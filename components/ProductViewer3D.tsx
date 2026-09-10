@@ -139,19 +139,22 @@ export default function ProductViewer3D({ colorway }: { colorway: Colorway }) {
             enablePan={false}
           />
         </Canvas>
-        <button
-          onClick={toggleView}
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-stone/40 bg-surface/80 px-3 py-1 text-[10px] uppercase tracking-widest text-foreground backdrop-blur-sm"
-        >
-          {facingBack ? "Avant" : "Arriere"}
-        </button>
 
-        <button
-          onClick={handleZoomToggle}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-foreground bg-background text-sm text-foreground shadow-md transition hover:bg-foreground hover:text-background"
-        >
-          +
-        </button>
+        <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 px-3">
+          <button
+            onClick={toggleView}
+            className="rounded-full border border-stone/40 bg-surface/80 px-3 py-1 text-[10px] uppercase tracking-widest text-foreground backdrop-blur-sm"
+          >
+            {facingBack ? "Avant" : "Arriere"}
+          </button>
+
+          <button
+            onClick={handleZoomToggle}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-foreground bg-background text-sm text-foreground shadow-md transition hover:bg-foreground hover:text-background"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {zoomOpen && (
