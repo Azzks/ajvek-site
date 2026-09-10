@@ -1,7 +1,7 @@
 const LINKS = [
   { label: "Email", href: "mailto:ajvek.contact@gmail.com" },
   { label: "TikTok", href: "https://www.tiktok.com/@ajvekstreet" },
-  { label: "Instagram", href: "https://www.instagram.com/ajvek_street" },
+  { label: "Instagram", href: "https://www.instagram.com/ajvekstreet" },
 ];
 
 export default function ContactPage() {

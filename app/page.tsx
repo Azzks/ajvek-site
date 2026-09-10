@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-gsap.registerPlugin(ScrollTrigger);
+const PREORDER_LIMIT = 20;
 
 export default function Home() {
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLAnchorElement>(null);
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/preorder-count")
+      .then((res) => res.json())
+      .then((data) => setCount(data.count ?? 0))
+      .catch(() => setCount(null));
+  }, []);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
@@ -17,7 +25,7 @@ export default function Home() {
 
     if (prefersReducedMotion) {
       gsap.set(titleRef.current, { opacity: 1, rotationX: 0 });
-      gsap.set(sectionRef.current, { opacity: 1, y: 0 });
+      gsap.set(buttonRef.current, { opacity: 1, y: 0 });
       return;
     }
 
@@ -35,48 +43,58 @@ export default function Home() {
         delay: 0.1,
       });
 
-      gsap.set(sectionRef.current, { opacity: 0, y: 40 });
-      gsap.to(sectionRef.current, {
+      gsap.set(buttonRef.current, { opacity: 0, y: 20 });
+      gsap.to(buttonRef.current, {
         opacity: 1,
         y: 0,
-        duration: 1,
+        duration: 0.8,
         ease: "power2.out",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 80%",
-        },
+        delay: 0.9,
       });
     });
 
     return () => ctx.revert();
   }, []);
 
-  return (
-    <>
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground px-6 text-center">
-        <p className="mb-4 text-xs tracking-[0.3em] text-stone uppercase">
-          Streetwear
-        </p>
-        <h1
-          ref={titleRef}
-          className="text-5xl sm:text-7xl font-display opacity-0"
-        >
-          AJVEK
-        </h1>
-        <p className="mt-6 max-w-md text-stone">
-          Le site arrive. En construction, une étape à la fois.
-        </p>
-      </main>
+  const isFull = count !== null && count >= PREORDER_LIMIT;
+  const percent =
+    count !== null ? Math.min((count / PREORDER_LIMIT) * 100, 100) : 0;
 
-      <section
-        ref={sectionRef}
-        className="flex flex-col items-center justify-center gap-4 px-6 py-24 text-center border-t border-surface"
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground px-6 text-center">
+      <p className="mb-4 text-xs tracking-[0.3em] text-stone uppercase">
+        Streetwear
+      </p>
+      <h1
+        ref={titleRef}
+        className="text-5xl sm:text-7xl font-display opacity-0"
       >
-        <h2 className="text-3xl font-display">La collection arrive</h2>
-        <p className="max-w-md text-stone">
-          Les premières pièces AJVEK sont en préparation. Reviens bientôt pour les découvrir.
-        </p>
-      </section>
-    </>
+        AJVEK
+      </h1>
+
+      <Link
+        ref={buttonRef}
+        href="/catalogue"
+        className="mt-10 inline-block rounded-full bg-foreground px-8 py-3 text-sm uppercase tracking-widest text-background opacity-0 transition hover:opacity-80"
+      >
+        Découvrir la collection
+      </Link>
+
+      {count !== null && (
+        <div className="mt-8 w-full max-w-xs">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface">
+            <div
+              className="h-full rounded-full bg-foreground transition-all duration-700"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-stone">
+            {isFull
+              ? "Les 20 précommandes sont complètes !"
+              : `${count}/${PREORDER_LIMIT} précommandées`}
+          </p>
+        </div>
+      )}
+    </main>
   );
 }
