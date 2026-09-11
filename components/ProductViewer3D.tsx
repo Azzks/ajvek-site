@@ -1,7 +1,14 @@
 "use client";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { useGLTF, useTexture, Decal, OrbitControls, useProgress, Html } from "@react-three/drei";
+import {
+  useGLTF,
+  useTexture,
+  Decal,
+  OrbitControls,
+  useProgress,
+  Html,
+} from "@react-three/drei";
 import gsap from "gsap";
 import type { Colorway } from "@/lib/products";
 
@@ -34,8 +41,20 @@ function Tshirt({ color, frontTexture, backTexture, backScale }: Colorway) {
 
   return (
     <mesh geometry={sourceMesh.geometry} material={material}>
-      <Decal position={[0, 0.47, 0.155]} rotation={[0, 0, 0]} scale={[0.075, 0.025, 0.15]} map={frontLogo} depthTest />
-      <Decal position={[0, 0.38, -0.155]} rotation={[0, Math.PI, 0]} scale={backScale} map={backDesign} depthTest />
+      <Decal
+        position={[0, 0.47, 0.155]}
+        rotation={[0, 0, 0]}
+        scale={[0.075, 0.025, 0.15]}
+        map={frontLogo}
+        depthTest
+      />
+      <Decal
+        position={[0, 0.38, -0.155]}
+        rotation={[0, Math.PI, 0]}
+        scale={backScale}
+        map={backDesign}
+        depthTest
+      />
     </mesh>
   );
 }
@@ -44,12 +63,18 @@ function Loader() {
   const { progress } = useProgress();
   return (
     <Html center>
-      <p className="text-[10px] uppercase tracking-[0.3em] text-stone">{Math.round(progress)}%</p>
+      <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+        {Math.round(progress)}%
+      </p>
     </Html>
   );
 }
 
-export default function ProductViewer3D({ colorway }: { colorway: Colorway }) {
+export default function ProductViewer3D({
+  colorway,
+}: {
+  colorway: Colorway;
+}) {
   const controlsRef = useRef<any>(null);
   const [facingBack, setFacingBack] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
@@ -105,7 +130,9 @@ export default function ProductViewer3D({ colorway }: { colorway: Colorway }) {
       ease: "power2.inOut",
       onUpdate: () => {
         controls.target.set(state.tx, state.ty, state.tz);
-        camera.position.copy(controls.target.clone().add(dir.clone().multiplyScalar(state.d)));
+        camera.position.copy(
+          controls.target.clone().add(dir.clone().multiplyScalar(state.d))
+        );
         controls.update();
       },
     });
@@ -121,11 +148,27 @@ export default function ProductViewer3D({ colorway }: { colorway: Colorway }) {
   return (
     <div className="relative">
       <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-surface bg-background">
-        <Canvas camera={{ position: [1.1, 0.55, 1.5], fov: 40 }}>
+        <Canvas
+          camera={{ position: [1.1, 0.55, 1.5], fov: 40 }}
+          resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
+          dpr={[1, 2]}
+        >
           <ambientLight intensity={0.2} />
-          <directionalLight position={[2, 3, 2]} intensity={1.6} color="#fff2dd" />
-          <directionalLight position={[-2.5, 1.5, -1.5]} intensity={0.5} color="#7d9bd6" />
-          <directionalLight position={[0, 0.5, -3]} intensity={0.8} color="#ffffff" />
+          <directionalLight
+            position={[2, 3, 2]}
+            intensity={1.6}
+            color="#fff2dd"
+          />
+          <directionalLight
+            position={[-2.5, 1.5, -1.5]}
+            intensity={0.5}
+            color="#7d9bd6"
+          />
+          <directionalLight
+            position={[0, 0.5, -3]}
+            intensity={0.8}
+            color="#ffffff"
+          />
           <Suspense fallback={<Loader />}>
             <Tshirt {...colorway} />
           </Suspense>
