@@ -19,7 +19,10 @@ export default function ProductPageClient({
   const router = useRouter();
 
   const initialColorIndex = product
-    ? Math.min(Math.max(parseInt(colorParam ?? "0", 10) || 0, 0), product.colorways.length - 1)
+    ? Math.min(
+        Math.max(parseInt(colorParam ?? "0", 10) || 0, 0),
+        product.colorways.length - 1
+      )
     : 0;
 
   const [colorIndex, setColorIndex] = useState(initialColorIndex);
@@ -52,20 +55,26 @@ export default function ProductPageClient({
         <ProductViewer3D colorway={colorway} />
         <div className="flex flex-col gap-6">
           <div>
-            <h1 className="text-xl uppercase tracking-[0.3em] text-foreground">{product.name}</h1>
+            <h1 className="text-xl uppercase tracking-[0.3em] text-foreground">
+              {product.name}
+            </h1>
             <p className="mt-2 text-sm text-stone">{product.price}</p>
           </div>
           <p className="text-sm text-stone">{product.description}</p>
 
           <div>
-            <p className="mb-2 text-xs uppercase tracking-widest text-stone">Couleur</p>
+            <p className="mb-2 text-xs uppercase tracking-widest text-stone">
+              Couleur
+            </p>
             <div className="flex gap-2">
               {product.colorways.map((cw, i) => (
                 <button
                   key={cw.label}
                   onClick={() => setColorIndex(i)}
                   className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
-                    i === colorIndex ? "border-foreground text-foreground" : "border-stone/40 text-stone"
+                    i === colorIndex
+                      ? "border-foreground text-foreground"
+                      : "border-stone/40 text-stone"
                   }`}
                 >
                   {cw.label}
@@ -75,24 +84,29 @@ export default function ProductPageClient({
           </div>
 
           <div>
-            <p className="mb-2 text-xs uppercase tracking-widest text-stone">Taille</p>
+            <p className="mb-2 text-xs uppercase tracking-widest text-stone">
+              Taille
+            </p>
             <div className="flex gap-2">
               {product.sizes.map((s) => (
                 <button
                   key={s}
-                  onClick={() => {
-                    setSize(s);
-                    setSizeError(false);
-                  }}
-                  className={`h-9 w-9 rounded-full border text-xs ${
-                    s === size ? "border-foreground text-foreground" : "border-stone/40 text-stone"
+                  onClick={() => setSize(s)}
+                  className={`h-10 w-10 rounded-full border text-xs uppercase tracking-widest ${
+                    s === size
+                      ? "border-foreground text-foreground"
+                      : "border-stone/40 text-stone"
                   }`}
                 >
                   {s}
                 </button>
               ))}
             </div>
-            {sizeError && <p className="mt-2 text-xs text-stone">Choisis une taille avant d&apos;ajouter au panier.</p>}
+            {sizeError && (
+              <p className="mt-2 text-xs text-stone">
+                Choisis une taille avant d&apos;ajouter au panier.
+              </p>
+            )}
           </div>
 
           <button
@@ -101,6 +115,13 @@ export default function ProductPageClient({
           >
             Ajouter au panier
           </button>
+
+          <div className="flex flex-col gap-1 text-[11px] text-stone">
+            <p>✓ Paiement sécurisé par carte bancaire (Stripe)</p>
+            <p>✓ Précommande — livraison une fois la série complète</p>
+            <p>✓ Retours possibles sous 14 jours après réception</p>
+          </div>
+
           <PreorderForm product={product} colorway={colorway} size={size} />
         </div>
       </div>
