@@ -30,7 +30,7 @@ export default function PreorderForm({
 
   const isFull = count !== null && count >= PREORDER_LIMIT;
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElepment>) {
     e.preventDefault();
     if (!size) {
       setError("Choisis une taille avant de précommander.");
