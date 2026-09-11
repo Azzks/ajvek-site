@@ -16,7 +16,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ajvek-site.vercel.app"),  title: {
+  metadataBase: new URL("https://ajvek-site.vercel.app"),
+  title: {
     default: "AJVEK — Streetwear",
     template: "%s · AJVEK",
   },
@@ -48,30 +49,53 @@ export default function RootLayout({
       <body
         className={`${cormorant.variable} ${manrope.variable} antialiased flex min-h-screen flex-col bg-background text-foreground`}
       >
-      <CartProvider>
-        <header className="flex items-center justify-between px-6 py-4 border-b border-surface">
-          <a href="/" className="font-display text-xl tracking-wide">
-            AJVEK
-          </a>
-          <nav className="flex gap-6 text-sm text-stone">
-            <a href="/catalogue" className="hover:text-foreground transition-colors">
-              Collection
+        <CartProvider>
+          <header className="flex items-center justify-between px-6 py-4 border-b border-surface">
+            <a href="/" className="font-display text-xl tracking-wide">
+              AJVEK
             </a>
-            <a href="/a-propos" className="hover:text-foreground transition-colors">
-              À propos
-            </a>
-            <a href="/contact" className="hover:text-foreground transition-colors">
-              Contact
-            </a>
-            <CartLink />
-          </nav>
-        </header>
+            <nav className="flex gap-6 text-sm text-stone">
+              <a
+                href="/catalogue"
+                className="hover:text-foreground transition-colors"
+              >
+                Collection
+              </a>
+              <a
+                href="/a-propos"
+                className="hover:text-foreground transition-colors"
+              >
+                À propos
+              </a>
+              <a
+                href="/contact"
+                className="hover:text-foreground transition-colors"
+              >
+                Contact
+              </a>
+              <CartLink />
+            </nav>
+          </header>
 
-        {children}
+          {children}
 
-        <footer className="px-6 py-6 text-center text-xs text-stone border-t border-surface">
-          © {new Date().getFullYear()} AJVEK. Tous droits réservés.
-        </footer>
+          <footer className="px-6 py-6 text-center text-xs text-stone border-t border-surface">
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-4">
+              <a
+                href="/cgv"
+                className="hover:text-foreground transition-colors"
+              >
+                CGV
+              </a>
+              <a
+                href="/confidentialite"
+                className="hover:text-foreground transition-colors"
+              >
+                Politique de confidentialité
+              </a>
+            </div>
+            <p>© {new Date().getFullYear()} AJVEK. Tous droits réservés.</p>
+          </footer>
         </CartProvider>
       </body>
     </html>
