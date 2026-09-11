@@ -6,6 +6,7 @@ import CartLink from "@/components/CartLink";
 
 const NAV_LINKS = [
   { href: "/catalogue", label: "Collection" },
+  { href: "/lookbook", label: "Lookbook" },
   { href: "/a-propos", label: "À propos" },
   { href: "/contact", label: "Contact" },
 ];
@@ -63,7 +64,7 @@ export default function SiteHeader() {
 
       <div
         className={`overflow-hidden transition-[max-height] duration-300 ease-in-out md:hidden ${
-          open ? "max-h-80" : "max-h-0"
+          open ? "max-h-96" : "max-h-0"
         }`}
       >
         <nav className="flex flex-col items-center gap-6 border-t border-surface bg-background px-6 py-8 text-sm uppercase tracking-widest text-stone">
