@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartContext";
-import CartLink from "@/components/CartLink";
+import SiteHeader from "@/components/SiteHeader";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-display",
@@ -50,32 +50,7 @@ export default function RootLayout({
         className={`${cormorant.variable} ${manrope.variable} antialiased flex min-h-screen flex-col bg-background text-foreground`}
       >
         <CartProvider>
-          <header className="flex items-center justify-between px-6 py-4 border-b border-surface">
-            <a href="/" className="font-display text-xl tracking-wide">
-              AJVEK
-            </a>
-            <nav className="flex gap-6 text-sm text-stone">
-              <a
-                href="/catalogue"
-                className="hover:text-foreground transition-colors"
-              >
-                Collection
-              </a>
-              <a
-                href="/a-propos"
-                className="hover:text-foreground transition-colors"
-              >
-                À propos
-              </a>
-              <a
-                href="/contact"
-                className="hover:text-foreground transition-colors"
-              >
-                Contact
-              </a>
-              <CartLink />
-            </nav>
-          </header>
+          <SiteHeader />
 
           {children}
 
