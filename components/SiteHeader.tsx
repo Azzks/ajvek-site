@@ -25,6 +25,14 @@ export default function SiteHeader() {
           AJVEK
         </Link>
 
+        <span
+          className="text-lg"
+          role="img"
+          aria-label="Produits fabriqués en France"
+        >
+          🇫🇷
+        </span>
+
         <nav className="hidden items-center gap-6 text-sm text-stone md:flex">
           {NAV_LINKS.map((link) => (
             <Link

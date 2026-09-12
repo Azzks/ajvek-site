@@ -39,7 +39,7 @@ export default function AProposPage() {
           <p>
             On construit AJVEK à distance, chacun de son côté, avec la même
             exigence. Pas une marque de plus : un jardin qu&apos;on cultive à
-            deux, pièce jusqu&apos;à ce qu&apos;il devienne ce qu&apos;on imagine
+            deux, pièce par pièce jusqu&apos;à ce qu&apos;il devienne ce qu&apos;on imagine
             depuis le début.
           </p>
         </ScrollReveal>

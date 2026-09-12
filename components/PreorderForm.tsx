@@ -1,8 +1,10 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
 import { supabase } from "@/lib/supabase";
 import type { Product, Colorway } from "@/lib/products";
+import MadeInFrance from "@/components/MadeInFrance";
 
 const PREORDER_LIMIT = 20;
 
@@ -111,6 +113,7 @@ export default function PreorderForm({
         <p className="text-sm text-stone">
           Tu es inscrit ! On te recontacte dès que la production est lancée.
         </p>
+        <MadeInFrance />
       </div>
     );
   }
@@ -122,6 +125,7 @@ export default function PreorderForm({
         <p className="mt-2 text-xs uppercase tracking-widest text-stone">
           Précommandes complètes pour ce lancement.
         </p>
+        <MadeInFrance />
       </div>
     );
   }
@@ -136,6 +140,7 @@ export default function PreorderForm({
         >
           Précommander
         </button>
+        <MadeInFrance />
       </div>
     );
   }
@@ -174,6 +179,7 @@ export default function PreorderForm({
           {submitting ? "Envoi..." : "Confirmer ma précommande"}
         </button>
       </form>
+      <MadeInFrance />
     </div>
   );
 }
