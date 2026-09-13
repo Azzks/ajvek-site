@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import MadeInFrance from "@/components/MadeInFrance";
+import PaymentNotice from "@/components/PaymentNotice";
 
 const PREORDER_LIMIT = 20;
 
@@ -97,6 +98,7 @@ export default function Home() {
         </div>
       )}
 
+      <PaymentNotice />
       <MadeInFrance />
     </main>
   );

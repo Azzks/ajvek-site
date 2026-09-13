@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthContext";
 import { CartProvider } from "@/components/CartContext";
 import SiteHeader from "@/components/SiteHeader";
 import { Analytics } from "@vercel/analytics/next";
@@ -50,29 +51,31 @@ export default function RootLayout({
       <body
         className={`${cormorant.variable} ${manrope.variable} antialiased flex min-h-screen flex-col bg-background text-foreground`}
       >
-        <CartProvider>
-          <SiteHeader />
+        <AuthProvider>
+          <CartProvider>
+            <SiteHeader />
 
-          {children}
+            {children}
 
-          <footer className="px-6 py-6 text-center text-xs text-stone border-t border-surface">
-            <div className="mb-3 flex flex-wrap items-center justify-center gap-4">
-              <a
-                href="/cgv"
-                className="hover:text-foreground transition-colors"
-              >
-                CGV
-              </a>
-              <a
-                href="/confidentialite"
-                className="hover:text-foreground transition-colors"
-              >
-                Politique de confidentialité
-              </a>
-            </div>
-            <p>© {new Date().getFullYear()} AJVEK. Tous droits réservés.</p>
-          </footer>
-        </CartProvider>
+            <footer className="px-6 py-6 text-center text-xs text-stone border-t border-surface">
+              <div className="mb-3 flex flex-wrap items-center justify-center gap-4">
+                <a
+                  href="/cgv"
+                  className="hover:text-foreground transition-colors"
+                >
+                  CGV
+                </a>
+                <a
+                  href="/confidentialite"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Politique de confidentialité
+                </a>
+              </div>
+              <p>© {new Date().getFullYear()} AJVEK. Tous droits réservés.</p>
+            </footer>
+          </CartProvider>
+        </AuthProvider>
 
         <Analytics />
 

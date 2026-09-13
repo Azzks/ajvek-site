@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import confetti from "canvas-confetti";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthContext";
 import type { Product, Colorway } from "@/lib/products";
 import MadeInFrance from "@/components/MadeInFrance";
+import PaymentNotice from "@/components/PaymentNotice";
 
 const PREORDER_LIMIT = 20;
 
@@ -17,11 +20,14 @@ export default function PreorderForm({
   colorway: Colorway;
   size: string | null;
 }) {
+  const { user, loading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState<number | null>(null);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     fetch("/api/preorder-count")
@@ -29,6 +35,12 @@ export default function PreorderForm({
       .then((data) => setCount(data.count ?? 0))
       .catch(() => setCount(0));
   }, []);
+
+  useEffect(() => {
+    if (user?.user_metadata?.full_name) {
+      setName(user.user_metadata.full_name);
+    }
+  }, [user]);
 
   const isFull = count !== null && count >= PREORDER_LIMIT;
 
@@ -42,14 +54,18 @@ export default function PreorderForm({
       setError("Les précommandes sont complètes.");
       return;
     }
+    if (!user) {
+      setError("Connecte-toi pour précommander.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
     const preorder = {
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
+      user_id: user.id,
+      name,
+      email: user.email,
+      phone,
       product_slug: product.slug,
       product_name: product.name,
       color: colorway.label,
@@ -113,6 +129,7 @@ export default function PreorderForm({
         <p className="text-sm text-stone">
           Tu es inscrit ! On te recontacte dès que la production est lancée.
         </p>
+        <PaymentNotice />
         <MadeInFrance />
       </div>
     );
@@ -125,6 +142,43 @@ export default function PreorderForm({
         <p className="mt-2 text-xs uppercase tracking-widest text-stone">
           Précommandes complètes pour ce lancement.
         </p>
+        <PaymentNotice />
+        <MadeInFrance />
+      </div>
+    );
+  }
+
+  if (authLoading) {
+    return (
+      <div>
+        {counterDisplay}
+        <MadeInFrance />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div>
+        {counterDisplay}
+        <p className="mt-2 mb-3 text-xs text-stone">
+          Connecte-toi pour précommander cet article.
+        </p>
+        <div className="flex gap-3">
+          <Link
+            href="/connexion"
+            className="rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
+          >
+            Se connecter
+          </Link>
+          <Link
+            href="/inscription"
+            className="rounded-full border border-stone/40 px-6 py-3 text-xs uppercase tracking-widest text-stone transition hover:border-foreground hover:text-foreground"
+          >
+            Créer un compte
+          </Link>
+        </div>
+        <PaymentNotice />
         <MadeInFrance />
       </div>
     );
@@ -140,6 +194,7 @@ export default function PreorderForm({
         >
           Précommander
         </button>
+        <PaymentNotice />
         <MadeInFrance />
       </div>
     );
@@ -154,22 +209,20 @@ export default function PreorderForm({
       >
         <input
           required
-          name="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="Nom"
           className="rounded border border-stone/40 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground"
         />
         <input
-          required
-          name="email"
-          type="email"
-          placeholder="Email"
-          className="rounded border border-stone/40 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground"
-        />
-        <input
-          name="phone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           placeholder="Téléphone (optionnel)"
           className="rounded border border-stone/40 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground"
         />
+        <p className="text-[10px] text-stone">
+          Précommande liée au compte {user.email}
+        </p>
         {error && <p className="text-xs text-stone">{error}</p>}
         <button
           type="submit"
@@ -179,6 +232,7 @@ export default function PreorderForm({
           {submitting ? "Envoi..." : "Confirmer ma précommande"}
         </button>
       </form>
+      <PaymentNotice />
       <MadeInFrance />
     </div>
   );
