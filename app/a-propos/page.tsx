@@ -10,19 +10,20 @@ export default function AProposPage() {
       <div className="mt-4 flex max-w-xl flex-col gap-5 text-stone">
         <ScrollReveal delay={100}>
           <p>
-            AJVEK, c&apos;est l&apos;histoire de deux amis dans la vingtaine, Alexis et
-            Julien, originaires de Bordeaux et de Nice, qui ont décidé de
-            donner vie à une marque de streetwear qui leur ressemble.
+            AJVEK, c&apos;est l&apos;histoire de deux amis dans la vingtaine,
+            Alexis et Julien, originaires de Bordeaux et de Nice, qui ont
+            décidé de donner vie à une marque de streetwear qui leur
+            ressemble.
           </p>
         </ScrollReveal>
 
         <ScrollReveal delay={150}>
           <p>
-            Ici, tout part des fleurs. La rose, qui ne s&apos;offre jamais sans
-            ses épines — la beauté qui se mérite, qui pique avant de séduire.
-            Le cerisier, dont les fleurs n&apos;éclosent que pour mieux tomber —
-            la grâce qui ne dure qu&apos;un instant, et qu&apos;on choisit de porter
-            quand même.
+            Ici, tout part des fleurs. La rose, qui ne s&apos;offre jamais
+            sans ses épines — la beauté qui se mérite, qui pique avant de
+            séduire. Le cerisier, dont les fleurs n&apos;éclosent que pour
+            mieux tomber — la grâce qui ne dure qu&apos;un instant, et
+            qu&apos;on choisit de porter quand même.
           </p>
         </ScrollReveal>
 
@@ -39,9 +40,25 @@ export default function AProposPage() {
           <p>
             On construit AJVEK à distance, chacun de son côté, avec la même
             exigence. Pas une marque de plus : un jardin qu&apos;on cultive à
-            deux, pièce par pièce jusqu&apos;à ce qu&apos;il devienne ce qu&apos;on imagine
-            depuis le début.
+            deux, pièce par pièce jusqu&apos;à ce qu&apos;il devienne ce
+            qu&apos;on imagine depuis le début.
           </p>
+        </ScrollReveal>
+
+        <ScrollReveal delay={150}>
+          <div className="mt-4 rounded border border-stone/30 bg-surface/40 p-6 text-left">
+            <p className="mb-3 text-xs uppercase tracking-widest text-stone">
+              Fabrication
+            </p>
+            <p className="text-sm text-stone">
+              AJVEK n&apos;est pas une marque de dropshipping : chaque
+              tee-shirt est réellement confectionné en France, en
+              partenariat avec{" "}
+              <span className="text-foreground">FB Création</span>, notre
+              atelier situé à Rancy, qui assure l&apos;impression DTF et la
+              broderie de chaque pièce.
+            </p>
+          </div>
         </ScrollReveal>
       </div>
     </main>
