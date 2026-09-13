@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartContext";
 import SiteHeader from "@/components/SiteHeader";
+import { Analytics } from "@vercel/analytics/next";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-display",
@@ -72,6 +73,8 @@ export default function RootLayout({
             <p>© {new Date().getFullYear()} AJVEK. Tous droits réservés.</p>
           </footer>
         </CartProvider>
+
+        <Analytics />
 
         <div
           aria-hidden
