@@ -1,9 +1,8 @@
 "use client";
+
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import { getProduct } from "@/lib/products";
-import { useCart } from "@/components/CartContext";
 import ProductViewer3D from "@/components/ProductViewer3D";
 import PreorderForm from "@/components/PreorderForm";
 
@@ -15,8 +14,6 @@ export default function ProductPageClient({
   colorParam?: string;
 }) {
   const product = getProduct(slug);
-  const { addItem } = useCart();
-  const router = useRouter();
 
   const initialColorIndex = product
     ? Math.min(
@@ -27,49 +24,41 @@ export default function ProductPageClient({
 
   const [colorIndex, setColorIndex] = useState(initialColorIndex);
   const [size, setSize] = useState<string | null>(null);
-  const [sizeError, setSizeError] = useState(false);
 
   if (!product) return notFound();
 
   const colorway = product.colorways[colorIndex];
 
-  function handleAddToCart() {
-    if (!size) {
-      setSizeError(true);
-      return;
-    }
-    addItem({
-      id: `${product!.slug}-${colorway.label}-${size}`,
-      slug: product!.slug,
-      name: product!.name,
-      colorLabel: colorway.label,
-      size,
-      price: product!.priceValue,
-    });
-    router.push("/panier");
-  }
-
   return (
     <div className="min-h-screen bg-background px-6 py-12">
       <div className="mx-auto grid max-w-4xl grid-cols-1 gap-10 md:grid-cols-2">
         <ProductViewer3D colorway={colorway} />
+
         <div className="flex flex-col gap-6">
           <div>
             <h1 className="text-xl uppercase tracking-[0.3em] text-foreground">
               {product.name}
             </h1>
-            <p className="mt-2 text-sm text-stone">{product.price}</p>
+
+            <p className="mt-2 text-sm text-stone">
+              {product.price}
+            </p>
           </div>
-          <p className="text-sm text-stone">{product.description}</p>
+
+          <p className="text-sm text-stone">
+            {product.description}
+          </p>
 
           <div>
             <p className="mb-2 text-xs uppercase tracking-widest text-stone">
               Couleur
             </p>
+
             <div className="flex gap-2">
               {product.colorways.map((cw, i) => (
                 <button
                   key={cw.label}
+                  type="button"
                   onClick={() => setColorIndex(i)}
                   className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
                     i === colorIndex
@@ -87,10 +76,12 @@ export default function ProductPageClient({
             <p className="mb-2 text-xs uppercase tracking-widest text-stone">
               Taille
             </p>
+
             <div className="flex gap-2">
               {product.sizes.map((s) => (
                 <button
                   key={s}
+                  type="button"
                   onClick={() => setSize(s)}
                   className={`h-10 w-10 rounded-full border text-xs uppercase tracking-widest ${
                     s === size
@@ -102,27 +93,20 @@ export default function ProductPageClient({
                 </button>
               ))}
             </div>
-            {sizeError && (
-              <p className="mt-2 text-xs text-stone">
-                Choisis une taille avant d&apos;ajouter au panier.
-              </p>
-            )}
           </div>
 
-          <button
-            onClick={handleAddToCart}
-            className="mt-4 rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
-          >
-            Ajouter au panier
-          </button>
-
           <div className="flex flex-col gap-1 text-[11px] text-stone">
-            <p>✓ Paiement sécurisé par carte bancaire (Stripe)</p>
-            <p>✓ Précommande — livraison une fois la série complète</p>
+            <p>✓ Paiement sécurisé par carte bancaire avec Stripe</p>
+            <p>✓ Production lancée à partir de 10 vêtements précommandés et payés</p>
+            <p>✓ Livraison France : 7,90 € pour 1 vêtement, 9,90 € pour 2, offerte dès 3</p>
             <p>✓ Retours possibles sous 14 jours après réception</p>
           </div>
 
-          <PreorderForm product={product} colorway={colorway} size={size} />
+          <PreorderForm
+            product={product}
+            colorway={colorway}
+            size={size}
+          />
         </div>
       </div>
     </div>

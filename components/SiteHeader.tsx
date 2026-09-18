@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import CartLink from "@/components/CartLink";
 
 const NAV_LINKS = [
   { href: "/catalogue", label: "Collection" },
+  { href: "/precommande", label: "Ma précommande" },
   { href: "/lookbook", label: "Lookbook" },
   { href: "/a-propos", label: "À propos" },
   { href: "/contact", label: "Contact" },
@@ -43,7 +43,6 @@ export default function SiteHeader() {
               {link.label}
             </Link>
           ))}
-          <CartLink />
         </nav>
 
         <button
@@ -57,11 +56,13 @@ export default function SiteHeader() {
               open ? "translate-y-0 rotate-45" : "-translate-y-2"
             }`}
           />
+
           <span
             className={`absolute h-px w-6 bg-foreground transition-opacity duration-200 ease-out ${
               open ? "opacity-0" : "opacity-100"
             }`}
           />
+
           <span
             className={`absolute h-px w-6 bg-foreground transition-all duration-300 ease-out ${
               open ? "translate-y-0 -rotate-45" : "translate-y-2"
@@ -86,9 +87,6 @@ export default function SiteHeader() {
               {link.label}
             </Link>
           ))}
-          <div onClick={() => setOpen(false)}>
-            <CartLink />
-          </div>
         </nav>
       </div>
     </header>
