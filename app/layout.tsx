@@ -18,13 +18,16 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ajvek-site.vercel.app"),
+  metadataBase: new URL("https://ajvek.fr"),
+
   title: {
     default: "AJVEK — Streetwear",
     template: "%s · AJVEK",
   },
+
   description:
     "AJVEK, marque de streetwear. Découvre les collections Roses et Sakura, tee-shirts en édition limitée.",
+
   openGraph: {
     title: "AJVEK — Streetwear",
     description:
@@ -33,6 +36,7 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     type: "website",
   },
+
   twitter: {
     card: "summary_large_image",
     title: "AJVEK — Streetwear",
@@ -60,19 +64,37 @@ export default function RootLayout({
             <footer className="px-6 py-6 text-center text-xs text-stone border-t border-surface">
               <div className="mb-3 flex flex-wrap items-center justify-center gap-4">
                 <a
+                  href="/mentions-legales"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Mentions légales
+                </a>
+
+                <a
                   href="/cgv"
                   className="hover:text-foreground transition-colors"
                 >
                   CGV
                 </a>
+
                 <a
                   href="/confidentialite"
                   className="hover:text-foreground transition-colors"
                 >
                   Politique de confidentialité
                 </a>
+
+                <a
+                  href="/contact"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Contact
+                </a>
               </div>
-              <p>© {new Date().getFullYear()} AJVEK. Tous droits réservés.</p>
+
+              <p>
+                © {new Date().getFullYear()} AJVEK. Tous droits réservés.
+              </p>
             </footer>
           </CartProvider>
         </AuthProvider>
