@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { supabase } from "@/lib/supabase";
@@ -9,7 +9,7 @@ import type { Product, Colorway } from "@/lib/products";
 import MadeInFrance from "@/components/MadeInFrance";
 import PaymentNotice from "@/components/PaymentNotice";
 
-const PREORDER_LIMIT = 20;
+const PREORDER_GOAL = 10;
 
 export default function PreorderForm({
   product,
@@ -21,9 +21,9 @@ export default function PreorderForm({
   size: string | null;
 }) {
   const { user, loading: authLoading } = useAuth();
+
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const [name, setName] = useState("");
@@ -42,63 +42,85 @@ export default function PreorderForm({
     }
   }, [user]);
 
-  const isFull = count !== null && count >= PREORDER_LIMIT;
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!size) {
-      setError("Choisis une taille avant de précommander.");
-      return;
-    }
-    if (isFull) {
-      setError("Les précommandes sont complètes.");
-      return;
-    }
-    if (!user) {
-      setError("Connecte-toi pour précommander.");
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-
-    const preorder = {
-      user_id: user.id,
-      name,
-      email: user.email,
-      phone,
-      product_slug: product.slug,
-      product_name: product.name,
-      color: colorway.label,
-      size,
-    };
-
-    const { error: dbError } = await supabase.from("preorders").insert(preorder);
-
-    if (dbError) {
-      setSubmitting(false);
-      setError("Une erreur est survenue, réessaie dans un instant.");
-      return;
-    }
-
-    fetch("/api/notify-order/notify-preorder", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(preorder),
-    }).catch(() => {});
-
-    const newCount = (count ?? 0) + 1;
-    setCount(newCount);
-
-    if (newCount >= PREORDER_LIMIT) {
+  useEffect(() => {
+    if (count !== null && count === PREORDER_GOAL) {
       confetti({
         particleCount: 150,
         spread: 90,
         origin: { y: 0.6 },
       });
     }
+  }, [count]);
 
-    setSubmitting(false);
-    setDone(true);
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!size) {
+      setError("Choisis une taille avant de précommander.");
+      return;
+    }
+
+    if (!user) {
+      setError("Connecte-toi pour précommander.");
+      return;
+    }
+
+    if (!name.trim()) {
+      setError("Indique ton nom.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setError("Ta session a expiré. Reconnecte-toi puis réessaie.");
+        setSubmitting(false);
+        return;
+      }
+
+      const response = await fetch("/api/create-preorder-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+          product_slug: product.slug,
+          product_name: product.name,
+          color: colorway.label,
+          size,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.url) {
+        setError(
+          data.error ||
+            "Impossible de lancer le paiement. Réessaie dans un instant."
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      console.error("[PreorderForm] Erreur checkout :", error);
+
+      setError(
+        "Impossible de lancer le paiement. Vérifie ta connexion et réessaie."
+      );
+
+      setSubmitting(false);
+    }
   }
 
   const counterDisplay = (
@@ -106,8 +128,11 @@ export default function PreorderForm({
       <p className="mb-1 text-[10px] uppercase tracking-widest text-stone">
         {count === null
           ? "Chargement..."
-          : `${Math.min(count, PREORDER_LIMIT)}/${PREORDER_LIMIT} précommandes`}
+          : count < PREORDER_GOAL
+            ? `${count}/${PREORDER_GOAL} précommandes payées`
+            : `${count} précommandes payées`}
       </p>
+
       <div className="h-1 w-full overflow-hidden rounded-full bg-stone/20">
         <div
           className="h-full rounded-full bg-foreground transition-all"
@@ -115,38 +140,24 @@ export default function PreorderForm({
             width:
               count === null
                 ? "0%"
-                : `${Math.min((count / PREORDER_LIMIT) * 100, 100)}%`,
+                : `${Math.min((count / PREORDER_GOAL) * 100, 100)}%`,
           }}
         />
       </div>
+
+      {count !== null && count < PREORDER_GOAL && (
+        <p className="mt-2 text-[10px] leading-relaxed text-stone">
+          Production lancée à partir de {PREORDER_GOAL} précommandes payées.
+        </p>
+      )}
+
+      {count !== null && count >= PREORDER_GOAL && (
+        <p className="mt-2 text-[10px] uppercase tracking-widest text-foreground">
+          Seuil de production atteint.
+        </p>
+      )}
     </div>
   );
-
-  if (done) {
-    return (
-      <div>
-        {counterDisplay}
-        <p className="text-sm text-stone">
-          Tu es inscrit ! On te recontacte dès que la production est lancée.
-        </p>
-        <PaymentNotice />
-        <MadeInFrance />
-      </div>
-    );
-  }
-
-  if (isFull) {
-    return (
-      <div>
-        {counterDisplay}
-        <p className="mt-2 text-xs uppercase tracking-widest text-stone">
-          Précommandes complètes pour ce lancement.
-        </p>
-        <PaymentNotice />
-        <MadeInFrance />
-      </div>
-    );
-  }
 
   if (authLoading) {
     return (
@@ -161,9 +172,11 @@ export default function PreorderForm({
     return (
       <div>
         {counterDisplay}
+
         <p className="mt-2 mb-3 text-xs text-stone">
           Connecte-toi pour précommander cet article.
         </p>
+
         <div className="flex gap-3">
           <Link
             href="/connexion"
@@ -171,6 +184,7 @@ export default function PreorderForm({
           >
             Se connecter
           </Link>
+
           <Link
             href="/inscription"
             className="rounded-full border border-stone/40 px-6 py-3 text-xs uppercase tracking-widest text-stone transition hover:border-foreground hover:text-foreground"
@@ -178,6 +192,7 @@ export default function PreorderForm({
             Créer un compte
           </Link>
         </div>
+
         <PaymentNotice />
         <MadeInFrance />
       </div>
@@ -188,12 +203,17 @@ export default function PreorderForm({
     return (
       <div>
         {counterDisplay}
+
         <button
-          onClick={() => setOpen(true)}
-          className="mt-2 rounded-full border border-stone/40 px-6 py-3 text-xs uppercase tracking-widest text-stone transition hover:border-foreground hover:text-foreground"
+          onClick={() => {
+            setError(null);
+            setOpen(true);
+          }}
+          className="mt-2 rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
         >
           Précommander
         </button>
+
         <PaymentNotice />
         <MadeInFrance />
       </div>
@@ -203,9 +223,10 @@ export default function PreorderForm({
   return (
     <div>
       {counterDisplay}
+
       <form
         onSubmit={handleSubmit}
-        className="mt-2 flex flex-col gap-3 rounded border border-surface p-4"
+        className="mt-3 flex flex-col gap-3 rounded border border-surface p-4"
       >
         <input
           required
@@ -214,24 +235,69 @@ export default function PreorderForm({
           placeholder="Nom"
           className="rounded border border-stone/40 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground"
         />
+
         <input
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="Téléphone (optionnel)"
           className="rounded border border-stone/40 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground"
         />
+
+        <div className="rounded border border-surface px-3 py-3">
+          <p className="text-[10px] uppercase tracking-widest text-stone">
+            Précommande
+          </p>
+
+          <p className="mt-1 text-sm text-foreground">
+            {product.name}
+          </p>
+
+          <p className="mt-1 text-xs text-stone">
+            {colorway.label}
+            {size ? ` — Taille ${size}` : ""}
+          </p>
+
+          <p className="mt-2 text-sm text-foreground">
+            {product.price}
+          </p>
+        </div>
+
         <p className="text-[10px] text-stone">
           Précommande liée au compte {user.email}
         </p>
-        {error && <p className="text-xs text-stone">{error}</p>}
+
+        <p className="text-[10px] leading-relaxed text-stone">
+          Tu seras redirigé vers Stripe pour effectuer le paiement sécurisé.
+          Ta précommande sera comptabilisée une fois le paiement confirmé.
+        </p>
+
+        {error && (
+          <p className="text-xs text-stone">
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-full border border-foreground px-4 py-2 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
+          className="rounded-full border border-foreground px-4 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? "Envoi..." : "Confirmer ma précommande"}
+          {submitting ? "Redirection vers Stripe..." : "Payer ma précommande"}
+        </button>
+
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+          className="text-[10px] uppercase tracking-widest text-stone underline underline-offset-4"
+        >
+          Annuler
         </button>
       </form>
+
       <PaymentNotice />
       <MadeInFrance />
     </div>
