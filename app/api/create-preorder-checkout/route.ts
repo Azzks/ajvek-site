@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { randomUUID } from "crypto";
 import { getProduct } from "@/lib/products";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -20,6 +21,13 @@ const supabaseAuth = createClient(
     },
   }
 );
+
+type CheckoutItem = {
+  product_slug: string;
+  color: string;
+  size: string;
+  quantity: number;
+};
 
 export async function POST(request: Request) {
   try {
@@ -51,54 +59,116 @@ export async function POST(request: Request) {
     const {
       name,
       phone,
-      product_slug,
-      product_name,
-      color,
-      size,
+      items,
+    }: {
+      name: string;
+      phone?: string;
+      items: CheckoutItem[];
     } = body;
 
-    if (
-      !name ||
-      !product_slug ||
-      !product_name ||
-      !color ||
-      !size
-    ) {
+    if (!name?.trim()) {
       return NextResponse.json(
-        { error: "Informations de précommande incomplètes." },
+        { error: "Ton nom est requis." },
         { status: 400 }
       );
     }
 
-    const product = getProduct(product_slug);
-
-    if (!product) {
+    if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
-        { error: "Produit introuvable." },
-        { status: 404 }
+        { error: "Ta précommande est vide." },
+        { status: 400 }
       );
     }
 
-    const { data: preorder, error: preorderError } =
+    const validatedItems: Array<{
+      product_slug: string;
+      product_name: string;
+      color: string;
+      size: string;
+      quantity: number;
+      priceValue: number;
+    }> = [];
+
+    let totalQuantity = 0;
+
+    for (const item of items) {
+      const quantity = Number(item.quantity);
+
+      if (
+        !item.product_slug ||
+        !item.color ||
+        !item.size ||
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > 10
+      ) {
+        return NextResponse.json(
+          { error: "Un article de la précommande est invalide." },
+          { status: 400 }
+        );
+      }
+
+      const product = getProduct(item.product_slug);
+
+      if (!product) {
+        return NextResponse.json(
+          { error: `Produit introuvable : ${item.product_slug}` },
+          { status: 404 }
+        );
+      }
+
+      validatedItems.push({
+        product_slug: product.slug,
+        product_name: product.name,
+        color: item.color,
+        size: item.size,
+        quantity,
+        priceValue: product.priceValue,
+      });
+
+      totalQuantity += quantity;
+    }
+
+    if (totalQuantity > 20) {
+      return NextResponse.json(
+        {
+          error:
+            "La quantité maximale autorisée pour une précommande est de 20 vêtements.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const checkoutGroupId = randomUUID();
+
+    const preorderRows = validatedItems.flatMap((item) =>
+      Array.from({ length: item.quantity }, () => ({
+        user_id: user.id,
+        name: name.trim(),
+        email: user.email!,
+        phone: phone?.trim() || null,
+        product_slug: item.product_slug,
+        product_name: item.product_name,
+        color: item.color,
+        size: item.size,
+        paid: false,
+        checkout_group_id: checkoutGroupId,
+      }))
+    );
+
+    const { data: createdPreorders, error: preorderError } =
       await supabaseAdmin
         .from("preorders")
-        .insert({
-          user_id: user.id,
-          name: name.trim(),
-          email: user.email,
-          phone: phone?.trim() || null,
-          product_slug,
-          product_name,
-          color,
-          size,
-          paid: false,
-        })
-        .select()
-        .single();
+        .insert(preorderRows)
+        .select();
 
-    if (preorderError || !preorder) {
+    if (
+      preorderError ||
+      !createdPreorders ||
+      createdPreorders.length === 0
+    ) {
       console.error(
-        "[create-preorder-checkout] Erreur création précommande:",
+        "[create-preorder-checkout] Erreur création précommandes:",
         preorderError
       );
 
@@ -108,6 +178,30 @@ export async function POST(request: Request) {
       );
     }
 
+    let shippingAmount = 0;
+    let shippingName = "Livraison offerte";
+
+    if (totalQuantity === 1) {
+      shippingAmount = 790;
+      shippingName = "Livraison France";
+    } else if (totalQuantity === 2) {
+      shippingAmount = 990;
+      shippingName = "Livraison France";
+    }
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+      validatedItems.map((item) => ({
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: `${item.product_name} — ${item.color} — Taille ${item.size}`,
+            description: "Précommande AJVEK",
+          },
+          unit_amount: Math.round(item.priceValue * 100),
+        },
+        quantity: item.quantity,
+      }));
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
 
@@ -115,38 +209,44 @@ export async function POST(request: Request) {
 
       payment_method_types: ["card"],
 
-      line_items: [
+      line_items: lineItems,
+
+      shipping_address_collection: {
+        allowed_countries: ["FR"],
+      },
+
+      shipping_options: [
         {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: `${product.name} — ${color} — Taille ${size}`,
-              description: "Précommande AJVEK",
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: {
+              amount: shippingAmount,
+              currency: "eur",
             },
-            unit_amount: Math.round(product.priceValue * 100),
+            display_name: shippingName,
           },
-          quantity: 1,
         },
       ],
 
       metadata: {
-        preorder_id: String(preorder.id),
+        checkout_group_id: checkoutGroupId,
         user_id: user.id,
-        product_slug,
-        color,
-        size,
+        item_count: String(totalQuantity),
       },
 
       success_url:
         "https://ajvek.fr/paiement/succes?session_id={CHECKOUT_SESSION_ID}",
 
       cancel_url:
-        `https://ajvek.fr/produit/${product_slug}`,
+        "https://ajvek.fr/paiement/annule",
     });
 
     if (!session.url) {
       return NextResponse.json(
-        { error: "Stripe n'a pas retourné de lien de paiement." },
+        {
+          error:
+            "Stripe n'a pas retourné de lien de paiement.",
+        },
         { status: 500 }
       );
     }
@@ -157,18 +257,18 @@ export async function POST(request: Request) {
         stripe_session_id: session.id,
         checkout_url: session.url,
       })
-      .eq("id", preorder.id);
+      .eq("checkout_group_id", checkoutGroupId);
 
     if (updateError) {
       console.error(
-        "[create-preorder-checkout] Erreur sauvegarde Stripe:",
+        "[create-preorder-checkout] Erreur sauvegarde session Stripe:",
         updateError
       );
     }
 
     return NextResponse.json({
       url: session.url,
-      preorderId: preorder.id,
+      itemCount: totalQuantity,
     });
   } catch (error) {
     console.error(

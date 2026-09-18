@@ -1,305 +1,330 @@
-"use client";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
+import { getProduct } from "@/lib/products";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import confetti from "canvas-confetti";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/components/AuthContext";
-import type { Product, Colorway } from "@/lib/products";
-import MadeInFrance from "@/components/MadeInFrance";
-import PaymentNotice from "@/components/PaymentNotice";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-const PREORDER_GOAL = 10;
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export default function PreorderForm({
-  product,
-  colorway,
-  size,
-}: {
-  product: Product;
-  colorway: Colorway;
-  size: string | null;
-}) {
-  const { user, loading: authLoading } = useAuth();
+const supabaseAuth = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
+);
 
-  const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [count, setCount] = useState<number | null>(null);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+type CheckoutItem = {
+  product_slug: string;
+  color: string;
+  size: string;
+  quantity: number;
+};
 
-  useEffect(() => {
-    fetch("/api/preorder-count")
-      .then((res) => res.json())
-      .then((data) => setCount(data.count ?? 0))
-      .catch(() => setCount(0));
-  }, []);
+export async function POST(request: Request) {
+  try {
+    /*
+     * 1. Vérification du compte Supabase connecté
+     */
+    const authorization = request.headers.get("authorization");
 
-  useEffect(() => {
-    if (user?.user_metadata?.full_name) {
-      setName(user.user_metadata.full_name);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (count !== null && count === PREORDER_GOAL) {
-      confetti({
-        particleCount: 150,
-        spread: 90,
-        origin: { y: 0.6 },
-      });
-    }
-  }, [count]);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    if (!size) {
-      setError("Choisis une taille avant de précommander.");
-      return;
+    if (!authorization?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Connexion requise." },
+        { status: 401 }
+      );
     }
 
-    if (!user) {
-      setError("Connecte-toi pour précommander.");
-      return;
+    const accessToken = authorization.replace("Bearer ", "");
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAuth.auth.getUser(accessToken);
+
+    if (userError || !user || !user.email) {
+      return NextResponse.json(
+        { error: "Session utilisateur invalide ou expirée." },
+        { status: 401 }
+      );
     }
 
-    if (!name.trim()) {
-      setError("Indique ton nom.");
-      return;
+    /*
+     * 2. Lecture du panier
+     */
+    const body = await request.json();
+
+    const {
+      name,
+      phone,
+      items,
+    }: {
+      name: string;
+      phone?: string;
+      items: CheckoutItem[];
+    } = body;
+
+    if (!name?.trim()) {
+      return NextResponse.json(
+        { error: "Ton nom est requis." },
+        { status: 400 }
+      );
     }
 
-    setSubmitting(true);
-    setError(null);
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json(
+        { error: "Ta précommande est vide." },
+        { status: 400 }
+      );
+    }
 
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    /*
+     * 3. Validation des produits et calcul serveur
+     *
+     * Le prix envoyé par le navigateur n'est jamais utilisé.
+     * Le vrai prix vient uniquement de lib/products.
+     */
+    const validatedItems: Array<{
+      product_slug: string;
+      product_name: string;
+      color: string;
+      size: string;
+      quantity: number;
+      priceValue: number;
+    }> = [];
 
-      if (!session?.access_token) {
-        setError("Ta session a expiré. Reconnecte-toi puis réessaie.");
-        setSubmitting(false);
-        return;
-      }
+    let totalQuantity = 0;
 
-      const response = await fetch("/api/create-preorder-checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          phone: phone.trim(),
-          product_slug: product.slug,
-          product_name: product.name,
-          color: colorway.label,
-          size,
-        }),
-      });
+    for (const item of items) {
+      const quantity = Number(item.quantity);
 
-      const data = await response.json();
-
-      if (!response.ok || !data.url) {
-        setError(
-          data.error ||
-            "Impossible de lancer le paiement. Réessaie dans un instant."
+      if (
+        !item.product_slug ||
+        !item.color ||
+        !item.size ||
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > 10
+      ) {
+        return NextResponse.json(
+          { error: "Un article de la précommande est invalide." },
+          { status: 400 }
         );
-        setSubmitting(false);
-        return;
       }
 
-      window.location.href = data.url;
-    } catch (error) {
-      console.error("[PreorderForm] Erreur checkout :", error);
+      const product = getProduct(item.product_slug);
 
-      setError(
-        "Impossible de lancer le paiement. Vérifie ta connexion et réessaie."
+      if (!product) {
+        return NextResponse.json(
+          { error: `Produit introuvable : ${item.product_slug}` },
+          { status: 404 }
+        );
+      }
+
+      validatedItems.push({
+        product_slug: product.slug,
+        product_name: product.name,
+        color: item.color,
+        size: item.size,
+        quantity,
+        priceValue: product.priceValue,
+      });
+
+      totalQuantity += quantity;
+    }
+
+    if (totalQuantity > 20) {
+      return NextResponse.json(
+        {
+          error:
+            "La quantité maximale autorisée pour une précommande est de 20 vêtements.",
+        },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * 4. Création des lignes Supabase
+     *
+     * Une ligne = un vêtement.
+     *
+     * Donc :
+     * - une commande de 1 vêtement = 1 précommande
+     * - une commande de 3 vêtements = 3 précommandes
+     *
+     * Le compteur /10 reste donc correct.
+     */
+    const preorderRows = validatedItems.flatMap((item) =>
+      Array.from({ length: item.quantity }, () => ({
+        user_id: user.id,
+        name: name.trim(),
+        email: user.email!,
+        phone: phone?.trim() || null,
+        product_slug: item.product_slug,
+        product_name: item.product_name,
+        color: item.color,
+        size: item.size,
+        paid: false,
+      }))
+    );
+
+    const { data: createdPreorders, error: preorderError } =
+      await supabaseAdmin
+        .from("preorders")
+        .insert(preorderRows)
+        .select();
+
+    if (
+      preorderError ||
+      !createdPreorders ||
+      createdPreorders.length === 0
+    ) {
+      console.error(
+        "[create-preorder-checkout] Erreur création précommandes:",
+        preorderError
       );
 
-      setSubmitting(false);
+      return NextResponse.json(
+        { error: "Impossible de créer la précommande." },
+        { status: 500 }
+      );
     }
-  }
 
-  const counterDisplay = (
-    <div className="mt-2 mb-1">
-      <p className="mb-1 text-[10px] uppercase tracking-widest text-stone">
-        {count === null
-          ? "Chargement..."
-          : count < PREORDER_GOAL
-            ? `${count}/${PREORDER_GOAL} précommandes payées`
-            : `${count} précommandes payées`}
-      </p>
+    /*
+     * 5. Frais de livraison
+     *
+     * France uniquement :
+     * 1 vêtement  = 7,90 €
+     * 2 vêtements = 9,90 €
+     * 3+ vêtements = offerts
+     */
+    let shippingAmount = 0;
+    let shippingName = "Livraison offerte";
 
-      <div className="h-1 w-full overflow-hidden rounded-full bg-stone/20">
-        <div
-          className="h-full rounded-full bg-foreground transition-all"
-          style={{
-            width:
-              count === null
-                ? "0%"
-                : `${Math.min((count / PREORDER_GOAL) * 100, 100)}%`,
-          }}
-        />
-      </div>
+    if (totalQuantity === 1) {
+      shippingAmount = 790;
+      shippingName = "Livraison France";
+    } else if (totalQuantity === 2) {
+      shippingAmount = 990;
+      shippingName = "Livraison France";
+    }
 
-      {count !== null && count < PREORDER_GOAL && (
-        <p className="mt-2 text-[10px] leading-relaxed text-stone">
-          Production lancée à partir de {PREORDER_GOAL} précommandes payées.
-        </p>
-      )}
+    /*
+     * 6. Création des articles Stripe
+     */
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+      validatedItems.map((item) => ({
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: `${item.product_name} — ${item.color} — Taille ${item.size}`,
+            description: "Précommande AJVEK",
+          },
+          unit_amount: Math.round(item.priceValue * 100),
+        },
+        quantity: item.quantity,
+      }));
 
-      {count !== null && count >= PREORDER_GOAL && (
-        <p className="mt-2 text-[10px] uppercase tracking-widest text-foreground">
-          Seuil de production atteint.
-        </p>
-      )}
-    </div>
-  );
+    const preorderIds = createdPreorders.map((p) => String(p.id));
 
-  if (authLoading) {
-    return (
-      <div>
-        {counterDisplay}
-        <MadeInFrance />
-      </div>
+    /*
+     * 7. Création du Checkout Stripe
+     */
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+
+      customer_email: user.email,
+
+      payment_method_types: ["card"],
+
+      line_items: lineItems,
+
+      /*
+       * Adresse obligatoire et France uniquement.
+       */
+      shipping_address_collection: {
+        allowed_countries: ["FR"],
+      },
+
+      /*
+       * Stripe ajoute automatiquement les frais de livraison
+       * au montant final.
+       */
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: {
+              amount: shippingAmount,
+              currency: "eur",
+            },
+            display_name: shippingName,
+          },
+        },
+      ],
+
+      metadata: {
+        preorder_ids: preorderIds.join(","),
+        user_id: user.id,
+        item_count: String(totalQuantity),
+      },
+
+      success_url:
+        "https://ajvek.fr/paiement/succes?session_id={CHECKOUT_SESSION_ID}",
+
+      cancel_url:
+        "https://ajvek.fr/precommande",
+    });
+
+    if (!session.url) {
+      return NextResponse.json(
+        {
+          error:
+            "Stripe n'a pas retourné de lien de paiement.",
+        },
+        { status: 500 }
+      );
+    }
+
+    /*
+     * 8. On rattache toutes les précommandes
+     * à la même session Stripe.
+     */
+    const { error: updateError } = await supabaseAdmin
+      .from("preorders")
+      .update({
+        stripe_session_id: session.id,
+        checkout_url: session.url,
+      })
+      .in("id", preorderIds);
+
+    if (updateError) {
+      console.error(
+        "[create-preorder-checkout] Erreur sauvegarde session Stripe:",
+        updateError
+      );
+    }
+
+    return NextResponse.json({
+      url: session.url,
+      itemCount: totalQuantity,
+    });
+  } catch (error) {
+    console.error(
+      "[create-preorder-checkout] Erreur générale:",
+      error
+    );
+
+    return NextResponse.json(
+      { error: "Erreur serveur." },
+      { status: 500 }
     );
   }
-
-  if (!user) {
-    return (
-      <div>
-        {counterDisplay}
-
-        <p className="mt-2 mb-3 text-xs text-stone">
-          Connecte-toi pour précommander cet article.
-        </p>
-
-        <div className="flex gap-3">
-          <Link
-            href="/connexion"
-            className="rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
-          >
-            Se connecter
-          </Link>
-
-          <Link
-            href="/inscription"
-            className="rounded-full border border-stone/40 px-6 py-3 text-xs uppercase tracking-widest text-stone transition hover:border-foreground hover:text-foreground"
-          >
-            Créer un compte
-          </Link>
-        </div>
-
-        <PaymentNotice />
-        <MadeInFrance />
-      </div>
-    );
-  }
-
-  if (!open) {
-    return (
-      <div>
-        {counterDisplay}
-
-        <button
-          onClick={() => {
-            setError(null);
-            setOpen(true);
-          }}
-          className="mt-2 rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
-        >
-          Précommander
-        </button>
-
-        <PaymentNotice />
-        <MadeInFrance />
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      {counterDisplay}
-
-      <form
-        onSubmit={handleSubmit}
-        className="mt-3 flex flex-col gap-3 rounded border border-surface p-4"
-      >
-        <input
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nom"
-          className="rounded border border-stone/40 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground"
-        />
-
-        <input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Téléphone (optionnel)"
-          className="rounded border border-stone/40 bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground"
-        />
-
-        <div className="rounded border border-surface px-3 py-3">
-          <p className="text-[10px] uppercase tracking-widest text-stone">
-            Précommande
-          </p>
-
-          <p className="mt-1 text-sm text-foreground">
-            {product.name}
-          </p>
-
-          <p className="mt-1 text-xs text-stone">
-            {colorway.label}
-            {size ? ` — Taille ${size}` : ""}
-          </p>
-
-          <p className="mt-2 text-sm text-foreground">
-            {product.price}
-          </p>
-        </div>
-
-        <p className="text-[10px] text-stone">
-          Précommande liée au compte {user.email}
-        </p>
-
-        <p className="text-[10px] leading-relaxed text-stone">
-          Tu seras redirigé vers Stripe pour effectuer le paiement sécurisé.
-          Ta précommande sera comptabilisée une fois le paiement confirmé.
-        </p>
-
-        {error && (
-          <p className="text-xs text-stone">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-full border border-foreground px-4 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {submitting ? "Redirection vers Stripe..." : "Payer ma précommande"}
-        </button>
-
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={() => {
-            setOpen(false);
-            setError(null);
-          }}
-          className="text-[10px] uppercase tracking-widest text-stone underline underline-offset-4"
-        >
-          Annuler
-        </button>
-      </form>
-
-      <PaymentNotice />
-      <MadeInFrance />
-    </div>
-  );
 }

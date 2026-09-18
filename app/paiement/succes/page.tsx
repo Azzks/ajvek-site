@@ -1,6 +1,15 @@
+"use client";
+
+import { useEffect } from "react";
 import Link from "next/link";
 
+const STORAGE_KEY = "ajvek-preorder-cart";
+
 export default function PaiementSuccesPage() {
+  useEffect(() => {
+    localStorage.removeItem(STORAGE_KEY);
+  }, []);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
       <p className="mb-4 text-xs uppercase tracking-[0.3em] text-stone">
@@ -17,13 +26,13 @@ export default function PaiementSuccesPage() {
       </p>
 
       <p className="mt-3 max-w-md text-sm text-stone">
-        La production sera lancée dès que le seuil de 10 précommandes payées
-        sera atteint.
+        La production sera lancée dès que le seuil de 10 vêtements
+        précommandés et payés sera atteint.
       </p>
 
       <p className="mt-3 max-w-md text-sm text-stone">
-        Tu recevras également un email de confirmation avec le récapitulatif de
-        ta précommande.
+        Tu vas également recevoir un email de confirmation avec le
+        récapitulatif de ta précommande.
       </p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
