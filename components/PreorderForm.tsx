@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthContext";
 import type { Product, Colorway } from "@/lib/products";
 import MadeInFrance from "@/components/MadeInFrance";
-import PaymentNotice from "@/components/PaymentNotice";
 
 const PREORDER_GOAL = 10;
 const STORAGE_KEY = "ajvek-preorder-cart";
@@ -115,8 +114,8 @@ export default function PreorderForm({
       : Math.min((count / PREORDER_GOAL) * 100, 100);
 
   const counterDisplay = (
-    <div className="mt-2 mb-4">
-      <p className="mb-1 text-[10px] uppercase tracking-widest text-stone">
+    <div className="mt-2 mb-5">
+      <p className="mb-2 text-[10px] uppercase tracking-widest text-stone">
         {count === null
           ? "Chargement..."
           : thresholdReached
@@ -134,13 +133,13 @@ export default function PreorderForm({
       </div>
 
       {count !== null && !thresholdReached && (
-        <p className="mt-2 text-[10px] leading-relaxed text-stone">
+        <p className="mt-3 text-[10px] leading-relaxed text-stone">
           Production lancée à partir de 10 vêtements précommandés et payés.
         </p>
       )}
 
       {thresholdReached && (
-        <p className="mt-2 text-[10px] uppercase tracking-widest text-foreground">
+        <p className="mt-3 text-[10px] uppercase tracking-widest text-foreground">
           Seuil de production atteint.
         </p>
       )}
@@ -181,7 +180,6 @@ export default function PreorderForm({
           </Link>
         </div>
 
-        <PaymentNotice />
         <MadeInFrance />
       </div>
     );
@@ -227,19 +225,12 @@ export default function PreorderForm({
       {!added && cartCount > 0 && (
         <Link
           href="/precommande"
-          className="mt-3 inline-block text-[10px] uppercase tracking-widest text-stone underline underline-offset-4"
+          className="mt-4 inline-block text-[10px] uppercase tracking-widest text-stone underline underline-offset-4"
         >
           Ma précommande — {cartCount} vêtement
           {cartCount > 1 ? "s" : ""}
         </Link>
       )}
-
-      <PaymentNotice />
-
-      <p className="mt-2 text-[10px] leading-relaxed text-stone">
-        Livraison France : 7,90 € pour 1 vêtement, 9,90 € pour 2 vêtements.
-        Livraison offerte dès 3 vêtements.
-      </p>
 
       <MadeInFrance />
     </div>
