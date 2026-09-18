@@ -6,7 +6,7 @@ import gsap from "gsap";
 import MadeInFrance from "@/components/MadeInFrance";
 import PaymentNotice from "@/components/PaymentNotice";
 
-const PREORDER_LIMIT = 20;
+const PREORDER_GOAL = 10;
 
 export default function Home() {
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -37,6 +37,7 @@ export default function Home() {
         rotationX: -90,
         transformPerspective: 800,
       });
+
       gsap.to(titleRef.current, {
         opacity: 1,
         rotationX: 0,
@@ -45,7 +46,11 @@ export default function Home() {
         delay: 0.1,
       });
 
-      gsap.set(buttonRef.current, { opacity: 0, y: 20 });
+      gsap.set(buttonRef.current, {
+        opacity: 0,
+        y: 20,
+      });
+
       gsap.to(buttonRef.current, {
         opacity: 1,
         y: 0,
@@ -58,18 +63,23 @@ export default function Home() {
     return () => ctx.revert();
   }, []);
 
-  const isFull = count !== null && count >= PREORDER_LIMIT;
+  const thresholdReached =
+    count !== null && count >= PREORDER_GOAL;
+
   const percent =
-    count !== null ? Math.min((count / PREORDER_LIMIT) * 100, 100) : 0;
+    count !== null
+      ? Math.min((count / PREORDER_GOAL) * 100, 100)
+      : 0;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground px-6 text-center">
-      <p className="mb-4 text-xs tracking-[0.3em] text-stone uppercase">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+      <p className="mb-4 text-xs uppercase tracking-[0.3em] text-stone">
         Streetwear
       </p>
+
       <h1
         ref={titleRef}
-        className="text-5xl sm:text-7xl font-display opacity-0"
+        className="font-display text-5xl opacity-0 sm:text-7xl"
       >
         AJVEK
       </h1>
@@ -87,13 +97,16 @@ export default function Home() {
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface">
             <div
               className="h-full rounded-full bg-foreground transition-all duration-700"
-              style={{ width: `${percent}%` }}
+              style={{
+                width: `${percent}%`,
+              }}
             />
           </div>
+
           <p className="mt-2 text-xs text-stone">
-            {isFull
-              ? "Les 20 précommandes sont complètes !"
-              : `${count}/${PREORDER_LIMIT} précommandées`}
+            {thresholdReached
+              ? `${count} précommandes payées · seuil de production atteint`
+              : `${count}/${PREORDER_GOAL} précommandes payées`}
           </p>
         </div>
       )}
