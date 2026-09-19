@@ -34,13 +34,33 @@ export default function MentionsLegalesPage() {
               <br />
               France
               <br />
+              SIREN : 130 156 805
+              <br />
               SIRET : 130 156 805 00017
+              <br />
+              RCS Nice : 130 156 805
+              <br />
+              Email :{" "}
+              <a
+                href="mailto:ajvek.contact@gmail.com"
+                className="text-white underline underline-offset-4"
+              >
+                ajvek.contact@gmail.com
+              </a>
+              <br />
+              Téléphone :{" "}
+              <a
+                href="tel:+33673059556"
+                className="text-white underline underline-offset-4"
+              >
+                +33 6 73 05 95 56
+              </a>
             </p>
 
             <p className="mt-4">
-              L’exploitation commerciale du site, la vente des produits et les
-              obligations liées à l’activité de commerce relèvent de
-              l’entreprise individuelle de Julien GORMAND.
+              L&apos;exploitation commerciale du site, la vente des produits et
+              les obligations liées à l&apos;activité de commerce relèvent de
+              l&apos;entreprise individuelle de Julien GORMAND.
             </p>
           </section>
 
@@ -57,14 +77,14 @@ export default function MentionsLegalesPage() {
             <p className="mt-4">
               La conception du site ajvek.fr, son développement, sa direction
               artistique, son identité visuelle, la création et la recherche
-              des éléments graphiques ainsi que le développement de l’univers
-              créatif de la marque sont notamment assurés par Alexis,
-              co-créateur du projet AJVEK.
+              des éléments graphiques ainsi que le développement de
+              l&apos;univers créatif de la marque sont notamment assurés par
+              Alexis, co-créateur du projet AJVEK.
             </p>
 
             <p className="mt-4">
-              Cette mention ne confère pas à Alexis la qualité d’associé de
-              l’entreprise individuelle de Julien GORMAND, laquelle demeure
+              Cette mention ne confère pas à Alexis la qualité d&apos;associé de
+              l&apos;entreprise individuelle de Julien GORMAND, laquelle demeure
               juridiquement exploitée par ce dernier.
             </p>
           </section>
@@ -85,8 +105,18 @@ export default function MentionsLegalesPage() {
             </p>
 
             <p className="mt-2">
+              Téléphone :{" "}
+              <a
+                href="tel:+33673059556"
+                className="text-white underline underline-offset-4"
+              >
+                +33 6 73 05 95 56
+              </a>
+            </p>
+
+            <p className="mt-2">
               Pour toute demande concernant une commande, une précommande ou
-              l’utilisation du site, vous pouvez également utiliser la page
+              l&apos;utilisation du site, vous pouvez également utiliser la page
               Contact.
             </p>
 
@@ -124,7 +154,7 @@ export default function MentionsLegalesPage() {
             <p>
               Les éléments présents sur ajvek.fr, notamment les textes,
               créations graphiques, photographies, visuels, logos, motifs,
-              designs, éléments d’interface, développements et contenus
+              designs, éléments d&apos;interface, développements et contenus
               spécifiques, peuvent être protégés par les règles applicables en
               matière de propriété intellectuelle.
             </p>
@@ -186,8 +216,8 @@ export default function MentionsLegalesPage() {
             </h2>
 
             <p>
-              L’entreprise relève actuellement de la franchise en base de TVA.
-              TVA non applicable, article 293 B du Code général des impôts.
+              L&apos;entreprise relève actuellement de la franchise en base de
+              TVA. TVA non applicable, article 293 B du Code général des impôts.
             </p>
           </section>
 
@@ -196,7 +226,7 @@ export default function MentionsLegalesPage() {
               9. Mise à jour
             </h2>
 
-            <p>Dernière mise à jour : 18 septembre 2026.</p>
+            <p>Dernière mise à jour : 20 septembre 2026.</p>
           </section>
         </div>
       </div>
