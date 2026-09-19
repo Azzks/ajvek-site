@@ -65,6 +65,7 @@ export default function PrecommandePage() {
 
   function saveItems(nextItems: PreorderCartItem[]) {
     setItems(nextItems);
+
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(nextItems)
@@ -147,12 +148,23 @@ export default function PrecommandePage() {
   }, [items]);
 
   const shipping = useMemo(() => {
-    if (totalQuantity === 0) return 0;
+    if (totalQuantity === 0) {
+      return 0;
+    }
 
+    /*
+     * Livraison offerte à partir de
+     * 3 vêtements, quel que soit le mode.
+     */
     if (totalQuantity >= 3) {
       return 0;
     }
 
+    /*
+     * Pour 1 ou 2 vêtements :
+     * - Point Relais : 4,90 €
+     * - Domicile : 7,90 €
+     */
     if (deliveryMethod === "relay") {
       return 4.9;
     }
@@ -205,6 +217,7 @@ export default function PrecommandePage() {
         setError(
           "Ta session a expiré. Reconnecte-toi puis réessaie."
         );
+
         setSubmitting(false);
         return;
       }
@@ -213,11 +226,14 @@ export default function PrecommandePage() {
         "/api/create-preorder-checkout",
         {
           method: "POST",
+
           headers: {
             "Content-Type":
               "application/json",
+
             Authorization: `Bearer ${session.access_token}`,
           },
+
           body: JSON.stringify({
             name: name.trim(),
             phone: phone.trim(),
@@ -234,8 +250,13 @@ export default function PrecommandePage() {
               (item) => ({
                 product_slug:
                   item.product_slug,
-                color: item.color,
-                size: item.size,
+
+                color:
+                  item.color,
+
+                size:
+                  item.size,
+
                 quantity:
                   item.quantity,
               })
@@ -302,8 +323,7 @@ export default function PrecommandePage() {
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
           Livraison en France uniquement.
           Choisis une livraison en Point
-          Relais Mondial Relay ou à
-          domicile.
+          Relais Mondial Relay ou à domicile.
         </p>
 
         {items.length === 0 ? (
@@ -321,6 +341,8 @@ export default function PrecommandePage() {
           </div>
         ) : (
           <>
+            {/* ARTICLES */}
+
             <div className="mt-10 space-y-4">
               {items.map(
                 (item, index) => {
@@ -350,22 +372,39 @@ export default function PrecommandePage() {
                           </p>
 
                           <p className="mt-1 text-xs text-stone">
-                            {
-                              item.color
-                            }{" "}
-                            — Taille{" "}
+                            {item.color} — Taille{" "}
                             {item.size}
                           </p>
 
-                          <p className="mt-2 text-sm text-foreground">
-                            {lineTotal
+                          <p className="mt-3 text-sm text-foreground">
+                            {itemPrice
                               .toFixed(2)
                               .replace(
                                 ".",
                                 ","
                               )}{" "}
-                            €
+                            € / vêtement
                           </p>
+
+                          {item.quantity >
+                            1 && (
+                            <p className="mt-1 text-xs text-stone">
+                              Total pour{" "}
+                              {
+                                item.quantity
+                              }{" "}
+                              vêtements :{" "}
+                              {lineTotal
+                                .toFixed(
+                                  2
+                                )
+                                .replace(
+                                  ".",
+                                  ","
+                                )}{" "}
+                              €
+                            </p>
+                          )}
                         </div>
 
                         <button
@@ -418,6 +457,8 @@ export default function PrecommandePage() {
               )}
             </div>
 
+            {/* LIVRAISON */}
+
             <div className="mt-8 rounded border border-surface p-5">
               <p className="text-xs uppercase tracking-widest text-stone">
                 Mode de livraison
@@ -468,13 +509,12 @@ export default function PrecommandePage() {
                   }`}
                 >
                   <p className="text-sm text-foreground">
-                    Livraison à
-                    domicile
+                    Livraison à domicile
                   </p>
 
                   <p className="mt-1 text-xs text-stone">
-                    Adresse renseignée
-                    sur Stripe
+                    Adresse renseignée sur
+                    Stripe
                   </p>
 
                   <p className="mt-3 text-sm text-foreground">
@@ -535,6 +575,8 @@ export default function PrecommandePage() {
               )}
             </div>
 
+            {/* TOTAL */}
+
             <div className="mt-8 rounded border border-surface p-5">
               <div className="flex justify-between gap-4 text-sm text-stone">
                 <span>
@@ -587,6 +629,8 @@ export default function PrecommandePage() {
                 </div>
               </div>
             </div>
+
+            {/* CONNEXION / PAIEMENT */}
 
             {!user ? (
               <div className="mt-8">
@@ -673,8 +717,8 @@ export default function PrecommandePage() {
                 </button>
 
                 <p className="mt-3 text-center text-[10px] leading-relaxed text-stone">
-                  Paiement sécurisé
-                  par Stripe.
+                  Paiement sécurisé par
+                  Stripe.
                 </p>
               </div>
             )}
