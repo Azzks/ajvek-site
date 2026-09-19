@@ -29,6 +29,18 @@ type CheckoutItem = {
   quantity: number;
 };
 
+type DeliveryMethod = "relay" | "home";
+
+type ServicePoint = {
+  id: number | string;
+  name?: string;
+  street?: string;
+  houseNumber?: string;
+  postalCode?: string;
+  city?: string;
+  carrier?: string;
+};
+
 export async function POST(request: Request) {
   try {
     const authorization = request.headers.get("authorization");
@@ -60,10 +72,14 @@ export async function POST(request: Request) {
       name,
       phone,
       items,
+      delivery_method,
+      service_point,
     }: {
       name: string;
       phone?: string;
       items: CheckoutItem[];
+      delivery_method: DeliveryMethod;
+      service_point?: ServicePoint | null;
     } = body;
 
     if (!name?.trim()) {
@@ -76,6 +92,28 @@ export async function POST(request: Request) {
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: "Ta précommande est vide." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      delivery_method !== "relay" &&
+      delivery_method !== "home"
+    ) {
+      return NextResponse.json(
+        { error: "Mode de livraison invalide." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      delivery_method === "relay" &&
+      (!service_point?.id ||
+        !service_point?.postalCode ||
+        !service_point?.city)
+    ) {
+      return NextResponse.json(
+        { error: "Choisis un Point Relais valide." },
         { status: 400 }
       );
     }
@@ -133,13 +171,42 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "La quantité maximale autorisée pour une précommande est de 20 vêtements.",
+            "La quantité maximale autorisée est de 20 vêtements.",
         },
         { status: 400 }
       );
     }
 
+    /*
+     * FRAIS DE LIVRAISON
+     *
+     * Calculés uniquement côté serveur.
+     *
+     * 1 ou 2 vêtements :
+     * - Point Relais = 4,90 €
+     * - Domicile = 7,90 €
+     *
+     * 3+ vêtements = offert
+     */
+
+    let shippingAmount = 0;
+
+    if (totalQuantity < 3) {
+      shippingAmount =
+        delivery_method === "relay" ? 490 : 790;
+    }
+
     const checkoutGroupId = randomUUID();
+
+    const servicePointAddress =
+      delivery_method === "relay" && service_point
+        ? [
+            service_point.houseNumber,
+            service_point.street,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        : null;
 
     const preorderRows = validatedItems.flatMap((item) =>
       Array.from({ length: item.quantity }, () => ({
@@ -147,12 +214,44 @@ export async function POST(request: Request) {
         name: name.trim(),
         email: user.email!,
         phone: phone?.trim() || null,
+
         product_slug: item.product_slug,
         product_name: item.product_name,
         color: item.color,
         size: item.size,
+
         paid: false,
+
         checkout_group_id: checkoutGroupId,
+
+        delivery_method,
+
+        shipping_amount: shippingAmount,
+
+        service_point_id:
+          delivery_method === "relay"
+            ? String(service_point?.id ?? "")
+            : null,
+
+        service_point_name:
+          delivery_method === "relay"
+            ? service_point?.name || null
+            : null,
+
+        service_point_address:
+          delivery_method === "relay"
+            ? servicePointAddress
+            : null,
+
+        service_point_postal_code:
+          delivery_method === "relay"
+            ? service_point?.postalCode || null
+            : null,
+
+        service_point_city:
+          delivery_method === "relay"
+            ? service_point?.city || null
+            : null,
       }))
     );
 
@@ -178,31 +277,30 @@ export async function POST(request: Request) {
       );
     }
 
-    let shippingAmount = 0;
-    let shippingName = "Livraison offerte";
-
-    if (totalQuantity === 1) {
-      shippingAmount = 790;
-      shippingName = "Livraison France";
-    } else if (totalQuantity === 2) {
-      shippingAmount = 990;
-      shippingName = "Livraison France";
-    }
-
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
       validatedItems.map((item) => ({
         price_data: {
           currency: "eur",
+
           product_data: {
             name: `${item.product_name} — ${item.color} — Taille ${item.size}`,
             description: "Précommande AJVEK",
           },
-          unit_amount: Math.round(item.priceValue * 100),
+
+          unit_amount: Math.round(
+            item.priceValue * 100
+          ),
         },
+
         quantity: item.quantity,
       }));
 
-    const session = await stripe.checkout.sessions.create({
+    const shippingLabel =
+      delivery_method === "relay"
+        ? "Mondial Relay — Point Relais"
+        : "Livraison à domicile";
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
 
       customer_email: user.email,
@@ -211,19 +309,20 @@ export async function POST(request: Request) {
 
       line_items: lineItems,
 
-      shipping_address_collection: {
-        allowed_countries: ["FR"],
-      },
-
       shipping_options: [
         {
           shipping_rate_data: {
             type: "fixed_amount",
+
             fixed_amount: {
               amount: shippingAmount,
               currency: "eur",
             },
-            display_name: shippingName,
+
+            display_name:
+              shippingAmount === 0
+                ? `${shippingLabel} — offerte`
+                : shippingLabel,
           },
         },
       ],
@@ -232,6 +331,11 @@ export async function POST(request: Request) {
         checkout_group_id: checkoutGroupId,
         user_id: user.id,
         item_count: String(totalQuantity),
+        delivery_method,
+        service_point_id:
+          delivery_method === "relay"
+            ? String(service_point?.id ?? "")
+            : "",
       },
 
       success_url:
@@ -239,7 +343,25 @@ export async function POST(request: Request) {
 
       cancel_url:
         "https://ajvek.fr/paiement/annule",
-    });
+    };
+
+    /*
+     * Pour la livraison à domicile uniquement,
+     * Stripe demande l'adresse du client.
+     *
+     * Pour Mondial Relay, le relais a déjà été choisi
+     * avant le paiement.
+     */
+    if (delivery_method === "home") {
+      sessionParams.shipping_address_collection = {
+        allowed_countries: ["FR"],
+      };
+    }
+
+    const session =
+      await stripe.checkout.sessions.create(
+        sessionParams
+      );
 
     if (!session.url) {
       return NextResponse.json(
@@ -251,17 +373,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from("preorders")
-      .update({
-        stripe_session_id: session.id,
-        checkout_url: session.url,
-      })
-      .eq("checkout_group_id", checkoutGroupId);
+    const { error: updateError } =
+      await supabaseAdmin
+        .from("preorders")
+        .update({
+          stripe_session_id: session.id,
+          checkout_url: session.url,
+        })
+        .eq(
+          "checkout_group_id",
+          checkoutGroupId
+        );
 
     if (updateError) {
       console.error(
-        "[create-preorder-checkout] Erreur sauvegarde session Stripe:",
+        "[create-preorder-checkout] Erreur sauvegarde Stripe:",
         updateError
       );
     }
@@ -269,6 +395,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       url: session.url,
       itemCount: totalQuantity,
+      shippingAmount,
+      deliveryMethod: delivery_method,
     });
   } catch (error) {
     console.error(

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { getProduct } from "@/lib/products";
+import ServicePointPicker, {
+  type SelectedServicePoint,
+} from "@/components/ServicePointPicker";
 
 const STORAGE_KEY = "ajvek-preorder-cart";
 
@@ -16,12 +19,22 @@ type PreorderCartItem = {
   quantity: number;
 };
 
+type DeliveryMethod = "relay" | "home";
+
 export default function PrecommandePage() {
   const { user, loading: authLoading } = useAuth();
 
   const [items, setItems] = useState<PreorderCartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+
+  const [deliveryMethod, setDeliveryMethod] =
+    useState<DeliveryMethod>("relay");
+
+  const [postalCode, setPostalCode] = useState("");
+  const [selectedPoint, setSelectedPoint] =
+    useState<SelectedServicePoint | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,62 +65,108 @@ export default function PrecommandePage() {
 
   function saveItems(nextItems: PreorderCartItem[]) {
     setItems(nextItems);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextItems));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(nextItems)
+    );
   }
 
   function increaseQuantity(index: number) {
-    const nextItems = [...items];
-    nextItems[index].quantity += 1;
+    const nextItems = items.map((item, i) =>
+      i === index
+        ? {
+            ...item,
+            quantity: item.quantity + 1,
+          }
+        : item
+    );
+
     saveItems(nextItems);
   }
 
   function decreaseQuantity(index: number) {
-    const nextItems = [...items];
+    const current = items[index];
 
-    if (nextItems[index].quantity <= 1) {
-      nextItems.splice(index, 1);
-    } else {
-      nextItems[index].quantity -= 1;
+    if (current.quantity <= 1) {
+      removeItem(index);
+      return;
     }
+
+    const nextItems = items.map((item, i) =>
+      i === index
+        ? {
+            ...item,
+            quantity: item.quantity - 1,
+          }
+        : item
+    );
 
     saveItems(nextItems);
   }
 
   function removeItem(index: number) {
-    const nextItems = [...items];
-    nextItems.splice(index, 1);
+    const nextItems = items.filter(
+      (_, i) => i !== index
+    );
+
     saveItems(nextItems);
+  }
+
+  function changeDeliveryMethod(
+    method: DeliveryMethod
+  ) {
+    setDeliveryMethod(method);
+    setError(null);
+
+    if (method === "home") {
+      setSelectedPoint(null);
+    }
   }
 
   const totalQuantity = useMemo(() => {
     return items.reduce(
-      (sum, item) => sum + Number(item.quantity || 0),
+      (sum, item) =>
+        sum + Number(item.quantity || 0),
       0
     );
   }, [items]);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => {
-      const product = getProduct(item.product_slug);
+      const product = getProduct(
+        item.product_slug
+      );
 
       if (!product) return sum;
 
-      return sum + product.priceValue * item.quantity;
+      return (
+        sum +
+        product.priceValue * item.quantity
+      );
     }, 0);
   }, [items]);
 
   const shipping = useMemo(() => {
     if (totalQuantity === 0) return 0;
-    if (totalQuantity === 1) return 7.9;
-    if (totalQuantity === 2) return 9.9;
-    return 0;
-  }, [totalQuantity]);
+
+    if (totalQuantity >= 3) {
+      return 0;
+    }
+
+    if (deliveryMethod === "relay") {
+      return 4.9;
+    }
+
+    return 7.9;
+  }, [totalQuantity, deliveryMethod]);
 
   const total = subtotal + shipping;
 
   async function handleCheckout() {
     if (!user) {
-      setError("Connecte-toi pour finaliser ta précommande.");
+      setError(
+        "Connecte-toi pour finaliser ta précommande."
+      );
       return;
     }
 
@@ -117,7 +176,19 @@ export default function PrecommandePage() {
     }
 
     if (items.length === 0) {
-      setError("Ta précommande est vide.");
+      setError(
+        "Ta précommande est vide."
+      );
+      return;
+    }
+
+    if (
+      deliveryMethod === "relay" &&
+      !selectedPoint
+    ) {
+      setError(
+        "Choisis ton Point Relais avant de continuer."
+      );
       return;
     }
 
@@ -127,46 +198,75 @@ export default function PrecommandePage() {
     try {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } =
+        await supabase.auth.getSession();
 
       if (!session?.access_token) {
-        setError("Ta session a expiré. Reconnecte-toi puis réessaie.");
-        setSubmitting(false);
-        return;
-      }
-
-      const response = await fetch("/api/create-preorder-checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          phone: phone.trim(),
-          items: items.map((item) => ({
-            product_slug: item.product_slug,
-            color: item.color,
-            size: item.size,
-            quantity: item.quantity,
-          })),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.url) {
         setError(
-          data.error ||
-            "Impossible de lancer le paiement. Réessaie dans un instant."
+          "Ta session a expiré. Reconnecte-toi puis réessaie."
         );
         setSubmitting(false);
         return;
       }
 
-      window.location.href = data.url;
+      const response = await fetch(
+        "/api/create-preorder-checkout",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            phone: phone.trim(),
+
+            delivery_method:
+              deliveryMethod,
+
+            service_point:
+              deliveryMethod === "relay"
+                ? selectedPoint
+                : null,
+
+            items: items.map(
+              (item) => ({
+                product_slug:
+                  item.product_slug,
+                color: item.color,
+                size: item.size,
+                quantity:
+                  item.quantity,
+              })
+            ),
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.url
+      ) {
+        setError(
+          data.error ||
+            "Impossible de lancer le paiement. Réessaie dans un instant."
+        );
+
+        setSubmitting(false);
+        return;
+      }
+
+      window.location.href =
+        data.url;
     } catch (error) {
-      console.error("[PrecommandePage] Erreur checkout :", error);
+      console.error(
+        "[PrecommandePage] Erreur checkout :",
+        error
+      );
 
       setError(
         "Impossible de lancer le paiement. Vérifie ta connexion puis réessaie."
@@ -180,7 +280,9 @@ export default function PrecommandePage() {
     return (
       <main className="min-h-screen bg-background px-6 py-16 text-foreground">
         <div className="mx-auto max-w-3xl">
-          <p className="text-sm text-stone">Chargement...</p>
+          <p className="text-sm text-stone">
+            Chargement...
+          </p>
         </div>
       </main>
     );
@@ -198,9 +300,10 @@ export default function PrecommandePage() {
         </h1>
 
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
-          Livraison en France uniquement pour le moment.
-          Les frais de port sont de 7,90 € pour 1 vêtement,
-          9,90 € pour 2 vêtements, et offerts dès 3 vêtements.
+          Livraison en France uniquement.
+          Choisis une livraison en Point
+          Relais Mondial Relay ou à
+          domicile.
         </p>
 
         {items.length === 0 ? (
@@ -219,89 +322,252 @@ export default function PrecommandePage() {
         ) : (
           <>
             <div className="mt-10 space-y-4">
-              {items.map((item, index) => {
-                const product = getProduct(item.product_slug);
+              {items.map(
+                (item, index) => {
+                  const product =
+                    getProduct(
+                      item.product_slug
+                    );
 
-                const itemPrice = product?.priceValue ?? 0;
-                const lineTotal = itemPrice * item.quantity;
+                  const itemPrice =
+                    product?.priceValue ??
+                    0;
 
-                return (
-                  <div
-                    key={`${item.product_slug}-${item.color}-${item.size}`}
-                    className="rounded border border-surface p-5"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-display text-xl">
-                          {product?.name ?? item.product_name}
-                        </p>
+                  const lineTotal =
+                    itemPrice *
+                    item.quantity;
 
-                        <p className="mt-1 text-xs text-stone">
-                          {item.color} — Taille {item.size}
-                        </p>
+                  return (
+                    <div
+                      key={`${item.product_slug}-${item.color}-${item.size}`}
+                      className="rounded border border-surface p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-display text-xl">
+                            {product?.name ??
+                              item.product_name}
+                          </p>
 
-                        <p className="mt-2 text-sm text-foreground">
-                          {lineTotal.toFixed(2).replace(".", ",")} €
-                        </p>
+                          <p className="mt-1 text-xs text-stone">
+                            {
+                              item.color
+                            }{" "}
+                            — Taille{" "}
+                            {item.size}
+                          </p>
+
+                          <p className="mt-2 text-sm text-foreground">
+                            {lineTotal
+                              .toFixed(2)
+                              .replace(
+                                ".",
+                                ","
+                              )}{" "}
+                            €
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeItem(
+                              index
+                            )
+                          }
+                          className="text-[10px] uppercase tracking-widest text-stone underline underline-offset-4"
+                        >
+                          Retirer
+                        </button>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => removeItem(index)}
-                        className="text-[10px] uppercase tracking-widest text-stone underline underline-offset-4"
-                      >
-                        Retirer
-                      </button>
+                      <div className="mt-5 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            decreaseQuantity(
+                              index
+                            )
+                          }
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-stone/40 text-sm"
+                        >
+                          −
+                        </button>
+
+                        <span className="min-w-8 text-center text-sm">
+                          {
+                            item.quantity
+                          }
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            increaseQuantity(
+                              index
+                            )
+                          }
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-stone/40 text-sm"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
+                  );
+                }
+              )}
+            </div>
 
-                    <div className="mt-5 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => decreaseQuantity(index)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-stone/40 text-sm"
-                      >
-                        −
-                      </button>
+            <div className="mt-8 rounded border border-surface p-5">
+              <p className="text-xs uppercase tracking-widest text-stone">
+                Mode de livraison
+              </p>
 
-                      <span className="min-w-8 text-center text-sm">
-                        {item.quantity}
-                      </span>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    changeDeliveryMethod(
+                      "relay"
+                    )
+                  }
+                  className={`rounded border p-4 text-left transition ${
+                    deliveryMethod ===
+                    "relay"
+                      ? "border-foreground"
+                      : "border-surface"
+                  }`}
+                >
+                  <p className="text-sm text-foreground">
+                    Point Relais
+                  </p>
 
-                      <button
-                        type="button"
-                        onClick={() => increaseQuantity(index)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-stone/40 text-sm"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  <p className="mt-1 text-xs text-stone">
+                    Mondial Relay
+                  </p>
+
+                  <p className="mt-3 text-sm text-foreground">
+                    {totalQuantity >= 3
+                      ? "Offerte"
+                      : "4,90 €"}
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    changeDeliveryMethod(
+                      "home"
+                    )
+                  }
+                  className={`rounded border p-4 text-left transition ${
+                    deliveryMethod ===
+                    "home"
+                      ? "border-foreground"
+                      : "border-surface"
+                  }`}
+                >
+                  <p className="text-sm text-foreground">
+                    Livraison à
+                    domicile
+                  </p>
+
+                  <p className="mt-1 text-xs text-stone">
+                    Adresse renseignée
+                    sur Stripe
+                  </p>
+
+                  <p className="mt-3 text-sm text-foreground">
+                    {totalQuantity >= 3
+                      ? "Offerte"
+                      : "7,90 €"}
+                  </p>
+                </button>
+              </div>
+
+              {deliveryMethod ===
+                "relay" && (
+                <div className="mt-5">
+                  <label className="text-[10px] uppercase tracking-widest text-stone">
+                    Ton code postal
+                  </label>
+
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    value={postalCode}
+                    onChange={(e) => {
+                      setPostalCode(
+                        e.target.value.replace(
+                          /\D/g,
+                          ""
+                        )
+                      );
+
+                      setSelectedPoint(
+                        null
+                      );
+                    }}
+                    placeholder="33000"
+                    className="mt-2 w-full rounded border border-stone/40 bg-transparent px-3 py-3 text-sm outline-none focus:border-foreground"
+                  />
+
+                  <ServicePointPicker
+                    postalCode={
+                      postalCode
+                    }
+                    selectedPoint={
+                      selectedPoint
+                    }
+                    onSelect={
+                      setSelectedPoint
+                    }
+                  />
+                </div>
+              )}
+
+              {totalQuantity >= 3 && (
+                <p className="mt-5 text-[10px] uppercase tracking-widest text-foreground">
+                  Livraison offerte dès 3
+                  vêtements
+                </p>
+              )}
             </div>
 
             <div className="mt-8 rounded border border-surface p-5">
               <div className="flex justify-between gap-4 text-sm text-stone">
-                <span>Sous-total</span>
                 <span>
-                  {subtotal.toFixed(2).replace(".", ",")} €
+                  Sous-total
+                </span>
+
+                <span>
+                  {subtotal
+                    .toFixed(2)
+                    .replace(
+                      ".",
+                      ","
+                    )}{" "}
+                  €
                 </span>
               </div>
 
               <div className="mt-3 flex justify-between gap-4 text-sm text-stone">
-                <span>Livraison France</span>
+                <span>
+                  Livraison
+                </span>
+
                 <span>
                   {shipping === 0
                     ? "Offerte"
-                    : `${shipping.toFixed(2).replace(".", ",")} €`}
+                    : `${shipping
+                        .toFixed(2)
+                        .replace(
+                          ".",
+                          ","
+                        )} €`}
                 </span>
               </div>
-
-              {totalQuantity >= 3 && (
-                <p className="mt-2 text-[10px] uppercase tracking-widest text-foreground">
-                  Livraison offerte dès 3 vêtements
-                </p>
-              )}
 
               <div className="mt-5 border-t border-surface pt-5">
                 <div className="flex items-center justify-between gap-4">
@@ -310,7 +576,13 @@ export default function PrecommandePage() {
                   </span>
 
                   <span className="font-display text-2xl">
-                    {total.toFixed(2).replace(".", ",")} €
+                    {total
+                      .toFixed(2)
+                      .replace(
+                        ".",
+                        ","
+                      )}{" "}
+                    €
                   </span>
                 </div>
               </div>
@@ -319,7 +591,9 @@ export default function PrecommandePage() {
             {!user ? (
               <div className="mt-8">
                 <p className="mb-4 text-sm text-stone">
-                  Connecte-toi pour finaliser ta précommande.
+                  Connecte-toi pour
+                  finaliser ta
+                  précommande.
                 </p>
 
                 <div className="flex flex-wrap gap-3">
@@ -347,20 +621,29 @@ export default function PrecommandePage() {
                 <input
                   required
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) =>
+                    setName(
+                      e.target.value
+                    )
+                  }
                   placeholder="Nom"
                   className="w-full rounded border border-stone/40 bg-transparent px-3 py-3 text-sm outline-none focus:border-foreground"
                 />
 
                 <input
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) =>
+                    setPhone(
+                      e.target.value
+                    )
+                  }
                   placeholder="Téléphone (optionnel)"
                   className="mt-3 w-full rounded border border-stone/40 bg-transparent px-3 py-3 text-sm outline-none focus:border-foreground"
                 />
 
                 <p className="mt-3 text-[10px] text-stone">
-                  Paiement lié au compte {user.email}
+                  Paiement lié au compte{" "}
+                  {user.email}
                 </p>
 
                 {error && (
@@ -371,20 +654,27 @@ export default function PrecommandePage() {
 
                 <button
                   type="button"
-                  onClick={handleCheckout}
-                  disabled={submitting}
+                  onClick={
+                    handleCheckout
+                  }
+                  disabled={
+                    submitting
+                  }
                   className="mt-5 w-full rounded-full bg-foreground px-6 py-4 text-xs uppercase tracking-widest text-background transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting
                     ? "Redirection vers Stripe..."
                     : `Payer ${total
                         .toFixed(2)
-                        .replace(".", ",")} €`}
+                        .replace(
+                          ".",
+                          ","
+                        )} €`}
                 </button>
 
                 <p className="mt-3 text-center text-[10px] leading-relaxed text-stone">
-                  L&apos;adresse de livraison française sera demandée
-                  directement sur la page de paiement sécurisée Stripe.
+                  Paiement sécurisé
+                  par Stripe.
                 </p>
               </div>
             )}

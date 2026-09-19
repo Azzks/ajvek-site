@@ -123,6 +123,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const first = unpaidPreorders[0];
+
     const summary = unpaidPreorders
       .map(
         (preorder) =>
@@ -130,16 +132,33 @@ export async function POST(request: Request) {
       )
       .join("\n");
 
-    const customerName =
-      unpaidPreorders[0]?.name || "client";
-
-    const customerEmail =
-      unpaidPreorders[0]?.email;
-
-    const customerPhone =
-      unpaidPreorders[0]?.phone || "-";
-
+    const customerName = first?.name || "client";
+    const customerEmail = first?.email;
+    const customerPhone = first?.phone || "-";
     const itemCount = unpaidPreorders.length;
+
+    const deliveryMethod =
+      first?.delivery_method === "relay"
+        ? "Point Relais Mondial Relay"
+        : "Livraison à domicile";
+
+    const shippingAmount =
+      typeof first?.shipping_amount === "number"
+        ? `${(first.shipping_amount / 100)
+            .toFixed(2)
+            .replace(".", ",")} €`
+        : "-";
+
+    let deliveryDetails = deliveryMethod;
+
+    if (first?.delivery_method === "relay") {
+      deliveryDetails +=
+        `\nPoint Relais : ${first.service_point_name || "-"}\n` +
+        `Adresse : ${first.service_point_address || "-"}\n` +
+        `Code postal : ${first.service_point_postal_code || "-"}\n` +
+        `Ville : ${first.service_point_city || "-"}\n` +
+        `ID Point Relais : ${first.service_point_id || "-"}`;
+    }
 
     const { error: ownerEmailError } =
       await resend.emails.send({
@@ -154,7 +173,9 @@ export async function POST(request: Request) {
           `Email : ${customerEmail}\n` +
           `Téléphone : ${customerPhone}\n\n` +
           `Articles :\n${summary}\n\n` +
-          `Nombre de vêtements : ${itemCount}\n` +
+          `Nombre de vêtements : ${itemCount}\n\n` +
+          `Livraison :\n${deliveryDetails}\n` +
+          `Frais de livraison : ${shippingAmount}\n\n` +
           `Session Stripe : ${session.id}\n`,
       });
 
@@ -175,7 +196,9 @@ export async function POST(request: Request) {
             `Bonjour ${customerName},\n\n` +
             `Ton paiement a bien été reçu et ta précommande AJVEK est confirmée.\n\n` +
             `Articles :\n${summary}\n\n` +
-            `Nombre de vêtements : ${itemCount}\n\n` +
+            `Nombre de vêtements : ${itemCount}\n` +
+            `Mode de livraison : ${deliveryMethod}\n` +
+            `Frais de livraison : ${shippingAmount}\n\n` +
             `La production sera lancée dès que le seuil de 10 vêtements précommandés et payés sera atteint.\n\n` +
             `Merci pour ta confiance,\n` +
             `L'équipe AJVEK`,
