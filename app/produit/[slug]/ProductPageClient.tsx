@@ -40,14 +40,10 @@ export default function ProductPageClient({
               {product.name}
             </h1>
 
-            <p className="mt-2 text-sm text-stone">
-              {product.price}
-            </p>
+            <p className="mt-2 text-sm text-stone">{product.price}</p>
           </div>
 
-          <p className="text-sm text-stone">
-            {product.description}
-          </p>
+          <p className="text-sm text-stone">{product.description}</p>
 
           <div>
             <p className="mb-2 text-xs uppercase tracking-widest text-stone">
@@ -97,8 +93,16 @@ export default function ProductPageClient({
 
           <div className="flex flex-col gap-1 text-[11px] text-stone">
             <p>✓ Paiement sécurisé par carte bancaire avec Stripe</p>
-            <p>✓ Production lancée à partir de 10 vêtements précommandés et payés</p>
-            <p>✓ Livraison France : 7,90 € pour 1 vêtement, 9,90 € pour 2, offerte dès 3</p>
+
+            <p>
+              ✓ Production lancée à partir de 10 vêtements précommandés et payés
+            </p>
+
+            <p>
+              ✓ Livraison : Mondial Relay 4,90 € ou domicile 7,90 € · offerte dès
+              3 vêtements
+            </p>
+
             <p>✓ Retours possibles sous 14 jours après réception</p>
           </div>
 
