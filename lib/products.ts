@@ -23,7 +23,7 @@ export const PRODUCTS: Product[] = [
     name: "AJVEK · Roses",
     price: "39,90 €",
     priceValue: 39.90,
-    preorderGoal: 20,
+    preorderGoal: 10,
     description:
       "La rose : une beauté qui se mérite, qui pique avant de séduire. Un tee-shirt en coton épais 180g/m², logo AJVEK brodé sur le devant, motif Roses imprimé en DTF dans le dos. Pièce en édition limitée, fabriquée en petite série.",
     sizes: ["S", "M", "L", "XL"],
@@ -49,7 +49,7 @@ export const PRODUCTS: Product[] = [
     name: "AJVEK · Sakura",
     price: "39,90 €",
     priceValue: 39.90,
-    preorderGoal: 20,
+    preorderGoal: 10,
     description:
       "Le cerisier : une grâce qui ne dure qu'un instant. Un tee-shirt en coton épais 180g/m², logo AJVEK brodé sur le devant, motif Sakura imprimé en DTF dans le dos. Pièce en édition limitée, fabriquée en petite série.",
     sizes: ["S", "M", "L", "XL"],
