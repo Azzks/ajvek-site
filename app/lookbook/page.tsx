@@ -1,73 +1,186 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Lookbook — AJVEK",
 };
 
 export default function LookbookPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
-      <style>{`
-        @keyframes camFlash {
-          0%, 70%, 100% { opacity: 0; transform: scale(0.6); }
-          78% { opacity: 1; transform: scale(1.15); }
-          86% { opacity: 0; transform: scale(0.9); }
-        }
-        @keyframes camBob {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2px); }
-        }
-      `}</style>
+    <main className="min-h-screen bg-background text-foreground">
+      {/* HERO */}
+      <section className="px-6 pb-16 pt-24 text-center md:pb-24 md:pt-32">
+        <p className="text-[10px] uppercase tracking-[0.45em] text-stone">
+          AJVEK
+        </p>
 
-      <p className="mb-4 text-xs uppercase tracking-[0.3em] text-stone">
-        AJVEK
-      </p>
-      <h1 className="text-3xl font-display uppercase tracking-[0.2em] sm:text-4xl">
-        Lookbook
-      </h1>
-      <p className="mt-6 max-w-md text-sm leading-relaxed text-stone">
-        Chaque pièce mérite d&apos;être vue portée, dans la lumière qu&apos;elle
-        mérite. Le lookbook AJVEK est en préparation.
-      </p>
+        <h1 className="mt-5 font-display text-5xl leading-none md:text-7xl">
+          Lookbook
+        </h1>
 
-      <svg
-        viewBox="0 0 200 90"
-        className="mt-10 h-24 w-52 text-foreground"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <g style={{ animation: "camBob 2.4s ease-in-out infinite" }}>
-          <circle cx="26" cy="24" r="7" />
-          <path d="M14,55 L38,55 L35,32 L17,32 Z" />
-          <path d="M23,34 L45,22" />
-          <rect x="42" y="14" width="20" height="14" rx="2" />
-          <circle cx="52" cy="21" r="5" />
-        </g>
+        <p className="mx-auto mt-7 max-w-xl text-sm leading-7 text-stone md:text-base">
+          Les pièces prennent une autre dimension lorsqu&apos;elles sont portées.
+          En attendant les premières images réelles, découvrez l&apos;univers
+          visuel qui guidera le premier lookbook AJVEK.
+        </p>
+      </section>
 
-        <g stroke="none" fill="currentColor">
-          <circle
-            cx="52"
-            cy="21"
-            r="9"
-            style={{ animation: "camFlash 2.4s ease-in-out infinite" }}
-            opacity="0"
-          />
-        </g>
+      {/* EDITORIAL BLOCK */}
+      <section className="px-5 pb-20 md:px-8 md:pb-28">
+        <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-12">
+          {/* CARD 1 */}
+          <div className="relative min-h-[58svh] overflow-hidden bg-[#111110] md:col-span-7 md:min-h-[72vh]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_35%),linear-gradient(to_bottom,transparent,rgba(0,0,0,0.5))]" />
 
-        <path d="M130,18 L142,10 L154,10 L166,18 L180,26 L172,36 L166,32 L166,68 L134,68 L134,32 L128,36 L120,26 Z" />
-      </svg>
+            <div className="absolute bottom-0 left-0 right-0 p-7 md:p-10">
+              <p className="text-[10px] uppercase tracking-[0.4em] text-stone-500">
+                Direction 01
+              </p>
 
-      <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-stone">
-        En préparation
-      </p>
+              <h2 className="mt-4 max-w-xl font-display text-3xl leading-tight md:text-5xl">
+                Ombres.
+                <br />
+                Béton.
+                <br />
+                Silhouettes.
+              </h2>
 
-      <a
-        href="/catalogue"
-        className="mt-10 inline-block rounded-full border border-foreground px-6 py-2 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
-      >
-        Voir la collection
-      </a>
+              <p className="mt-5 max-w-md text-sm leading-6 text-stone-400">
+                Une lumière basse, des textures brutes et des coupes larges.
+                L&apos;univers AJVEK doit rester sombre, simple et centré sur la pièce.
+              </p>
+            </div>
+          </div>
+
+          {/* CARD 2 */}
+          <div className="relative min-h-[42svh] overflow-hidden border border-surface bg-surface/30 md:col-span-5 md:min-h-[72vh]">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative h-64 w-44 md:h-80 md:w-56">
+                <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/10" />
+                <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/10" />
+
+                <div className="absolute inset-8 border border-white/10" />
+
+                <div className="absolute left-1/2 top-1/2 h-28 w-20 -translate-x-1/2 -translate-y-1/2 rotate-6 border border-white/20" />
+              </div>
+            </div>
+
+            <div className="absolute bottom-0 left-0 right-0 p-7 md:p-10">
+              <p className="text-[10px] uppercase tracking-[0.4em] text-stone-500">
+                Direction 02
+              </p>
+
+              <p className="mt-3 text-sm leading-6 text-stone-400">
+                Des cadrages simples et beaucoup d&apos;espace autour du vêtement.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SHOOTING PLAN */}
+      <section className="border-y border-surface px-6 py-20 md:py-28">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-12 md:grid-cols-[0.8fr_1.2fr] md:gap-20">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
+                À venir
+              </p>
+
+              <h2 className="mt-5 font-display text-3xl leading-tight md:text-5xl">
+                Le premier
+                <br />
+                shooting AJVEK.
+              </h2>
+            </div>
+
+            <div className="grid gap-8 sm:grid-cols-2">
+              <div className="border-t border-surface pt-5">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                  01
+                </p>
+
+                <p className="mt-3 text-lg">
+                  Fit
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-stone">
+                  Montrer la coupe oversize, les épaules, la longueur et le tombé
+                  réel du tee-shirt.
+                </p>
+              </div>
+
+              <div className="border-t border-surface pt-5">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                  02
+                </p>
+
+                <p className="mt-3 text-lg">
+                  Dos
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-stone">
+                  Mettre le motif au centre de l&apos;image et laisser respirer le
+                  cadre autour.
+                </p>
+              </div>
+
+              <div className="border-t border-surface pt-5">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                  03
+                </p>
+
+                <p className="mt-3 text-lg">
+                  Détails
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-stone">
+                  Broderie AJK, impression DTF, matière, col et finitions.
+                </p>
+              </div>
+
+              <div className="border-t border-surface pt-5">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                  04
+                </p>
+
+                <p className="mt-3 text-lg">
+                  Mouvement
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-stone">
+                  Marche, rotation du modèle et plans plus naturels pour donner
+                  de la vie à la pièce.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PLACEHOLDER PREMIUM */}
+      <section className="px-6 py-28 text-center md:py-36">
+        <p className="text-[10px] uppercase tracking-[0.45em] text-stone">
+          Bientôt
+        </p>
+
+        <h2 className="mx-auto mt-5 max-w-3xl font-display text-4xl leading-tight md:text-6xl">
+          Les premières pièces
+          <br />
+          devant l&apos;objectif.
+        </h2>
+
+        <p className="mx-auto mt-6 max-w-lg text-sm leading-7 text-stone">
+          Cette page évoluera dès la réception des premiers tee-shirts avec les
+          photos et vidéos originales du premier shooting AJVEK.
+        </p>
+
+        <Link
+          href="/catalogue"
+          className="mt-10 inline-block rounded-full bg-foreground px-8 py-3 text-sm uppercase tracking-widest text-background transition hover:opacity-80"
+        >
+          Voir la collection
+        </Link>
+      </section>
     </main>
   );
 }
