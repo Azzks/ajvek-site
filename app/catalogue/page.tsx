@@ -15,8 +15,8 @@ export default function CataloguePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      {/* HEADER */}
-      <section className="px-6 pb-10 pt-20 text-center md:pb-16 md:pt-28">
+      {/* INTRO */}
+      <section className="px-6 pb-9 pt-16 text-center md:pb-16 md:pt-28">
         <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
           AJVEK
         </p>
@@ -26,16 +26,16 @@ export default function CataloguePage() {
         </h1>
 
         <p className="mx-auto mt-5 max-w-lg text-sm leading-6 text-stone md:text-base">
-          Des pièces pensées autour du dessin, du végétal et d&apos;une identité
-          graphique propre à AJVEK.
+          Des pièces pensées autour du dessin, du végétal et d&apos;une
+          identité graphique propre à AJVEK.
         </p>
 
-        <div className="mx-auto mt-8 h-px w-16 bg-stone/30" />
+        <div className="mx-auto mt-7 h-px w-16 bg-stone/30" />
       </section>
 
       {/* PRODUITS */}
-      <section className="px-4 pb-24 md:px-8 md:pb-32">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="px-4 pb-18 md:px-8 md:pb-32">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-x-8 gap-y-11 sm:grid-cols-2 md:gap-y-14 lg:grid-cols-4">
           {tiles.map((tile) => (
             <Link
               key={tile.key}
@@ -43,25 +43,22 @@ export default function CataloguePage() {
               className="group block"
             >
               <article>
-                {/* IMAGE */}
-                <div className="relative aspect-[4/5] overflow-hidden bg-[#111110]">
+                <div className="relative aspect-[4/4.65] overflow-hidden bg-[#151514] sm:aspect-[4/5]">
                   <img
                     src={tile.image}
                     alt={`${tile.name} ${tile.color}`}
                     className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.025]"
                   />
 
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-70" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
 
-                  {/* BADGE */}
-                  <div className="absolute left-4 top-4">
-                    <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[9px] uppercase tracking-[0.25em] text-white/70 backdrop-blur-sm">
+                  <div className="absolute left-3 top-3 md:left-4 md:top-4">
+                    <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[9px] uppercase tracking-[0.25em] text-white/70 backdrop-blur-sm">
                       Précommande
                     </span>
                   </div>
 
-                  {/* CTA HOVER */}
-                  <div className="absolute bottom-4 left-4 right-4 translate-y-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <div className="absolute bottom-4 left-4 right-4 hidden translate-y-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 md:block">
                     <div className="flex items-center justify-between border-t border-white/15 pt-3 text-[10px] uppercase tracking-[0.25em] text-white">
                       <span>Découvrir</span>
                       <span>→</span>
@@ -69,7 +66,6 @@ export default function CataloguePage() {
                   </div>
                 </div>
 
-                {/* INFOS */}
                 <div className="mt-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -103,8 +99,8 @@ export default function CataloguePage() {
         </div>
       </section>
 
-      {/* FOOTER CTA */}
-      <section className="border-t border-surface px-6 py-20 text-center">
+      {/* OUTRO */}
+      <section className="border-t border-surface px-6 py-16 text-center md:py-20">
         <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
           AJVEK
         </p>
