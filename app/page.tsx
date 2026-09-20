@@ -5,6 +5,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import MadeInFrance from "@/components/MadeInFrance";
 import PaymentNotice from "@/components/PaymentNotice";
+import DesignProcessStory from "@/components/DesignProcessStory";
 
 const PREORDER_GOAL = 10;
 
@@ -26,8 +27,16 @@ export default function Home() {
     ).matches;
 
     if (prefersReducedMotion) {
-      gsap.set(titleRef.current, { opacity: 1, rotationX: 0 });
-      gsap.set(buttonRef.current, { opacity: 1, y: 0 });
+      gsap.set(titleRef.current, {
+        opacity: 1,
+        rotationX: 0,
+      });
+
+      gsap.set(buttonRef.current, {
+        opacity: 1,
+        y: 0,
+      });
+
       return;
     }
 
@@ -72,47 +81,102 @@ export default function Home() {
       : 0;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
-      <p className="mb-4 text-xs uppercase tracking-[0.3em] text-stone">
-        Streetwear
-      </p>
+    <main className="bg-background text-foreground">
+      {/* HERO */}
+      <section className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <p className="mb-4 text-xs uppercase tracking-[0.3em] text-stone">
+          Streetwear
+        </p>
 
-      <h1
-        ref={titleRef}
-        className="font-display text-5xl opacity-0 sm:text-7xl"
-      >
-        AJVEK
-      </h1>
+        <h1
+          ref={titleRef}
+          className="font-display text-5xl opacity-0 sm:text-7xl"
+        >
+          AJVEK
+        </h1>
 
-      <Link
-        ref={buttonRef}
-        href="/catalogue"
-        className="mt-10 inline-block rounded-full bg-foreground px-8 py-3 text-sm uppercase tracking-widest text-background opacity-0 transition hover:opacity-80"
-      >
-        Découvrir la collection
-      </Link>
+        <p className="mt-6 max-w-md text-sm leading-6 text-stone">
+          Des pièces pensées autour du dessin, du végétal et d&apos;une
+          identité graphique propre à AJVEK.
+        </p>
 
-      {count !== null && (
-        <div className="mt-8 w-full max-w-xs">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface">
-            <div
-              className="h-full rounded-full bg-foreground transition-all duration-700"
-              style={{
-                width: `${percent}%`,
-              }}
-            />
+        <Link
+          ref={buttonRef}
+          href="/catalogue"
+          className="mt-10 inline-block rounded-full bg-foreground px-8 py-3 text-sm uppercase tracking-widest text-background opacity-0 transition hover:opacity-80"
+        >
+          Découvrir la collection
+        </Link>
+
+        {count !== null && (
+          <div className="mt-10 w-full max-w-xs">
+            <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-stone">
+              <span>Précommandes</span>
+              <span>
+                {count}/{PREORDER_GOAL}
+              </span>
+            </div>
+
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface">
+              <div
+                className="h-full rounded-full bg-foreground transition-all duration-700"
+                style={{
+                  width: `${percent}%`,
+                }}
+              />
+            </div>
+
+            <p className="mt-3 text-xs leading-5 text-stone">
+              {thresholdReached
+                ? `${count} précommandes payées · seuil de production atteint`
+                : `${PREORDER_GOAL - count} vêtement${
+                    PREORDER_GOAL - count > 1 ? "s" : ""
+                  } avant le lancement de la production`}
+            </p>
           </div>
+        )}
 
-          <p className="mt-2 text-xs text-stone">
-            {thresholdReached
-              ? `${count} précommandes payées · seuil de production atteint`
-              : `${count}/${PREORDER_GOAL} précommandes payées`}
-          </p>
+        <div className="mt-8">
+          <PaymentNotice />
         </div>
-      )}
 
-      <PaymentNotice />
-      <MadeInFrance />
+        <div className="mt-6">
+          <MadeInFrance />
+        </div>
+
+        <div className="mt-16 text-[10px] uppercase tracking-[0.35em] text-stone/60">
+          Scroll
+        </div>
+      </section>
+
+      {/* PROCESSUS CRÉATIF */}
+      <DesignProcessStory />
+
+      {/* CTA FINAL */}
+      <section className="flex min-h-[70svh] items-center justify-center px-6 py-24 text-center">
+        <div className="max-w-xl">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
+            Collection actuelle
+          </p>
+
+          <h2 className="mt-5 font-display text-4xl leading-tight sm:text-5xl">
+            Le dessin devient
+            <br />
+            une pièce AJVEK.
+          </h2>
+
+          <p className="mx-auto mt-6 max-w-md text-sm leading-6 text-stone">
+            Découvrez les pièces actuellement disponibles en précommande.
+          </p>
+
+          <Link
+            href="/catalogue"
+            className="mt-10 inline-block rounded-full bg-foreground px-8 py-3 text-sm uppercase tracking-widest text-background transition hover:opacity-80"
+          >
+            Voir la collection
+          </Link>
+        </div>
+      </section>
     </main>
   );
 }
