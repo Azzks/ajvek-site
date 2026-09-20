@@ -32,6 +32,7 @@ export default function PrecommandePage() {
     useState<DeliveryMethod>("relay");
 
   const [postalCode, setPostalCode] = useState("");
+
   const [selectedPoint, setSelectedPoint] =
     useState<SelectedServicePoint | null>(null);
 
@@ -65,7 +66,11 @@ export default function PrecommandePage() {
 
   function saveItems(nextItems: PreorderCartItem[]) {
     setItems(nextItems);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextItems));
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(nextItems)
+    );
   }
 
   function increaseQuantity(index: number) {
@@ -103,6 +108,7 @@ export default function PrecommandePage() {
 
   function removeItem(index: number) {
     const nextItems = items.filter((_, i) => i !== index);
+
     saveItems(nextItems);
   }
 
@@ -163,7 +169,9 @@ export default function PrecommandePage() {
     }
 
     if (deliveryMethod === "relay" && !selectedPoint) {
-      setError("Choisis ton Point Relais avant de continuer.");
+      setError(
+        "Choisis ton Point Relais avant de continuer."
+      );
       return;
     }
 
@@ -261,9 +269,9 @@ export default function PrecommandePage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       {/* HERO */}
-      <section className="border-b border-surface px-6 pb-10 pt-16 md:px-8 md:pb-14 md:pt-20">
+      <section className="border-b border-surface px-6 pb-8 pt-12 md:px-8 md:pb-14 md:pt-20">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+          <div className="grid gap-7 md:grid-cols-[1fr_auto] md:items-end">
             <div>
               <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
                 AJVEK — Précommande
@@ -273,7 +281,7 @@ export default function PrecommandePage() {
                 Ma précommande
               </h1>
 
-              <p className="mt-5 max-w-xl text-sm leading-6 text-stone md:text-base">
+              <p className="mt-4 max-w-xl text-sm leading-6 text-stone md:mt-5 md:text-base">
                 Vérifie tes pièces, choisis ton mode de livraison puis
                 finalise le paiement de ta précommande.
               </p>
@@ -308,9 +316,9 @@ export default function PrecommandePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-10 md:px-8 md:py-14">
+      <section className="mx-auto max-w-7xl px-5 py-9 md:px-8 md:py-14">
         {items.length === 0 ? (
-          <div className="mx-auto max-w-2xl border border-surface px-6 py-12 text-center md:px-10 md:py-16">
+          <div className="mx-auto max-w-2xl border border-surface px-6 py-10 text-center md:px-10 md:py-16">
             <p className="text-[10px] uppercase tracking-[0.35em] text-stone">
               Ta sélection
             </p>
@@ -329,13 +337,14 @@ export default function PrecommandePage() {
               className="group mt-8 inline-flex items-center gap-4 rounded-full bg-foreground px-6 py-3.5 text-[10px] uppercase tracking-[0.25em] text-background"
             >
               <span>Voir la collection</span>
+
               <span className="transition-transform group-hover:translate-x-1">
                 →
               </span>
             </Link>
           </div>
         ) : (
-          <div className="grid gap-12 lg:grid-cols-[1fr_390px] lg:gap-16">
+          <div className="grid gap-11 lg:grid-cols-[1fr_390px] lg:gap-16">
             {/* GAUCHE */}
             <div>
               {/* ARTICLES */}
@@ -357,35 +366,55 @@ export default function PrecommandePage() {
                   </p>
                 </div>
 
-                <div className="mt-7 border-t border-surface">
+                <div className="mt-6 border-t border-surface">
                   {items.map((item, index) => {
-                    const product = getProduct(
-                      item.product_slug
-                    );
+                    const product = getProduct(item.product_slug);
 
-                    const itemPrice =
-                      product?.priceValue ?? 0;
+                    const itemPrice = product?.priceValue ?? 0;
 
                     const lineTotal =
                       itemPrice * item.quantity;
 
+                    const image = `/catalogue/${item.product_slug}-${item.color.toLowerCase()}.png`;
+
                     return (
                       <article
                         key={`${item.product_slug}-${item.color}-${item.size}`}
-                        className="border-b border-surface py-6"
+                        className="border-b border-surface py-5"
                       >
-                        <div className="grid gap-5 sm:grid-cols-[1fr_auto]">
+                        <div className="grid grid-cols-[92px_1fr] gap-5">
+                          {/* MINIATURE */}
+                          <div className="relative aspect-[4/5] overflow-hidden bg-[#151514]">
+                            <img
+                              src={image}
+                              alt={`${product?.name ?? item.product_name} ${item.color}`}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+
+                          {/* INFOS */}
                           <div>
-                            <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                              AJVEK
-                            </p>
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                                  AJVEK
+                                </p>
 
-                            <h3 className="mt-2 font-display text-2xl">
-                              {product?.name ??
-                                item.product_name}
-                            </h3>
+                                <h3 className="mt-2 font-display text-2xl leading-none">
+                                  {product?.name ?? item.product_name}
+                                </h3>
+                              </div>
 
-                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-stone">
+                              <button
+                                type="button"
+                                onClick={() => removeItem(index)}
+                                className="text-[9px] uppercase tracking-[0.25em] text-stone underline underline-offset-4"
+                              >
+                                Retirer
+                              </button>
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-stone">
                               <span>{item.color}</span>
                               <span>Taille {item.size}</span>
                               <span>
@@ -395,60 +424,42 @@ export default function PrecommandePage() {
                                 € / pièce
                               </span>
                             </div>
+
+                            <div className="mt-5 flex items-center justify-between gap-4">
+                              <div className="inline-flex items-center border border-surface">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    decreaseQuantity(index)
+                                  }
+                                  className="flex h-9 w-9 items-center justify-center text-sm text-stone hover:text-foreground"
+                                >
+                                  −
+                                </button>
+
+                                <span className="flex h-9 min-w-9 items-center justify-center border-x border-surface text-sm">
+                                  {item.quantity}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    increaseQuantity(index)
+                                  }
+                                  className="flex h-9 w-9 items-center justify-center text-sm text-stone hover:text-foreground"
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              <p className="font-display text-lg">
+                                {lineTotal
+                                  .toFixed(2)
+                                  .replace(".", ",")}{" "}
+                                €
+                              </p>
+                            </div>
                           </div>
-
-                          <div className="flex items-start justify-between gap-8 sm:flex-col sm:items-end">
-                            <p className="font-display text-xl">
-                              {lineTotal
-                                .toFixed(2)
-                                .replace(".", ",")}{" "}
-                              €
-                            </p>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removeItem(index)
-                              }
-                              className="text-[9px] uppercase tracking-[0.25em] text-stone underline underline-offset-4"
-                            >
-                              Retirer
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="mt-5 flex items-center justify-between">
-                          <div className="inline-flex items-center border border-surface">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                decreaseQuantity(index)
-                              }
-                              className="flex h-10 w-10 items-center justify-center text-sm text-stone hover:text-foreground"
-                            >
-                              −
-                            </button>
-
-                            <span className="flex h-10 min-w-10 items-center justify-center border-x border-surface text-sm">
-                              {item.quantity}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                increaseQuantity(index)
-                              }
-                              className="flex h-10 w-10 items-center justify-center text-sm text-stone hover:text-foreground"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {item.quantity > 1 && (
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-stone">
-                              {item.quantity} pièces
-                            </p>
-                          )}
                         </div>
                       </article>
                     );
@@ -457,7 +468,7 @@ export default function PrecommandePage() {
               </section>
 
               {/* LIVRAISON */}
-              <section className="mt-14">
+              <section className="mt-11">
                 <p className="text-[10px] uppercase tracking-[0.35em] text-stone">
                   02 — Livraison
                 </p>
@@ -466,17 +477,17 @@ export default function PrecommandePage() {
                   Choisis la réception
                 </h2>
 
-                <p className="mt-3 max-w-xl text-sm leading-6 text-stone">
+                <p className="mt-3 text-sm leading-6 text-stone">
                   Livraison disponible en France uniquement.
                 </p>
 
-                <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={() =>
                       changeDeliveryMethod("relay")
                     }
-                    className={`relative min-h-40 border p-5 text-left ${
+                    className={`relative min-h-32 border p-4 text-left ${
                       deliveryMethod === "relay"
                         ? "border-foreground bg-white/[0.025]"
                         : "border-surface"
@@ -502,7 +513,7 @@ export default function PrecommandePage() {
                       />
                     </div>
 
-                    <p className="absolute bottom-5 left-5 font-display text-xl">
+                    <p className="absolute bottom-4 left-4 font-display text-xl">
                       {totalQuantity >= 3
                         ? "Offerte"
                         : "4,90 €"}
@@ -514,7 +525,7 @@ export default function PrecommandePage() {
                     onClick={() =>
                       changeDeliveryMethod("home")
                     }
-                    className={`relative min-h-40 border p-5 text-left ${
+                    className={`relative min-h-32 border p-4 text-left ${
                       deliveryMethod === "home"
                         ? "border-foreground bg-white/[0.025]"
                         : "border-surface"
@@ -527,8 +538,7 @@ export default function PrecommandePage() {
                         </p>
 
                         <p className="mt-1 text-xs leading-5 text-stone">
-                          Adresse renseignée au moment du
-                          paiement Stripe.
+                          Adresse renseignée au paiement.
                         </p>
                       </div>
 
@@ -541,7 +551,7 @@ export default function PrecommandePage() {
                       />
                     </div>
 
-                    <p className="absolute bottom-5 left-5 font-display text-xl">
+                    <p className="absolute bottom-4 left-4 font-display text-xl">
                       {totalQuantity >= 3
                         ? "Offerte"
                         : "7,90 €"}
@@ -558,14 +568,14 @@ export default function PrecommandePage() {
                 )}
 
                 {deliveryMethod === "relay" && (
-                  <div className="mt-7 border-t border-surface pt-7">
+                  <div className="mt-6 border-t border-surface pt-6">
                     <label className="text-[10px] uppercase tracking-[0.3em] text-stone">
                       Code postal
                     </label>
 
                     <p className="mt-2 text-xs leading-5 text-stone">
-                      Indique ton code postal pour afficher les
-                      Points Relais disponibles.
+                      Indique ton code postal pour afficher les Points
+                      Relais disponibles.
                     </p>
 
                     <input
@@ -594,7 +604,7 @@ export default function PrecommandePage() {
               </section>
 
               {/* INFORMATIONS */}
-              <section className="mt-14">
+              <section className="mt-11">
                 <p className="text-[10px] uppercase tracking-[0.35em] text-stone">
                   03 — Informations
                 </p>
@@ -604,7 +614,7 @@ export default function PrecommandePage() {
                 </h2>
 
                 {!user ? (
-                  <div className="mt-7 border border-surface p-6">
+                  <div className="mt-6 border border-surface p-6">
                     <p className="text-sm leading-6 text-stone">
                       Connecte-toi pour finaliser ta précommande
                       et accéder au paiement sécurisé.
@@ -627,7 +637,7 @@ export default function PrecommandePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-7">
+                  <div className="mt-6">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
                         <label className="text-[9px] uppercase tracking-[0.3em] text-stone">
@@ -672,7 +682,7 @@ export default function PrecommandePage() {
               </section>
             </div>
 
-            {/* RESUME STICKY */}
+            {/* RÉSUMÉ */}
             <aside className="lg:sticky lg:top-24 lg:self-start">
               <div className="border border-surface bg-[#111110] p-6 md:p-7">
                 <p className="text-[10px] uppercase tracking-[0.35em] text-stone">
@@ -683,7 +693,7 @@ export default function PrecommandePage() {
                   Précommande
                 </h2>
 
-                <div className="mt-7 space-y-4 border-t border-surface pt-6">
+                <div className="mt-6 space-y-4 border-t border-surface pt-5">
                   <div className="flex justify-between gap-5 text-sm text-stone">
                     <span>
                       {totalQuantity} vêtement
@@ -691,10 +701,7 @@ export default function PrecommandePage() {
                     </span>
 
                     <span>
-                      {subtotal
-                        .toFixed(2)
-                        .replace(".", ",")}{" "}
-                      €
+                      {subtotal.toFixed(2).replace(".", ",")} €
                     </span>
                   </div>
 
@@ -717,20 +724,18 @@ export default function PrecommandePage() {
                       </span>
 
                       <span className="font-display text-3xl">
-                        {total
-                          .toFixed(2)
-                          .replace(".", ",")}{" "}
-                        €
+                        {total.toFixed(2).replace(".", ",")} €
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-7 space-y-3 border-y border-surface py-5">
+                <div className="mt-6 space-y-3 border-y border-surface py-5">
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-xs text-stone">
                       Paiement
                     </span>
+
                     <span className="text-xs text-foreground">
                       Stripe
                     </span>
@@ -740,6 +745,7 @@ export default function PrecommandePage() {
                     <span className="text-xs text-stone">
                       Production
                     </span>
+
                     <span className="text-xs text-foreground">
                       Dès 10 payés
                     </span>
@@ -749,6 +755,7 @@ export default function PrecommandePage() {
                     <span className="text-xs text-stone">
                       Expédition
                     </span>
+
                     <span className="text-xs text-foreground">
                       France
                     </span>
@@ -778,10 +785,7 @@ export default function PrecommandePage() {
 
                     <span className="flex items-center gap-3">
                       <span className="text-sm">
-                        {total
-                          .toFixed(2)
-                          .replace(".", ",")}{" "}
-                        €
+                        {total.toFixed(2).replace(".", ",")} €
                       </span>
 
                       {!submitting && (
