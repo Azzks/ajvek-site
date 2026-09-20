@@ -28,9 +28,9 @@ export default function TwitterImage() {
         <div
           style={{
             position: "absolute",
-            width: "760px",
-            height: "760px",
-            border: "1px solid rgba(244,241,234,0.07)",
+            width: "520px",
+            height: "520px",
+            border: "1px solid rgba(244,241,234,0.08)",
             borderRadius: "9999px",
           }}
         />
@@ -38,9 +38,9 @@ export default function TwitterImage() {
         <div
           style={{
             position: "absolute",
-            width: "480px",
-            height: "480px",
-            border: "1px solid rgba(244,241,234,0.04)",
+            width: "380px",
+            height: "380px",
+            border: "1px solid rgba(244,241,234,0.045)",
             borderRadius: "9999px",
           }}
         />
@@ -51,14 +51,17 @@ export default function TwitterImage() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
           }}
         >
           <div
             style={{
               fontFamily: "serif",
-              fontSize: "190px",
-              lineHeight: 0.8,
-              letterSpacing: "-10px",
+              fontSize: "150px",
+              lineHeight: 1,
+              letterSpacing: "-5px",
+              whiteSpace: "nowrap",
             }}
           >
             AJVEK
@@ -66,11 +69,20 @@ export default function TwitterImage() {
 
           <div
             style={{
-              marginTop: "45px",
+              width: "60px",
+              height: "1px",
+              background: "#8a8178",
+              marginTop: "34px",
+            }}
+          />
+
+          <div
+            style={{
+              marginTop: "26px",
               fontFamily: "sans-serif",
               textTransform: "uppercase",
-              letterSpacing: "7px",
-              fontSize: "17px",
+              letterSpacing: "6px",
+              fontSize: "15px",
               color: "#8a8178",
             }}
           >

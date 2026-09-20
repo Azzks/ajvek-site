@@ -18,47 +18,47 @@ export default function OpenGraphImage() {
           height: "100%",
           position: "relative",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
+          alignItems: "center",
+          justifyContent: "center",
           background: "#0c0c0b",
           color: "#f4f1ea",
-          padding: "64px 72px",
           overflow: "hidden",
         }}
       >
+        {/* CERCLES */}
         <div
           style={{
             position: "absolute",
-            width: "720px",
-            height: "720px",
+            width: "520px",
+            height: "520px",
             border: "1px solid rgba(244,241,234,0.08)",
             borderRadius: "9999px",
-            top: "-230px",
-            right: "-180px",
           }}
         />
 
         <div
           style={{
             position: "absolute",
-            width: "460px",
-            height: "460px",
-            border: "1px solid rgba(244,241,234,0.05)",
+            width: "380px",
+            height: "380px",
+            border: "1px solid rgba(244,241,234,0.045)",
             borderRadius: "9999px",
-            top: "-100px",
-            right: "-50px",
           }}
         />
 
+        {/* TOP */}
         <div
           style={{
+            position: "absolute",
+            top: "50px",
+            left: "60px",
+            right: "60px",
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
             fontFamily: "sans-serif",
-            fontSize: "18px",
-            letterSpacing: "7px",
             textTransform: "uppercase",
+            letterSpacing: "6px",
+            fontSize: "15px",
             color: "#8a8178",
           }}
         >
@@ -66,18 +66,24 @@ export default function OpenGraphImage() {
           <span>France</span>
         </div>
 
+        {/* CENTRE SAFE */}
         <div
           style={{
+            position: "relative",
             display: "flex",
             flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
           }}
         >
           <div
             style={{
               fontFamily: "serif",
-              fontSize: "190px",
-              lineHeight: 0.8,
-              letterSpacing: "-10px",
+              fontSize: "150px",
+              lineHeight: 1,
+              letterSpacing: "-5px",
+              whiteSpace: "nowrap",
             }}
           >
             AJVEK
@@ -85,38 +91,43 @@ export default function OpenGraphImage() {
 
           <div
             style={{
-              width: "72px",
+              width: "60px",
               height: "1px",
               background: "#8a8178",
-              marginTop: "48px",
-              marginBottom: "28px",
+              marginTop: "34px",
             }}
           />
 
           <div
             style={{
-              maxWidth: "650px",
+              marginTop: "26px",
               fontFamily: "sans-serif",
-              fontSize: "25px",
-              lineHeight: 1.5,
+              textTransform: "uppercase",
+              letterSpacing: "6px",
+              fontSize: "15px",
               color: "#b3a48c",
             }}
           >
-            Du dessin au vêtement.
+            Du dessin au vêtement
           </div>
         </div>
 
+        {/* BOTTOM */}
         <div
           style={{
+            position: "absolute",
+            bottom: "45px",
+            left: "60px",
+            right: "60px",
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-end",
+            alignItems: "center",
             borderTop: "1px solid rgba(244,241,234,0.1)",
-            paddingTop: "25px",
+            paddingTop: "20px",
             fontFamily: "sans-serif",
-            fontSize: "15px",
-            letterSpacing: "4px",
             textTransform: "uppercase",
+            letterSpacing: "4px",
+            fontSize: "12px",
             color: "#8a8178",
           }}
         >
