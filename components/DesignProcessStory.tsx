@@ -37,11 +37,12 @@ const STEPS = [
 ];
 
 export default function DesignProcessStory() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const desktopRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    const container = containerRef.current;
+    const container = desktopRef.current;
+
     if (!container) return;
 
     const sections = Array.from(
@@ -65,7 +66,7 @@ export default function DesignProcessStory() {
         }
       },
       {
-        threshold: [0.25, 0.4, 0.55, 0.7],
+        threshold: [0.25, 0.45, 0.65],
         rootMargin: "-20% 0px -20% 0px",
       }
     );
@@ -76,32 +77,90 @@ export default function DesignProcessStory() {
   }, []);
 
   return (
-    <section
-      ref={containerRef}
-      className="relative overflow-hidden bg-[#0c0c0b] text-[#f3f0ea]"
-    >
-      <div className="mx-auto max-w-7xl px-5 pb-12 pt-24 md:px-8 md:pb-20 md:pt-32">
-        <div className="max-w-2xl">
-          <p className="mb-4 text-[10px] uppercase tracking-[0.4em] text-stone-500">
-            AJVEK — Processus créatif
-          </p>
+    <section className="bg-[#0c0c0b] text-[#f3f0ea]">
+      {/* INTRO */}
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-24 md:px-8 md:pb-20 md:pt-32">
+        <p className="mb-4 text-[10px] uppercase tracking-[0.4em] text-stone-500">
+          AJVEK — Processus créatif
+        </p>
 
-          <h2 className="font-display text-4xl leading-[0.95] tracking-tight md:text-6xl">
-            Du croquis
-            <br />
-            au vêtement.
-          </h2>
+        <h2 className="font-display text-4xl leading-[0.95] tracking-tight md:text-6xl">
+          Du croquis
+          <br />
+          au vêtement.
+        </h2>
 
-          <p className="mt-6 max-w-lg text-sm leading-6 text-stone-400 md:text-base">
-            Une idée, plusieurs essais, puis une construction progressive
-            jusqu’au design final.
-          </p>
+        <p className="mt-6 max-w-lg text-sm leading-6 text-stone-400 md:text-base">
+          Une idée, plusieurs essais, puis une construction progressive
+          jusqu&apos;au design final.
+        </p>
+
+        <p className="mt-8 text-[10px] uppercase tracking-[0.35em] text-stone-600 md:hidden">
+          Glisse pour découvrir →
+        </p>
+      </div>
+
+      {/* MOBILE — VRAI CARROUSEL SWIPE */}
+      <div className="md:hidden">
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {STEPS.map((step) => (
+            <article
+              key={step.image}
+              className="w-[88vw] shrink-0 snap-center"
+            >
+              <div className="mb-7 px-1">
+                <p className="mb-4 text-[10px] uppercase tracking-[0.4em] text-stone-500">
+                  Étape {step.number}
+                </p>
+
+                <h3 className="font-display text-3xl leading-tight">
+                  {step.title}
+                </h3>
+
+                <p className="mt-4 max-w-sm text-sm leading-6 text-stone-400">
+                  {step.text}
+                </p>
+              </div>
+
+              <div className="relative h-[62svh] overflow-hidden bg-[#151514]">
+                <Image
+                  src={step.image}
+                  alt={step.title}
+                  fill
+                  sizes="88vw"
+                  className="object-contain"
+                />
+
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/5" />
+
+                <div className="absolute bottom-4 left-4">
+                  <span className="text-[10px] uppercase tracking-[0.3em] text-white/50">
+                    {step.number} / 05
+                  </span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="flex justify-center gap-2 pb-20">
+          {STEPS.map((_, index) => (
+            <span
+              key={index}
+              className="h-[2px] w-6 bg-white/20"
+            />
+          ))}
         </div>
       </div>
 
-      <div className="relative mx-auto max-w-7xl md:grid md:grid-cols-[1.15fr_0.85fr] md:gap-16 md:px-8">
-        <div className="sticky top-0 z-10 flex h-[72svh] items-center bg-[#0c0c0b] px-4 md:h-screen md:px-0">
-          <div className="relative h-[62svh] w-full overflow-hidden bg-[#151514] md:h-[78vh]">
+      {/* DESKTOP — SCROLL PREMIUM */}
+      <div
+        ref={desktopRef}
+        className="relative mx-auto hidden max-w-7xl md:grid md:grid-cols-[1.15fr_0.85fr] md:gap-16 md:px-8"
+      >
+        {/* IMAGE STICKY */}
+        <div className="sticky top-0 flex h-screen items-center">
+          <div className="relative h-[78vh] w-full overflow-hidden bg-[#151514]">
             {STEPS.map((step, index) => (
               <div
                 key={step.image}
@@ -117,7 +176,7 @@ export default function DesignProcessStory() {
                   src={step.image}
                   alt={step.title}
                   fill
-                  sizes="(max-width: 768px) 100vw, 60vw"
+                  sizes="60vw"
                   className="object-contain"
                   priority={index === 0}
                 />
@@ -126,7 +185,7 @@ export default function DesignProcessStory() {
 
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5" />
 
-            <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between md:bottom-7 md:left-7 md:right-7">
+            <div className="absolute bottom-7 left-7 right-7 flex items-end justify-between">
               <span className="text-[10px] uppercase tracking-[0.3em] text-white/50">
                 {String(activeIndex + 1).padStart(2, "0")} / 05
               </span>
@@ -147,12 +206,13 @@ export default function DesignProcessStory() {
           </div>
         </div>
 
-        <div className="relative px-6 md:px-0">
+        {/* TEXTES */}
+        <div>
           {STEPS.map((step, index) => (
             <article
               key={step.image}
               data-process-step={index}
-              className="flex min-h-[72svh] items-center py-20 md:min-h-screen md:py-0"
+              className="flex min-h-screen items-center"
             >
               <div
                 className={`max-w-md transition-all duration-700 ${
@@ -165,11 +225,11 @@ export default function DesignProcessStory() {
                   Étape {step.number}
                 </p>
 
-                <h3 className="font-display text-3xl leading-tight md:text-5xl">
+                <h3 className="font-display text-5xl leading-tight">
                   {step.title}
                 </h3>
 
-                <p className="mt-5 text-sm leading-6 text-stone-400 md:text-base md:leading-7">
+                <p className="mt-5 text-base leading-7 text-stone-400">
                   {step.text}
                 </p>
               </div>
@@ -178,6 +238,7 @@ export default function DesignProcessStory() {
         </div>
       </div>
 
+      {/* FIN */}
       <div className="mx-auto flex min-h-[55svh] max-w-7xl items-center justify-center px-6 py-24 text-center">
         <div>
           <p className="text-[10px] uppercase tracking-[0.45em] text-stone-500">
