@@ -80,6 +80,11 @@ export default function Home() {
       ? Math.min((count / PREORDER_GOAL) * 100, 100)
       : 0;
 
+  const remaining =
+    count !== null
+      ? Math.max(PREORDER_GOAL - count, 0)
+      : 0;
+
   return (
     <main className="bg-background text-foreground">
       {/* HERO */}
@@ -108,31 +113,61 @@ export default function Home() {
           Découvrir la collection
         </Link>
 
+        {/* COMPTEUR PREMIUM */}
         {count !== null && (
-          <div className="mt-10 w-full max-w-xs">
-            <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-stone">
-              <span>Précommandes</span>
-              <span>
-                {count}/{PREORDER_GOAL}
-              </span>
-            </div>
+          <div className="mt-10 w-full max-w-sm">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.025] px-5 py-5 text-left backdrop-blur-sm">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-stone">
+                    Précommandes payées
+                  </p>
 
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface">
-              <div
-                className="h-full rounded-full bg-foreground transition-all duration-700"
-                style={{
-                  width: `${percent}%`,
-                }}
-              />
-            </div>
+                  <div className="mt-2 flex items-end gap-2">
+                    <span className="font-display text-4xl leading-none text-foreground">
+                      {count}
+                    </span>
 
-            <p className="mt-3 text-xs leading-5 text-stone">
-              {thresholdReached
-                ? `${count} précommandes payées · seuil de production atteint`
-                : `${PREORDER_GOAL - count} vêtement${
-                    PREORDER_GOAL - count > 1 ? "s" : ""
-                  } avant le lancement de la production`}
-            </p>
+                    <span className="pb-1 text-sm text-stone">
+                      / {PREORDER_GOAL}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-stone">
+                    Production
+                  </p>
+
+                  <p className="mt-1 text-xs text-foreground">
+                    {thresholdReached ? "Seuil atteint" : "En attente"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 h-[3px] w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-foreground transition-all duration-1000 ease-out"
+                  style={{
+                    width: `${percent}%`,
+                  }}
+                />
+              </div>
+
+              <div className="mt-4 flex items-center justify-between gap-4">
+                <p className="text-xs leading-5 text-stone">
+                  {thresholdReached
+                    ? "Le seuil de production est atteint."
+                    : `${remaining} vêtement${
+                        remaining > 1 ? "s" : ""
+                      } avant le lancement.`}
+                </p>
+
+                <span className="shrink-0 text-[10px] uppercase tracking-[0.25em] text-stone">
+                  {Math.round(percent)}%
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
