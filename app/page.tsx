@@ -6,6 +6,7 @@ import gsap from "gsap";
 import MadeInFrance from "@/components/MadeInFrance";
 import PaymentNotice from "@/components/PaymentNotice";
 import DesignProcessStory from "@/components/DesignProcessStory";
+import HomeIntro from "@/components/HomeIntro";
 
 const PREORDER_GOAL = 10;
 
@@ -16,17 +17,17 @@ export default function Home() {
 
   useEffect(() => {
     fetch("/api/preorder-count")
-      .then((res) => res.json())
-      .then((data) => setCount(data.count ?? 0))
+      .then((r) => r.json())
+      .then((d) => setCount(d.count ?? 0))
       .catch(() => setCount(null));
   }, []);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia(
+    const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
 
-    if (prefersReducedMotion) {
+    if (reduced) {
       gsap.set(titleRef.current, {
         opacity: 1,
         rotationX: 0,
@@ -72,8 +73,7 @@ export default function Home() {
     return () => ctx.revert();
   }, []);
 
-  const thresholdReached =
-    count !== null && count >= PREORDER_GOAL;
+  const thresholdReached = count !== null && count >= PREORDER_GOAL;
 
   const percent =
     count !== null
@@ -87,7 +87,8 @@ export default function Home() {
 
   return (
     <main className="bg-background text-foreground">
-      {/* HERO */}
+      <HomeIntro />
+
       <section className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
         <p className="mb-4 text-xs uppercase tracking-[0.3em] text-stone">
           Streetwear
@@ -113,7 +114,6 @@ export default function Home() {
           Découvrir la collection
         </Link>
 
-        {/* COMPTEUR PREMIUM */}
         {count !== null && (
           <div className="mt-10 w-full max-w-sm">
             <div className="rounded-2xl border border-white/10 bg-white/[0.025] px-5 py-5 text-left backdrop-blur-sm">
@@ -140,7 +140,9 @@ export default function Home() {
                   </p>
 
                   <p className="mt-1 text-xs text-foreground">
-                    {thresholdReached ? "Seuil atteint" : "En attente"}
+                    {thresholdReached
+                      ? "Seuil atteint"
+                      : "En attente"}
                   </p>
                 </div>
               </div>
@@ -184,10 +186,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PROCESSUS CRÉATIF */}
       <DesignProcessStory />
 
-      {/* CTA FINAL */}
       <section className="flex min-h-[70svh] items-center justify-center px-6 py-24 text-center">
         <div className="max-w-xl">
           <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
