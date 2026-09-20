@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { notFound } from "next/navigation";
+
 import { getProduct } from "@/lib/products";
 import ProductViewer3D from "@/components/ProductViewer3D";
 import PreorderForm from "@/components/PreorderForm";
@@ -15,39 +16,66 @@ export default function ProductPageClient({
 }) {
   const product = getProduct(slug);
 
-  const initialColorIndex = product
-    ? Math.min(
-        Math.max(parseInt(colorParam ?? "0", 10) || 0, 0),
-        product.colorways.length - 1
-      )
-    : 0;
+  const initialColorIndex =
+    product
+      ? Math.min(
+          Math.max(
+            parseInt(
+              colorParam ?? "0",
+              10
+            ) || 0,
+            0
+          ),
+          product.colorways.length - 1
+        )
+      : 0;
 
-  const [colorIndex, setColorIndex] = useState(initialColorIndex);
-  const [size, setSize] = useState<string | null>(null);
+  const [
+    colorIndex,
+    setColorIndex,
+  ] = useState(
+    initialColorIndex
+  );
 
-  if (!product) return notFound();
+  const [size, setSize] =
+    useState<string | null>(
+      null
+    );
 
-  const colorway = product.colorways[colorIndex];
+  if (!product) {
+    return notFound();
+  }
+
+  const colorway =
+    product.colorways[
+      colorIndex
+    ];
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-5 pb-24 pt-10 md:grid-cols-[1.15fr_0.85fr] md:gap-16 md:px-8 md:pb-32 md:pt-16">
-        {/* VISUEL PRODUIT */}
+      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-9 px-5 pb-16 pt-8 md:grid-cols-[1.15fr_0.85fr] md:gap-16 md:px-8 md:pb-32 md:pt-16">
+        {/* VIEWER */}
         <div className="md:sticky md:top-24 md:self-start">
           <div className="overflow-hidden bg-[#111110]">
-            <ProductViewer3D colorway={colorway} />
+            <ProductViewer3D
+              colorway={
+                colorway
+              }
+            />
           </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-surface pt-3 text-[10px] uppercase tracking-[0.25em] text-stone">
+          <div className="mt-3 flex items-center justify-between border-t border-surface pt-3 text-[9px] uppercase tracking-[0.28em] text-stone">
             <span>AJVEK</span>
-            <span>Précommande</span>
+            <span>
+              Précommande
+            </span>
           </div>
         </div>
 
-        {/* INFORMATIONS */}
+        {/* INFOS */}
         <div className="flex flex-col">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
+            <p className="text-[10px] uppercase tracking-[0.38em] text-stone">
               Collection actuelle
             </p>
 
@@ -65,43 +93,59 @@ export default function ProductPageClient({
               </span>
             </div>
 
-            <p className="mt-6 text-sm leading-6 text-stone">
-              {product.description}
+            <p className="mt-5 text-sm leading-7 text-stone">
+              {
+                product.description
+              }
             </p>
           </div>
 
           {/* COULEUR */}
-          <div className="mt-10 border-t border-surface pt-6">
+          <div className="mt-8 border-t border-surface pt-6">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
                 Couleur
               </p>
 
               <p className="text-xs text-foreground">
-                {colorway.label}
+                {
+                  colorway.label
+                }
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {product.colorways.map((cw, i) => (
-                <button
-                  key={cw.label}
-                  type="button"
-                  onClick={() => setColorIndex(i)}
-                  className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition ${
-                    i === colorIndex
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
-                  }`}
-                >
-                  {cw.label}
-                </button>
-              ))}
+              {product.colorways.map(
+                (
+                  cw,
+                  index
+                ) => (
+                  <button
+                    key={
+                      cw.label
+                    }
+                    type="button"
+                    onClick={() =>
+                      setColorIndex(
+                        index
+                      )
+                    }
+                    className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition ${
+                      index ===
+                      colorIndex
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
+                    }`}
+                  >
+                    {cw.label}
+                  </button>
+                )
+              )}
             </div>
           </div>
 
           {/* TAILLE */}
-          <div className="mt-8 border-t border-surface pt-6">
+          <div className="mt-7 border-t border-surface pt-6">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
                 Taille
@@ -112,32 +156,40 @@ export default function ProductPageClient({
               </span>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
-              {product.sizes.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSize(s)}
-                  className={`h-12 min-w-12 border text-xs uppercase tracking-[0.2em] transition ${
-                    s === size
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+            <div className="grid grid-cols-4 gap-2">
+              {product.sizes.map(
+                (s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() =>
+                      setSize(s)
+                    }
+                    className={`h-12 border text-xs uppercase tracking-[0.2em] transition ${
+                      s ===
+                      size
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                )
+              )}
             </div>
 
             {!size && (
-              <p className="mt-3 text-[11px] text-stone">
-                Sélectionne ta taille avant d&apos;ajouter le vêtement à ta
+              <p className="mt-3 text-[11px] leading-5 text-stone">
+                Sélectionne ta
+                taille avant
+                d&apos;ajouter le
+                vêtement à ta
                 précommande.
               </p>
             )}
           </div>
 
-          {/* INFOS CLÉS */}
+          {/* PROD + LIVRAISON */}
           <div className="mt-8 border-y border-surface">
             <div className="grid grid-cols-1 divide-y divide-surface sm:grid-cols-2 sm:divide-x sm:divide-y-0">
               <div className="py-5 sm:pr-6">
@@ -146,7 +198,10 @@ export default function ProductPageClient({
                 </p>
 
                 <p className="mt-2 text-sm leading-6 text-foreground">
-                  Lancée à partir de 10 vêtements précommandés et payés.
+                  Lancée à partir
+                  de 10 vêtements
+                  précommandés et
+                  payés.
                 </p>
               </div>
 
@@ -156,64 +211,89 @@ export default function ProductPageClient({
                 </p>
 
                 <p className="mt-2 text-sm leading-6 text-foreground">
-                  Mondial Relay 4,90 € · domicile 7,90 € · offerte dès 3
-                  vêtements.
+                  Mondial Relay
+                  4,90 € · domicile
+                  7,90 € · offerte
+                  dès 3 vêtements.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* RÉASSURANCE */}
-          <div className="mt-6 grid grid-cols-1 gap-3 text-[11px] leading-5 text-stone sm:grid-cols-2">
-            <div className="border border-surface px-4 py-4">
-              <p className="text-foreground">Paiement sécurisé</p>
-              <p className="mt-1">
-                Paiement par carte bancaire via Stripe.
+          {/* REASSURANCE */}
+          <div className="mt-6 grid grid-cols-2 gap-px bg-surface">
+            <div className="bg-background p-4">
+              <p className="text-[10px] text-foreground">
+                Paiement
+                sécurisé
+              </p>
+
+              <p className="mt-1 text-[11px] leading-5 text-stone">
+                Carte bancaire
+                via Stripe.
               </p>
             </div>
 
-            <div className="border border-surface px-4 py-4">
-              <p className="text-foreground">Retours</p>
-              <p className="mt-1">
-                Droit de rétractation de 14 jours après réception.
+            <div className="bg-background p-4">
+              <p className="text-[10px] text-foreground">
+                Retours
+              </p>
+
+              <p className="mt-1 text-[11px] leading-5 text-stone">
+                14 jours après
+                réception.
               </p>
             </div>
 
-            <div className="border border-surface px-4 py-4">
-              <p className="text-foreground">Fabrication</p>
-              <p className="mt-1">
-                Produit en France par des entreprises françaises.
+            <div className="bg-background p-4">
+              <p className="text-[10px] text-foreground">
+                Fabrication
+              </p>
+
+              <p className="mt-1 text-[11px] leading-5 text-stone">
+                Produit en France.
               </p>
             </div>
 
-            <div className="border border-surface px-4 py-4">
-              <p className="text-foreground">Précommande</p>
-              <p className="mt-1">
-                Le paiement confirme immédiatement ta précommande.
+            <div className="bg-background p-4">
+              <p className="text-[10px] text-foreground">
+                Précommande
+              </p>
+
+              <p className="mt-1 text-[11px] leading-5 text-stone">
+                Paiement =
+                confirmation.
               </p>
             </div>
           </div>
 
-          {/* ACTION */}
-          <div className="mt-8 border-t border-surface pt-8">
+          {/* CTA */}
+          <div className="mt-7 border-t border-surface pt-7">
             <PreorderForm
-              product={product}
-              colorway={colorway}
+              product={
+                product
+              }
+              colorway={
+                colorway
+              }
               size={size}
             />
           </div>
         </div>
       </section>
 
-      {/* BANDEAU FINAL */}
-      <section className="border-t border-surface px-6 py-16 text-center">
-        <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
-          AJVEK
-        </p>
+      {/* FINAL */}
+      <section className="flex min-h-[36svh] items-center justify-center border-t border-surface px-6 py-14 text-center md:min-h-[50svh] md:py-16">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
+            AJVEK
+          </p>
 
-        <p className="mx-auto mt-4 max-w-xl font-display text-2xl leading-tight md:text-4xl">
-          Du dessin à la pièce finale.
-        </p>
+          <p className="mx-auto mt-4 max-w-xl font-display text-2xl leading-tight md:text-4xl">
+            Du dessin à la
+            pièce finale.
+          </p>
+        </div>
       </section>
     </main>
   );

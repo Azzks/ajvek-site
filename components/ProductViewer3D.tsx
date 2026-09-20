@@ -1,5 +1,12 @@
 "use client";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   useGLTF,
@@ -20,27 +27,43 @@ useTexture.preload("/decals/roses-blanc.png");
 useTexture.preload("/decals/sakura.png");
 useTexture.preload("/decals/sakura-blanc.png");
 
-function Tshirt({ color, frontTexture, backTexture, backScale }: Colorway) {
+function Tshirt({
+  color,
+  frontTexture,
+  backTexture,
+  backScale,
+}: Colorway) {
   const { scene } = useGLTF("/models/tshirt_base.glb");
   const frontLogo = useTexture(frontTexture);
   const backDesign = useTexture(backTexture);
 
   const sourceMesh = useMemo(() => {
     let found: any = null;
+
     scene.traverse((child: any) => {
-      if (child.isMesh && !found) found = child;
+      if (child.isMesh && !found) {
+        found = child;
+      }
     });
+
     return found;
   }, [scene]);
 
-  const material = useMemo(() => sourceMesh.material.clone(), [sourceMesh]);
+  const material = useMemo(
+    () => sourceMesh.material.clone(),
+    [sourceMesh]
+  );
 
   useEffect(() => {
     material.color.set(color);
   }, [material, color]);
 
   return (
-    <mesh geometry={sourceMesh.geometry} material={material}>
+    <mesh
+      geometry={sourceMesh.geometry}
+      material={material}
+      scale={1.08}
+    >
       <Decal
         position={[0, 0.47, 0.155]}
         rotation={[0, 0, 0]}
@@ -48,6 +71,7 @@ function Tshirt({ color, frontTexture, backTexture, backScale }: Colorway) {
         map={frontLogo}
         depthTest
       />
+
       <Decal
         position={[0, 0.38, -0.155]}
         rotation={[0, Math.PI, 0]}
@@ -61,6 +85,7 @@ function Tshirt({ color, frontTexture, backTexture, backScale }: Colorway) {
 
 function Loader() {
   const { progress } = useProgress();
+
   return (
     <Html center>
       <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
@@ -76,124 +101,228 @@ export default function ProductViewer3D({
   colorway: Colorway;
 }) {
   const controlsRef = useRef<any>(null);
-  const [facingBack, setFacingBack] = useState(false);
-  const [zoomOpen, setZoomOpen] = useState(false);
-  const [zoomVisible, setZoomVisible] = useState(false);
+
+  const [facingBack, setFacingBack] =
+    useState(false);
+
+  const [zoomOpen, setZoomOpen] =
+    useState(false);
+
+  const [zoomVisible, setZoomVisible] =
+    useState(false);
 
   useEffect(() => {
     if (zoomOpen) {
-      const id = requestAnimationFrame(() => setZoomVisible(true));
-      return () => cancelAnimationFrame(id);
+      const id = requestAnimationFrame(() =>
+        setZoomVisible(true)
+      );
+
+      return () =>
+        cancelAnimationFrame(id);
     }
+
     setZoomVisible(false);
   }, [zoomOpen]);
 
   function toggleView() {
     const controls = controlsRef.current;
+
     if (!controls) return;
-    const current = controls.getAzimuthalAngle();
-    const next = facingBack ? 0 : Math.PI;
-    const obj = { angle: current };
+
+    const current =
+      controls.getAzimuthalAngle();
+
+    const next = facingBack
+      ? 0
+      : Math.PI;
+
+    const obj = {
+      angle: current,
+    };
+
     gsap.to(obj, {
       angle: next,
       duration: 0.8,
       ease: "power2.inOut",
+
       onUpdate: () => {
-        controls.setAzimuthalAngle(obj.angle);
+        controls.setAzimuthalAngle(
+          obj.angle
+        );
+
         controls.update();
       },
     });
+
     setFacingBack(!facingBack);
   }
 
   function handleZoomToggle() {
     const opening = !zoomOpen;
+
     setZoomOpen(opening);
 
-    const controls = controlsRef.current;
+    const controls =
+      controlsRef.current;
+
     if (!controls) return;
+
     const camera = controls.object;
-    const dir = camera.position.clone().sub(controls.target).normalize();
+
+    const dir = camera.position
+      .clone()
+      .sub(controls.target)
+      .normalize();
+
     const state = {
       tx: controls.target.x,
       ty: controls.target.y,
       tz: controls.target.z,
       d: controls.getDistance(),
     };
+
     const goal = opening
-      ? { tx: 0, ty: facingBack ? 0.38 : 0.47, tz: 0, d: 0.55 }
-      : { tx: 0, ty: 0.3, tz: 0, d: 1.9 };
+      ? {
+          tx: 0,
+          ty: facingBack
+            ? 0.38
+            : 0.47,
+          tz: 0,
+          d: 0.55,
+        }
+      : {
+          tx: 0,
+          ty: 0.3,
+          tz: 0,
+          d: 1.9,
+        };
 
     gsap.to(state, {
       ...goal,
       duration: 0.9,
       ease: "power2.inOut",
+
       onUpdate: () => {
-        controls.target.set(state.tx, state.ty, state.tz);
-        camera.position.copy(
-          controls.target.clone().add(dir.clone().multiplyScalar(state.d))
+        controls.target.set(
+          state.tx,
+          state.ty,
+          state.tz
         );
+
+        camera.position.copy(
+          controls.target
+            .clone()
+            .add(
+              dir
+                .clone()
+                .multiplyScalar(
+                  state.d
+                )
+            )
+        );
+
         controls.update();
       },
     });
   }
 
-  const frontEmbroidery = colorway.frontTexture.includes("blanc")
-    ? "/embroidery/ajk-brode-blanc.png"
-    : "/embroidery/ajk-brode-noir.png";
+  const frontEmbroidery =
+    colorway.frontTexture.includes(
+      "blanc"
+    )
+      ? "/embroidery/ajk-brode-blanc.png"
+      : "/embroidery/ajk-brode-noir.png";
 
-  const zoomImg = facingBack ? colorway.backTexture : frontEmbroidery;
-  const zoomLabel = facingBack ? "Impression DTF en France" : "Brodé en France";
+  const zoomImg = facingBack
+    ? colorway.backTexture
+    : frontEmbroidery;
+
+  const zoomLabel = facingBack
+    ? "Impression DTF en France"
+    : "Brodé en France";
 
   return (
     <div className="relative">
-      <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-surface bg-background">
+      <div className="relative h-[66svh] min-h-[430px] max-h-[620px] w-full overflow-hidden rounded-lg border border-surface bg-background md:aspect-square md:h-auto md:min-h-0 md:max-h-none">
         <Canvas
-          camera={{ position: [1.1, 0.55, 1.5], fov: 40 }}
-          resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
+          camera={{
+            position: [
+              1.02,
+              0.52,
+              1.38,
+            ],
+            fov: 38,
+          }}
+          resize={{
+            scroll: false,
+            debounce: {
+              scroll: 50,
+              resize: 0,
+            },
+          }}
           dpr={[1, 2]}
         >
           <ambientLight intensity={0.2} />
+
           <directionalLight
             position={[2, 3, 2]}
             intensity={1.6}
             color="#fff2dd"
           />
+
           <directionalLight
-            position={[-2.5, 1.5, -1.5]}
+            position={[
+              -2.5,
+              1.5,
+              -1.5,
+            ]}
             intensity={0.5}
             color="#7d9bd6"
           />
+
           <directionalLight
             position={[0, 0.5, -3]}
             intensity={0.8}
             color="#ffffff"
           />
-          <Suspense fallback={<Loader />}>
+
+          <Suspense
+            fallback={<Loader />}
+          >
             <Tshirt {...colorway} />
           </Suspense>
+
           <OrbitControls
             ref={controlsRef}
             target={[0, 0.3, 0]}
             minDistance={0.5}
             maxDistance={3}
-            minPolarAngle={Math.PI / 3}
-            maxPolarAngle={Math.PI / 1.8}
+            minPolarAngle={
+              Math.PI / 3
+            }
+            maxPolarAngle={
+              Math.PI / 1.8
+            }
             enablePan={false}
           />
         </Canvas>
 
         <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 px-3">
           <button
+            type="button"
             onClick={toggleView}
-            className="rounded-full border border-stone/40 bg-surface/80 px-3 py-1 text-[10px] uppercase tracking-widest text-foreground backdrop-blur-sm"
+            className="rounded-full border border-stone/40 bg-surface/80 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-foreground backdrop-blur-sm"
           >
-            {facingBack ? "Avant" : "Arriere"}
+            {facingBack
+              ? "Avant"
+              : "Arrière"}
           </button>
 
           <button
+            type="button"
             onClick={handleZoomToggle}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-foreground bg-background text-sm text-foreground shadow-md transition hover:bg-foreground hover:text-background"
+            aria-label="Zoomer sur le détail"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-foreground bg-background text-base text-foreground shadow-md transition hover:bg-foreground hover:text-background"
           >
             +
           </button>
@@ -201,12 +330,16 @@ export default function ProductViewer3D({
       </div>
 
       {zoomOpen && (
-        <div className="mt-6 flex flex-col items-center gap-3">
+        <div className="mt-5 flex flex-col items-center gap-3">
           <div
-            className={`h-56 w-56 overflow-hidden rounded-full border border-surface bg-background shadow-2xl transition-opacity duration-300 ease-out ${
-              zoomVisible ? "opacity-100" : "opacity-0"
+            className={`h-48 w-48 overflow-hidden rounded-full border border-surface bg-background shadow-2xl transition-opacity duration-300 ease-out sm:h-56 sm:w-56 ${
+              zoomVisible
+                ? "opacity-100"
+                : "opacity-0"
             }`}
-            style={{ perspective: "900px" }}
+            style={{
+              perspective: "900px",
+            }}
           >
             <div className="flex h-full w-full items-center justify-center bg-stone/10 p-3">
               <img
@@ -217,8 +350,12 @@ export default function ProductViewer3D({
                   transform: zoomVisible
                     ? "rotateY(0deg) rotateX(0deg) scale(1.15)"
                     : "rotateY(50deg) rotateX(12deg) scale(0.5)",
-                  transformStyle: "preserve-3d",
-                  filter: "contrast(1.2) brightness(1.05)",
+
+                  transformStyle:
+                    "preserve-3d",
+
+                  filter:
+                    "contrast(1.2) brightness(1.05)",
                 }}
               />
             </div>
@@ -226,7 +363,9 @@ export default function ProductViewer3D({
 
           <div
             className={`rounded-full border border-surface bg-background px-3 py-1.5 shadow-lg transition-opacity delay-150 duration-300 ease-out ${
-              zoomVisible ? "opacity-100" : "opacity-0"
+              zoomVisible
+                ? "opacity-100"
+                : "opacity-0"
             }`}
           >
             <p className="whitespace-nowrap text-[9px] uppercase tracking-widest text-stone">
