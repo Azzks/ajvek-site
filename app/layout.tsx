@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
+
 import { AuthProvider } from "@/components/AuthContext";
 import { CartProvider } from "@/components/CartContext";
 import SiteHeader from "@/components/SiteHeader";
@@ -22,17 +23,47 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://ajvek.fr"),
 
   title: {
-    default: "AJVEK — Streetwear",
+    default: "AJVEK — Streetwear français",
     template: "%s · AJVEK",
   },
 
   description:
-    "AJVEK, marque de streetwear. Découvre les collections Roses et Sakura, tee-shirts en édition limitée.",
+    "AJVEK imagine des pièces streetwear autour du dessin, du végétal et d’une identité graphique singulière. Découvrez la collection actuellement disponible en précommande.",
+
+  applicationName: "AJVEK",
+
+  authors: [
+    {
+      name: "AJVEK",
+      url: "https://ajvek.fr",
+    },
+  ],
+
+  creator: "AJVEK",
+  publisher: "AJVEK",
+
+  keywords: [
+    "AJVEK",
+    "streetwear",
+    "streetwear français",
+    "mode",
+    "tee-shirt",
+    "t-shirt",
+    "vêtement",
+    "précommande",
+    "Made in France",
+    "mode française",
+  ],
+
+  alternates: {
+    canonical: "/",
+  },
 
   openGraph: {
-    title: "AJVEK — Streetwear",
+    title: "AJVEK — Streetwear français",
     description:
-      "Marque de streetwear. Découvre les collections Roses et Sakura, tee-shirts en édition limitée.",
+      "Des pièces construites autour du dessin, du végétal et d’une identité propre à AJVEK.",
+    url: "https://ajvek.fr",
     siteName: "AJVEK",
     locale: "fr_FR",
     type: "website",
@@ -40,10 +71,24 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "AJVEK — Streetwear",
+    title: "AJVEK — Streetwear français",
     description:
-      "Marque de streetwear. Découvre les collections Roses et Sakura, tee-shirts en édition limitée.",
+      "Des pièces construites autour du dessin, du végétal et d’une identité propre à AJVEK.",
   },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+
+  category: "fashion",
 };
 
 export default function RootLayout({
@@ -60,9 +105,7 @@ export default function RootLayout({
           <CartProvider>
             <SiteHeader />
 
-            <div className="flex-1">
-              {children}
-            </div>
+            <div className="flex-1">{children}</div>
 
             <SiteFooter />
           </CartProvider>
