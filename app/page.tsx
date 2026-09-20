@@ -155,31 +155,19 @@ export default function Home() {
 
       <section
         ref={heroRef}
-        className="relative min-h-[calc(100svh-65px)] overflow-hidden"
+        className="relative overflow-hidden"
       >
-        {/* DECORATION */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[46%] h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.035] sm:h-[44rem] sm:w-[44rem] lg:h-[58rem] lg:w-[58rem]"
+          className="pointer-events-none absolute left-1/2 top-[42%] h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.035] sm:h-[44rem] sm:w-[44rem] lg:h-[58rem] lg:w-[58rem]"
         />
 
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[46%] h-[20rem] w-[20rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.025] sm:h-[30rem] sm:w-[30rem] lg:h-[40rem] lg:w-[40rem]"
+          className="pointer-events-none absolute left-1/2 top-[42%] h-[20rem] w-[20rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.025] sm:h-[30rem] sm:w-[30rem] lg:h-[40rem] lg:w-[40rem]"
         />
 
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-6 top-20 hidden h-[calc(100%-10rem)] w-px bg-white/[0.04] md:block"
-        />
-
-        <div
-          aria-hidden
-          className="pointer-events-none absolute right-6 top-20 hidden h-[calc(100%-10rem)] w-px bg-white/[0.04] md:block"
-        />
-
-        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-65px)] max-w-7xl flex-col px-5 pb-8 pt-16 md:px-8 md:pb-10 md:pt-20">
-          {/* HERO MAIN */}
+        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-65px)] max-w-7xl flex-col px-5 pb-6 pt-12 md:px-8 md:pb-10 md:pt-20">
           <div className="flex flex-1 flex-col items-center justify-center text-center">
             <p
               ref={eyebrowRef}
@@ -190,16 +178,16 @@ export default function Home() {
 
             <h1
               ref={titleRef}
-              className="mt-6 font-display text-[22vw] leading-[0.72] tracking-[-0.055em] opacity-0 sm:text-[8rem] md:text-[10rem] lg:text-[12rem]"
+              className="mt-5 font-display text-[22vw] leading-[0.72] tracking-[-0.055em] opacity-0 sm:text-[8rem] md:text-[10rem] lg:text-[12rem]"
             >
               AJVEK
             </h1>
 
-            <div className="mt-9 h-px w-12 bg-stone/35" />
+            <div className="mt-7 h-px w-12 bg-stone/35" />
 
             <p
               ref={textRef}
-              className="mt-7 max-w-md text-sm leading-6 text-stone opacity-0 md:text-[15px]"
+              className="mt-6 max-w-md text-sm leading-6 text-stone opacity-0 md:text-[15px]"
             >
               Des pièces construites autour du dessin,
               <br className="hidden sm:block" />
@@ -209,7 +197,7 @@ export default function Home() {
             <Link
               ref={buttonRef}
               href="/catalogue"
-              className="group mt-9 flex items-center gap-5 rounded-full border border-foreground bg-foreground px-6 py-3.5 text-[10px] uppercase tracking-[0.27em] text-background opacity-0 transition duration-300 hover:bg-transparent hover:text-foreground"
+              className="group mt-8 flex items-center gap-5 rounded-full border border-foreground bg-foreground px-6 py-3.5 text-[10px] uppercase tracking-[0.27em] text-background opacity-0 transition duration-300 hover:bg-transparent hover:text-foreground"
             >
               <span>Découvrir la collection</span>
 
@@ -219,12 +207,10 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* LOWER HERO */}
           <div
             ref={metaRef}
-            className="mt-10 grid gap-5 opacity-0 md:grid-cols-[1fr_auto_1fr] md:items-end"
+            className="mt-7 grid gap-5 opacity-0 md:grid-cols-[1fr_auto_1fr] md:items-end"
           >
-            {/* PREORDER */}
             <div className="order-2 md:order-1">
               {count !== null && (
                 <div className="mx-auto max-w-sm md:mx-0">
@@ -274,17 +260,15 @@ export default function Home() {
               )}
             </div>
 
-            {/* CENTER */}
             <div className="order-1 text-center md:order-2">
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone/70">
                 Scroll
               </p>
 
-              <div className="mx-auto mt-3 h-8 w-px bg-gradient-to-b from-stone/60 to-transparent" />
+              <div className="mx-auto mt-3 h-7 w-px bg-gradient-to-b from-stone/60 to-transparent" />
             </div>
 
-            {/* TRUST */}
-            <div className="order-3 flex flex-col items-center gap-4 md:items-end">
+            <div className="order-3 flex flex-col items-center gap-3 md:items-end">
               <PaymentNotice />
               <MadeInFrance />
             </div>
@@ -294,7 +278,7 @@ export default function Home() {
 
       <DesignProcessStory />
 
-      <section className="relative flex min-h-[70svh] items-center justify-center overflow-hidden border-t border-surface px-6 py-24 text-center">
+      <section className="relative flex min-h-[62svh] items-center justify-center overflow-hidden border-t border-surface px-6 py-20 text-center md:min-h-[70svh] md:py-24">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.035] sm:h-96 sm:w-96"
@@ -317,7 +301,7 @@ export default function Home() {
 
           <Link
             href="/catalogue"
-            className="group mt-10 inline-flex items-center gap-5 rounded-full border border-foreground px-6 py-3.5 text-[10px] uppercase tracking-[0.27em] text-foreground transition duration-300 hover:bg-foreground hover:text-background"
+            className="group mt-9 inline-flex items-center gap-5 rounded-full border border-foreground px-6 py-3 text-[10px] uppercase tracking-[0.27em] text-foreground transition duration-300 hover:bg-foreground hover:text-background"
           >
             <span>Voir la collection</span>
 
