@@ -30,36 +30,68 @@ export default function ProductPageClient({
   const colorway = product.colorways[colorIndex];
 
   return (
-    <div className="min-h-screen bg-background px-6 py-12">
-      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-10 md:grid-cols-2">
-        <ProductViewer3D colorway={colorway} />
+    <main className="min-h-screen bg-background text-foreground">
+      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-5 pb-24 pt-10 md:grid-cols-[1.15fr_0.85fr] md:gap-16 md:px-8 md:pb-32 md:pt-16">
+        {/* VISUEL PRODUIT */}
+        <div className="md:sticky md:top-24 md:self-start">
+          <div className="overflow-hidden bg-[#111110]">
+            <ProductViewer3D colorway={colorway} />
+          </div>
 
-        <div className="flex flex-col gap-6">
+          <div className="mt-4 flex items-center justify-between border-t border-surface pt-3 text-[10px] uppercase tracking-[0.25em] text-stone">
+            <span>AJVEK</span>
+            <span>Précommande</span>
+          </div>
+        </div>
+
+        {/* INFORMATIONS */}
+        <div className="flex flex-col">
           <div>
-            <h1 className="text-xl uppercase tracking-[0.3em] text-foreground">
+            <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
+              Collection actuelle
+            </p>
+
+            <h1 className="mt-4 font-display text-4xl leading-none md:text-5xl">
               {product.name}
             </h1>
 
-            <p className="mt-2 text-sm text-stone">{product.price}</p>
+            <div className="mt-5 flex items-center justify-between gap-4">
+              <p className="text-lg text-foreground">
+                {product.price}
+              </p>
+
+              <span className="rounded-full border border-surface px-3 py-1 text-[9px] uppercase tracking-[0.25em] text-stone">
+                Précommande
+              </span>
+            </div>
+
+            <p className="mt-6 text-sm leading-6 text-stone">
+              {product.description}
+            </p>
           </div>
 
-          <p className="text-sm text-stone">{product.description}</p>
+          {/* COULEUR */}
+          <div className="mt-10 border-t border-surface pt-6">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                Couleur
+              </p>
 
-          <div>
-            <p className="mb-2 text-xs uppercase tracking-widest text-stone">
-              Couleur
-            </p>
+              <p className="text-xs text-foreground">
+                {colorway.label}
+              </p>
+            </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {product.colorways.map((cw, i) => (
                 <button
                   key={cw.label}
                   type="button"
                   onClick={() => setColorIndex(i)}
-                  className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
+                  className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition ${
                     i === colorIndex
-                      ? "border-foreground text-foreground"
-                      : "border-stone/40 text-stone"
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
                   }`}
                 >
                   {cw.label}
@@ -68,51 +100,121 @@ export default function ProductPageClient({
             </div>
           </div>
 
-          <div>
-            <p className="mb-2 text-xs uppercase tracking-widest text-stone">
-              Taille
-            </p>
+          {/* TAILLE */}
+          <div className="mt-8 border-t border-surface pt-6">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                Taille
+              </p>
 
-            <div className="flex gap-2">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-stone">
+                Coupe oversize
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
               {product.sizes.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setSize(s)}
-                  className={`h-10 w-10 rounded-full border text-xs uppercase tracking-widest ${
+                  className={`h-12 min-w-12 border text-xs uppercase tracking-[0.2em] transition ${
                     s === size
-                      ? "border-foreground text-foreground"
-                      : "border-stone/40 text-stone"
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
                   }`}
                 >
                   {s}
                 </button>
               ))}
             </div>
+
+            {!size && (
+              <p className="mt-3 text-[11px] text-stone">
+                Sélectionne ta taille avant d&apos;ajouter le vêtement à ta
+                précommande.
+              </p>
+            )}
           </div>
 
-          <div className="flex flex-col gap-1 text-[11px] text-stone">
-            <p>✓ Paiement sécurisé par carte bancaire avec Stripe</p>
+          {/* INFOS CLÉS */}
+          <div className="mt-8 border-y border-surface">
+            <div className="grid grid-cols-1 divide-y divide-surface sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              <div className="py-5 sm:pr-6">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                  Production
+                </p>
 
-            <p>
-              ✓ Production lancée à partir de 10 vêtements précommandés et payés
-            </p>
+                <p className="mt-2 text-sm leading-6 text-foreground">
+                  Lancée à partir de 10 vêtements précommandés et payés.
+                </p>
+              </div>
 
-            <p>
-              ✓ Livraison : Mondial Relay 4,90 € ou domicile 7,90 € · offerte dès
-              3 vêtements
-            </p>
+              <div className="py-5 sm:pl-6">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                  Livraison
+                </p>
 
-            <p>✓ Retours possibles sous 14 jours après réception</p>
+                <p className="mt-2 text-sm leading-6 text-foreground">
+                  Mondial Relay 4,90 € · domicile 7,90 € · offerte dès 3
+                  vêtements.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <PreorderForm
-            product={product}
-            colorway={colorway}
-            size={size}
-          />
+          {/* RÉASSURANCE */}
+          <div className="mt-6 grid grid-cols-1 gap-3 text-[11px] leading-5 text-stone sm:grid-cols-2">
+            <div className="border border-surface px-4 py-4">
+              <p className="text-foreground">Paiement sécurisé</p>
+              <p className="mt-1">
+                Paiement par carte bancaire via Stripe.
+              </p>
+            </div>
+
+            <div className="border border-surface px-4 py-4">
+              <p className="text-foreground">Retours</p>
+              <p className="mt-1">
+                Droit de rétractation de 14 jours après réception.
+              </p>
+            </div>
+
+            <div className="border border-surface px-4 py-4">
+              <p className="text-foreground">Fabrication</p>
+              <p className="mt-1">
+                Produit en France par des entreprises françaises.
+              </p>
+            </div>
+
+            <div className="border border-surface px-4 py-4">
+              <p className="text-foreground">Précommande</p>
+              <p className="mt-1">
+                Le paiement confirme immédiatement ta précommande.
+              </p>
+            </div>
+          </div>
+
+          {/* ACTION */}
+          <div className="mt-8 border-t border-surface pt-8">
+            <PreorderForm
+              product={product}
+              colorway={colorway}
+              size={size}
+            />
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
+
+      {/* BANDEAU FINAL */}
+      <section className="border-t border-surface px-6 py-16 text-center">
+        <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
+          AJVEK
+        </p>
+
+        <p className="mx-auto mt-4 max-w-xl font-display text-2xl leading-tight md:text-4xl">
+          Du dessin à la pièce finale.
+        </p>
+      </section>
+    </main>
   );
 }
