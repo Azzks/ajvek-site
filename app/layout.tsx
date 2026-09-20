@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthContext";
 import { CartProvider } from "@/components/CartContext";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import { Analytics } from "@vercel/analytics/next";
 
 const cormorant = Cormorant_Garamond({
@@ -53,49 +54,17 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body
-        className={`${cormorant.variable} ${manrope.variable} antialiased flex min-h-screen flex-col bg-background text-foreground`}
+        className={`${cormorant.variable} ${manrope.variable} flex min-h-screen flex-col bg-background text-foreground antialiased`}
       >
         <AuthProvider>
           <CartProvider>
             <SiteHeader />
 
-            {children}
+            <div className="flex-1">
+              {children}
+            </div>
 
-            <footer className="px-6 py-6 text-center text-xs text-stone border-t border-surface">
-              <div className="mb-3 flex flex-wrap items-center justify-center gap-4">
-                <a
-                  href="/mentions-legales"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Mentions légales
-                </a>
-
-                <a
-                  href="/cgv"
-                  className="hover:text-foreground transition-colors"
-                >
-                  CGV
-                </a>
-
-                <a
-                  href="/confidentialite"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Politique de confidentialité
-                </a>
-
-                <a
-                  href="/contact"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Contact
-                </a>
-              </div>
-
-              <p>
-                © {new Date().getFullYear()} AJVEK. Tous droits réservés.
-              </p>
-            </footer>
+            <SiteFooter />
           </CartProvider>
         </AuthProvider>
 
