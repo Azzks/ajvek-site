@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthContext";
 import { CartProvider } from "@/components/CartContext";
 import SiteHeader from "@/components/SiteHeader";
+import PromoDrawBanner from "@/components/PromoDrawBanner";
 import SiteFooter from "@/components/SiteFooter";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -79,6 +80,7 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+
     googleBot: {
       index: true,
       follow: true,
@@ -105,7 +107,11 @@ export default function RootLayout({
           <CartProvider>
             <SiteHeader />
 
-            <div className="flex-1">{children}</div>
+            <PromoDrawBanner />
+
+            <div className="flex-1">
+              {children}
+            </div>
 
             <SiteFooter />
           </CartProvider>
