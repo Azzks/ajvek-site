@@ -114,6 +114,29 @@ img {
   }
 }
 
+/* AJVEK — BANDEAU PROMOTIONNEL ANIMÉ */
+
+@keyframes ajvek-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ajvek-marquee {
+  animation: ajvek-marquee 24s linear infinite;
+  will-change: transform;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ajvek-marquee:hover {
+    animation-play-state: paused;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -132,5 +155,10 @@ img {
   a:active,
   button:hover {
     transform: none;
+  }
+
+  .ajvek-marquee {
+    animation: none !important;
+    transform: none !important;
   }
 }

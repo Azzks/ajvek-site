@@ -61,7 +61,9 @@ export async function POST(request: Request) {
 
     if (userError || !user || !user.email) {
       return NextResponse.json(
-        { error: "Session utilisateur invalide ou expirée." },
+        {
+          error: "Session utilisateur invalide ou expirée.",
+        },
         { status: 401 }
       );
     }
@@ -141,7 +143,9 @@ export async function POST(request: Request) {
         quantity > 10
       ) {
         return NextResponse.json(
-          { error: "Un article de la précommande est invalide." },
+          {
+            error: "Un article de la précommande est invalide.",
+          },
           { status: 400 }
         );
       }
@@ -150,7 +154,9 @@ export async function POST(request: Request) {
 
       if (!product) {
         return NextResponse.json(
-          { error: `Produit introuvable : ${item.product_slug}` },
+          {
+            error: `Produit introuvable : ${item.product_slug}`,
+          },
           { status: 404 }
         );
       }
@@ -179,8 +185,6 @@ export async function POST(request: Request) {
 
     /*
      * FRAIS DE LIVRAISON
-     *
-     * Calculés uniquement côté serveur.
      *
      * 1 ou 2 vêtements :
      * - Point Relais = 4,90 €
@@ -255,11 +259,13 @@ export async function POST(request: Request) {
       }))
     );
 
-    const { data: createdPreorders, error: preorderError } =
-      await supabaseAdmin
-        .from("preorders")
-        .insert(preorderRows)
-        .select();
+    const {
+      data: createdPreorders,
+      error: preorderError,
+    } = await supabaseAdmin
+      .from("preorders")
+      .insert(preorderRows)
+      .select();
 
     if (
       preorderError ||
@@ -272,7 +278,9 @@ export async function POST(request: Request) {
       );
 
       return NextResponse.json(
-        { error: "Impossible de créer la précommande." },
+        {
+          error: "Impossible de créer la précommande.",
+        },
         { status: 500 }
       );
     }
@@ -306,6 +314,15 @@ export async function POST(request: Request) {
       customer_email: user.email,
 
       payment_method_types: ["card"],
+
+      /*
+       * Permet au client d'entrer un code promo
+       * directement sur la page de paiement Stripe.
+       *
+       * Exemple pour le gagnant :
+       * AJVEK30-XXXX
+       */
+      allow_promotion_codes: true,
 
       line_items: lineItems,
 
@@ -346,11 +363,11 @@ export async function POST(request: Request) {
     };
 
     /*
-     * Pour la livraison à domicile uniquement,
+     * Livraison à domicile :
      * Stripe demande l'adresse du client.
      *
-     * Pour Mondial Relay, le relais a déjà été choisi
-     * avant le paiement.
+     * Mondial Relay :
+     * le relais est déjà choisi avant le paiement.
      */
     if (delivery_method === "home") {
       sessionParams.shipping_address_collection = {
