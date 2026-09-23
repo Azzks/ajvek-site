@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 2. LECTURE DE LA REQUÊTE
+     * 2. DONNÉES
      * ============================================================
      */
 
@@ -110,12 +110,6 @@ export async function POST(request: Request) {
       delivery_method: DeliveryMethod;
       service_point?: ServicePoint | null;
     } = body;
-
-    /*
-     * ============================================================
-     * 3. VALIDATION DES INFORMATIONS CLIENT
-     * ============================================================
-     */
 
     if (!name?.trim()) {
       return NextResponse.json(
@@ -171,24 +165,8 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 4. VALIDATION DES ARTICLES
+     * 3. VALIDATION + FUSION DES DOUBLONS
      * ============================================================
-     *
-     * IMPORTANT :
-     *
-     * Le navigateur peut accidentellement envoyer plusieurs lignes
-     * correspondant exactement au même article :
-     *
-     * Sakura / Noir / M ×1
-     * Sakura / Noir / M ×1
-     * Sakura / Noir / M ×1
-     *
-     * On fusionne donc ces lignes côté serveur.
-     *
-     * Cela évite :
-     * - les doublons Supabase
-     * - les doublons Stripe
-     * - les quantités artificiellement gonflées
      */
 
     const mergedItems = new Map<string, ValidatedItem>();
@@ -227,15 +205,6 @@ export async function POST(request: Request) {
         );
       }
 
-      /*
-       * On nettoie légèrement les valeurs pour éviter que :
-       *
-       * "Noir"
-       * " Noir "
-       *
-       * soient considérés comme deux articles différents.
-       */
-
       const cleanColor = item.color.trim();
       const cleanSize = item.size.trim();
 
@@ -250,11 +219,6 @@ export async function POST(request: Request) {
       if (existingItem) {
         const newQuantity =
           existingItem.quantity + quantity;
-
-        /*
-         * La limite de 10 par variante ne doit pas pouvoir être
-         * contournée en envoyant plusieurs lignes identiques.
-         */
 
         if (newQuantity > 10) {
           return NextResponse.json(
@@ -283,27 +247,10 @@ export async function POST(request: Request) {
 
     const validatedItems = Array.from(mergedItems.values());
 
-    /*
-     * ============================================================
-     * 5. QUANTITÉ TOTALE
-     * ============================================================
-     */
-
     const totalQuantity = validatedItems.reduce(
       (total, item) => total + item.quantity,
       0
     );
-
-    if (totalQuantity < 1) {
-      return NextResponse.json(
-        {
-          error: "Ta précommande est vide.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
 
     if (totalQuantity > 20) {
       return NextResponse.json(
@@ -319,15 +266,8 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 6. FRAIS DE LIVRAISON
+     * 4. LIVRAISON
      * ============================================================
-     *
-     * 1 ou 2 vêtements :
-     * - Point Relais = 4,90 €
-     * - Domicile = 7,90 €
-     *
-     * 3 vêtements ou plus :
-     * - livraison offerte
      */
 
     let shippingAmount = 0;
@@ -339,17 +279,11 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 7. IDENTIFIANT UNIQUE DE LA COMMANDE
+     * 5. IDENTIFIANT DE COMMANDE
      * ============================================================
      */
 
     const checkoutGroupId = randomUUID();
-
-    /*
-     * ============================================================
-     * 8. POINT RELAIS
-     * ============================================================
-     */
 
     const servicePointAddress =
       delivery_method === "relay" && service_point
@@ -363,24 +297,10 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 9. CRÉATION DES LIGNES SUPABASE
+     * 6. CRÉATION DES LIGNES SUPABASE
      * ============================================================
      *
-     * On conserve volontairement :
-     *
-     * 1 vêtement physique = 1 ligne Supabase
-     *
-     * Exemple :
-     *
-     * Sakura M ×2
-     *
-     * donne :
-     *
-     * ligne 1 = Sakura M
-     * ligne 2 = Sakura M
-     *
-     * C'est nécessaire pour que le compteur de production
-     * compte bien les vêtements et non les commandes.
+     * 1 vêtement physique = 1 ligne.
      */
 
     const preorderRows = validatedItems.flatMap((item) =>
@@ -471,7 +391,7 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 10. ARTICLES STRIPE
+     * 7. ARTICLES STRIPE
      * ============================================================
      */
 
@@ -492,12 +412,6 @@ export async function POST(request: Request) {
         quantity: item.quantity,
       }));
 
-    /*
-     * ============================================================
-     * 11. LIVRAISON STRIPE
-     * ============================================================
-     */
-
     const shippingLabel =
       delivery_method === "relay"
         ? "Mondial Relay — Point Relais"
@@ -505,7 +419,7 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 12. SESSION STRIPE
+     * 8. SESSION STRIPE
      * ============================================================
      */
 
@@ -516,11 +430,28 @@ export async function POST(request: Request) {
 
       payment_method_types: ["card"],
 
+      allow_promotion_codes: true,
+
       /*
-       * Codes promotionnels Stripe.
+       * IMPORTANT :
+       *
+       * Ces métadonnées sont copiées directement dans le
+       * PaymentIntent Stripe.
+       *
+       * Donc si Stripe envoie :
+       *
+       * payment_intent.payment_failed
+       *
+       * notre webhook sait immédiatement à quelle commande AJVEK
+       * correspond l'échec.
        */
 
-      allow_promotion_codes: true,
+      payment_intent_data: {
+        metadata: {
+          checkout_group_id: checkoutGroupId,
+          user_id: user.id,
+        },
+      },
 
       line_items: lineItems,
 
@@ -541,6 +472,11 @@ export async function POST(request: Request) {
           },
         },
       ],
+
+      /*
+       * On garde aussi les métadonnées sur la Checkout Session
+       * pour le webhook de paiement réussi.
+       */
 
       metadata: {
         checkout_group_id: checkoutGroupId,
@@ -564,14 +500,6 @@ export async function POST(request: Request) {
         "https://ajvek.fr/paiement/annule",
     };
 
-    /*
-     * Pour une livraison à domicile,
-     * Stripe demande l'adresse du client.
-     *
-     * Pour Mondial Relay, le point relais
-     * est déjà sélectionné avant Stripe.
-     */
-
     if (delivery_method === "home") {
       sessionParams.shipping_address_collection = {
         allowed_countries: ["FR"],
@@ -580,20 +508,32 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 13. CRÉATION DE LA SESSION STRIPE
+     * 9. CRÉATION STRIPE
      * ============================================================
      */
 
-    const session = await stripe.checkout.sessions.create(
-      sessionParams
-    );
+    let session: Stripe.Checkout.Session;
 
-    if (!session.url) {
+    try {
+      session = await stripe.checkout.sessions.create(
+        sessionParams
+      );
+    } catch (error) {
       /*
-       * Si Stripe ne réussit pas à créer le checkout,
-       * on supprime les lignes temporaires que l'on vient de créer.
+       * La session Stripe n'a même pas pu être créée.
+       * On supprime donc les lignes temporaires.
        */
 
+      await supabaseAdmin
+        .from("preorders")
+        .delete()
+        .eq("checkout_group_id", checkoutGroupId)
+        .eq("paid", false);
+
+      throw error;
+    }
+
+    if (!session.url) {
       await supabaseAdmin
         .from("preorders")
         .delete()
@@ -613,7 +553,7 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 14. SAUVEGARDE DE LA SESSION STRIPE
+     * 10. SAUVEGARDE DE LA SESSION
      * ============================================================
      */
 
@@ -634,17 +574,14 @@ export async function POST(request: Request) {
 
     /*
      * ============================================================
-     * 15. RÉPONSE AU SITE
+     * 11. RÉPONSE
      * ============================================================
      */
 
     return NextResponse.json({
       url: session.url,
-
       itemCount: totalQuantity,
-
       shippingAmount,
-
       deliveryMethod: delivery_method,
     });
   } catch (error) {

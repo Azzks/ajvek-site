@@ -6,6 +6,7 @@ import Link from "next/link";
 const NAV_LINKS = [
   { href: "/catalogue", label: "Collection" },
   { href: "/precommande", label: "Ma précommande" },
+  { href: "/mes-commandes", label: "Mes commandes" },
   { href: "/lookbook", label: "Lookbook" },
   { href: "/a-propos", label: "À propos" },
   { href: "/contact", label: "Contact" },
@@ -41,7 +42,7 @@ export default function SiteHeader() {
           </Link>
 
           {/* NAV DESKTOP */}
-          <nav className="hidden items-center gap-8 text-[11px] uppercase tracking-[0.22em] text-stone md:flex">
+          <nav className="hidden items-center gap-7 text-[11px] uppercase tracking-[0.2em] text-stone md:flex">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
@@ -124,9 +125,9 @@ export default function SiteHeader() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-between border-t border-white/10 py-5"
+                  className="flex items-center justify-between border-t border-white/10 py-4"
                 >
-                  <span className="font-display text-[2.25rem] leading-none">
+                  <span className="font-display text-[2rem] leading-none">
                     {link.label}
                   </span>
 
