@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 const NAV_LINKS = [
   { href: "/catalogue", label: "Collection" },
@@ -12,8 +13,14 @@ const NAV_LINKS = [
   { href: "/contact", label: "Contact" },
 ];
 
+const ADMIN_LINK = {
+  href: "/admin/commandes",
+  label: "Administration",
+};
+
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -26,6 +33,61 @@ export default function SiteHeader() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkAdmin() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          if (active) {
+            setIsAdmin(false);
+          }
+
+          return;
+        }
+
+        const response = await fetch("/api/admin/orders", {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (active) {
+          setIsAdmin(response.ok);
+        }
+      } catch (error) {
+        console.error("[SiteHeader] Vérification admin :", error);
+
+        if (active) {
+          setIsAdmin(false);
+        }
+      }
+    }
+
+    checkAdmin();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      checkAdmin();
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const visibleLinks = isAdmin
+    ? [...NAV_LINKS, ADMIN_LINK]
+    : NAV_LINKS;
 
   return (
     <>
@@ -43,11 +105,15 @@ export default function SiteHeader() {
 
           {/* NAV DESKTOP */}
           <nav className="hidden items-center gap-7 text-[11px] uppercase tracking-[0.2em] text-stone md:flex">
-            {NAV_LINKS.map((link) => (
+            {visibleLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="transition-colors hover:text-foreground"
+                className={
+                  link.href === "/admin/commandes"
+                    ? "text-foreground transition-opacity hover:opacity-70"
+                    : "transition-colors hover:text-foreground"
+                }
               >
                 {link.label}
               </Link>
@@ -120,12 +186,16 @@ export default function SiteHeader() {
             </p>
 
             <nav>
-              {NAV_LINKS.map((link, index) => (
+              {visibleLinks.map((link, index) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-between border-t border-white/10 py-4"
+                  className={`flex items-center justify-between border-t border-white/10 py-4 ${
+                    link.href === "/admin/commandes"
+                      ? "text-white"
+                      : ""
+                  }`}
                 >
                   <span className="font-display text-[2rem] leading-none">
                     {link.label}
