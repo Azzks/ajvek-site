@@ -32,15 +32,8 @@ export default function ProductPageClient({
 
   const colorway = product.colorways[colorIndex];
 
-  const scrollToPreorder = () => {
-    document.getElementById("preorder")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  };
-
   return (
-    <main className="min-h-screen bg-background pb-28 text-foreground md:pb-0">
+    <main className="min-h-screen bg-background text-foreground">
       {/* =====================================================
           PRODUCT
       ====================================================== */}
@@ -78,7 +71,9 @@ export default function ProductPageClient({
             </h1>
 
             <div className="mt-5 flex items-center justify-between gap-4">
-              <p className="text-lg text-foreground">{product.price}</p>
+              <p className="font-display text-3xl text-foreground">
+                {product.price}
+              </p>
 
               <span className="rounded-full border border-surface px-3 py-1 text-[9px] uppercase tracking-[0.25em] text-stone">
                 Précommande
@@ -162,27 +157,57 @@ export default function ProductPageClient({
           </div>
 
           {/* =================================================
+              PREORDER
+          ================================================== */}
+
+          <div className="mt-8 border-t border-surface pt-7">
+            <div className="mb-6 flex items-end justify-between">
+              <div>
+                <p className="text-[9px] uppercase tracking-[0.35em] text-stone/60">
+                  Ta pièce
+                </p>
+
+                <p className="mt-2 font-display text-2xl">
+                  {product.price}
+                </p>
+              </div>
+
+              <p className="text-right text-[8px] uppercase leading-5 tracking-[0.28em] text-stone/60">
+                Drop 001
+                <br />
+                Précommande
+              </p>
+            </div>
+
+            <PreorderForm
+              product={product}
+              colorway={colorway}
+              size={size}
+            />
+          </div>
+
+          {/* =================================================
               PRODUCTION + LIVRAISON
           ================================================== */}
 
-          <div className="mt-8 border-y border-surface">
+          <div className="mt-10 border-y border-surface">
             <div className="grid grid-cols-1 divide-y divide-surface sm:grid-cols-2 sm:divide-x sm:divide-y-0">
               <div className="py-5 sm:pr-6">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
                   Production
                 </p>
 
-                <p className="mt-2 text-sm leading-6 text-foreground">
+                <p className="mt-3 text-sm leading-6 text-foreground">
                   Lancée à partir de 10 vêtements précommandés et payés.
                 </p>
               </div>
 
               <div className="py-5 sm:pl-6">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+                <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
                   Livraison
                 </p>
 
-                <p className="mt-2 text-sm leading-6 text-foreground">
+                <p className="mt-3 text-sm leading-6 text-foreground">
                   Mondial Relay 4,90 € · domicile 7,90 € · offerte dès 3
                   vêtements.
                 </p>
@@ -200,101 +225,73 @@ export default function ProductPageClient({
                 Paiement sécurisé
               </p>
 
-              <p className="mt-1 text-[11px] leading-5 text-stone">
+              <p className="mt-2 text-[11px] leading-5 text-stone">
                 Carte bancaire via Stripe.
               </p>
             </div>
 
             <div className="bg-background p-4">
-              <p className="text-[10px] text-foreground">Retours</p>
+              <p className="text-[10px] text-foreground">
+                Retours
+              </p>
 
-              <p className="mt-1 text-[11px] leading-5 text-stone">
+              <p className="mt-2 text-[11px] leading-5 text-stone">
                 14 jours après réception.
               </p>
             </div>
 
             <div className="bg-background p-4">
-              <p className="text-[10px] text-foreground">Fabrication</p>
+              <p className="text-[10px] text-foreground">
+                Fabrication
+              </p>
 
-              <p className="mt-1 text-[11px] leading-5 text-stone">
+              <p className="mt-2 text-[11px] leading-5 text-stone">
                 Produit en France.
               </p>
             </div>
 
             <div className="bg-background p-4">
-              <p className="text-[10px] text-foreground">Précommande</p>
+              <p className="text-[10px] text-foreground">
+                Précommande
+              </p>
 
-              <p className="mt-1 text-[11px] leading-5 text-stone">
+              <p className="mt-2 text-[11px] leading-5 text-stone">
                 Paiement = confirmation.
               </p>
             </div>
           </div>
-
-          {/* =================================================
-              PREORDER FORM
-          ================================================== */}
-
-          <div
-            id="preorder"
-            className="mt-7 scroll-mt-24 border-t border-surface pt-7"
-          >
-            <PreorderForm
-              product={product}
-              colorway={colorway}
-              size={size}
-            />
-          </div>
         </div>
       </section>
 
       {/* =====================================================
-          FINAL
+          FINAL BRAND SECTION
       ====================================================== */}
 
-      <section className="flex min-h-[36svh] items-center justify-center border-t border-surface px-6 py-14 text-center md:min-h-[50svh] md:py-16">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-stone">
-            AJVEK
+      <section className="relative flex min-h-[40svh] items-center justify-center overflow-hidden border-t border-surface px-6 py-20 text-center md:min-h-[50svh]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[30vw] leading-none text-foreground/[0.015]"
+        >
+          AJVEK
+        </div>
+
+        <div className="relative z-10">
+          <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
+            AJVEK · DROP 001
           </p>
 
-          <p className="mx-auto mt-4 max-w-xl font-display text-2xl leading-tight md:text-4xl">
-            Du dessin à la pièce finale.
+          <p className="mx-auto mt-6 max-w-xl font-display text-4xl leading-[0.95] tracking-[-0.03em] md:text-6xl">
+            Du dessin
+            <br />
+            à la pièce finale.
+          </p>
+
+          <p className="mx-auto mt-6 max-w-sm text-sm leading-7 text-stone">
+            Une première série pensée autour du dessin et produite en quantité
+            limitée.
           </p>
         </div>
       </section>
-
-      {/* =====================================================
-          MOBILE FIXED BUY BAR
-          TOUJOURS EN BAS DE L'ÉCRAN
-      ====================================================== */}
-
-      <div className="fixed inset-x-0 bottom-0 z-[9999] border-t border-white/10 bg-background/95 px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-xl md:hidden">
-        <div className="mx-auto flex max-w-lg items-center gap-4">
-          {/* PRODUCT */}
-
-          <div className="min-w-0 flex-1 pl-1">
-            <p className="truncate text-[8px] uppercase tracking-[0.32em] text-stone/55">
-              AJVEK · {product.name}
-            </p>
-
-            <p className="mt-1 font-display text-xl leading-none">
-              {product.price}
-            </p>
-          </div>
-
-          {/* BUTTON */}
-
-          <button
-            type="button"
-            onClick={scrollToPreorder}
-            className="flex min-w-[185px] items-center justify-between rounded-full bg-foreground px-5 py-4 text-[8px] uppercase tracking-[0.25em] text-background"
-          >
-            <span>Choisir</span>
-
-            <span className="ml-4 text-base">↑</span>
-          </button>
-        </div>
-      </div>
     </main>
   );
 }
