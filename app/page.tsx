@@ -18,8 +18,8 @@ const PRODUCTS = [
     name: "ROSES",
     description:
       "Une composition verticale construite autour de la rose et du lettrage AJVEK.",
-    image: "/images/drop/roses-black.jpg",
-    alternateImage: "/images/drop/roses-white.jpg",
+    image: "/images/drop-001/roses-black.jpg",
+    alternateImage: "/images/drop-001/roses-white.jpg",
     href: "/catalogue",
   },
   {
@@ -28,8 +28,8 @@ const PRODUCTS = [
     name: "CERISIER",
     description:
       "Une seconde lecture du végétal, plus organique, pensée comme le contrepoint de Roses.",
-    image: "/images/drop/cerisier-white.jpg",
-    alternateImage: "/images/drop/cerisier-black.jpg",
+    image: "/images/drop-001/cerisier-white.jpg",
+    alternateImage: "/images/drop-001/cerisier-black.jpg",
     href: "/catalogue",
   },
 ];
@@ -178,7 +178,6 @@ export default function Home() {
         className="relative min-h-[calc(100svh-65px)] overflow-hidden border-b border-surface"
       >
         {/* GRID */}
-
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.045]"
@@ -191,8 +190,7 @@ export default function Home() {
           }}
         />
 
-        {/* GHOST */}
-
+        {/* GHOST 001 */}
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[49%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[50vw] leading-none text-foreground/[0.018] md:text-[25vw]"
@@ -202,7 +200,6 @@ export default function Home() {
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100svh-65px)] max-w-7xl flex-col px-5 pb-8 pt-10 md:px-8 md:pb-10 md:pt-16">
           {/* TOP */}
-
           <div className="flex items-center justify-between">
             <p className="text-[9px] uppercase tracking-[0.4em] text-stone/60">
               Drop 001 · 2026
@@ -214,7 +211,6 @@ export default function Home() {
           </div>
 
           {/* CENTER */}
-
           <div className="flex flex-1 flex-col justify-center py-10">
             <p
               ref={eyebrowRef}
@@ -240,11 +236,8 @@ export default function Home() {
             </p>
 
             {/* PRICE */}
-
             <div className="mt-8 flex items-center gap-4">
-              <span className="font-display text-3xl">
-                {PRICE}
-              </span>
+              <span className="font-display text-3xl">{PRICE}</span>
 
               <span className="h-px w-8 bg-stone/30" />
 
@@ -271,7 +264,6 @@ export default function Home() {
           </div>
 
           {/* BOTTOM */}
-
           <div
             ref={metaRef}
             className="border-t border-surface pt-5 opacity-0"
@@ -281,9 +273,7 @@ export default function Home() {
                 Première collection
               </p>
 
-              <p className="text-[11px]">
-                Roses · Cerisier
-              </p>
+              <p className="text-[11px]">Roses · Cerisier</p>
             </div>
           </div>
         </div>
@@ -349,7 +339,6 @@ export default function Home() {
               }`}
             >
               {/* IMAGE */}
-
               <Link
                 href={product.href}
                 className={`group relative aspect-[4/5] overflow-hidden bg-[#d5d4d1] md:aspect-square ${
@@ -379,7 +368,6 @@ export default function Home() {
               </Link>
 
               {/* CONTENT */}
-
               <div
                 className={`flex flex-col justify-center px-5 py-14 md:px-12 md:py-20 lg:px-16 ${
                   index % 2 === 1 ? "md:order-1" : ""
@@ -408,7 +396,6 @@ export default function Home() {
                 </p>
 
                 {/* FEATURES */}
-
                 <div className="mt-9 flex flex-wrap gap-2">
                   {["Oversize", "Broderie", "DTF"].map((feature) => (
                     <span
@@ -421,7 +408,6 @@ export default function Home() {
                 </div>
 
                 {/* PRICE */}
-
                 <div className="mt-12 flex items-end justify-between border-t border-surface pt-7">
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.35em] text-stone/50">
@@ -481,7 +467,6 @@ export default function Home() {
               </p>
 
               {/* PROGRESS */}
-
               <div className="mt-10">
                 <div className="flex items-end justify-between">
                   <p className="text-[8px] uppercase tracking-[0.35em] text-stone">
