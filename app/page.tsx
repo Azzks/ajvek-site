@@ -5,35 +5,32 @@ import Image from "next/image";
 import Link from "next/link";
 import gsap from "gsap";
 
-import MadeInFrance from "@/components/MadeInFrance";
-import PaymentNotice from "@/components/PaymentNotice";
 import DesignProcessStory from "@/components/DesignProcessStory";
 import HomeIntro from "@/components/HomeIntro";
 
 const PREORDER_GOAL = 10;
+const PRICE = "39,90 €";
 
-const DESIGNS = [
+const PRODUCTS = [
   {
     number: "01",
     code: "AJVEK 001",
     name: "ROSES",
-    letter: "R",
     description:
-      "Une composition construite autour du mouvement de la rose et du lettrage AJVEK.",
+      "Une composition verticale construite autour de la rose et du lettrage AJVEK.",
+    image: "/images/drop/roses-black.jpg",
+    alternateImage: "/images/drop/roses-white.jpg",
     href: "/catalogue",
-    image: "/images/drop-001/roses-black.jpg",
-    secondaryImage: "/images/drop-001/roses-white.jpg",
   },
   {
     number: "02",
     code: "AJVEK 002",
     name: "CERISIER",
-    letter: "C",
     description:
-      "Une seconde lecture du végétal, plus légère, pensée comme le contrepoint de Roses.",
+      "Une seconde lecture du végétal, plus organique, pensée comme le contrepoint de Roses.",
+    image: "/images/drop/cerisier-white.jpg",
+    alternateImage: "/images/drop/cerisier-black.jpg",
     href: "/catalogue",
-    image: "/images/drop-001/cerisier-white.jpg",
-    secondaryImage: "/images/drop-001/cerisier-black.jpg",
   },
 ];
 
@@ -47,11 +44,9 @@ export default function Home() {
 
   const [count, setCount] = useState<number | null>(null);
 
-  /*
-   * ============================================================
-   * PRÉCOMMANDES
-   * ============================================================
-   */
+  /* =========================================================
+     PRÉCOMMANDES
+  ========================================================= */
 
   useEffect(() => {
     fetch("/api/preorder-count", {
@@ -62,11 +57,9 @@ export default function Home() {
       .catch(() => setCount(null));
   }, []);
 
-  /*
-   * ============================================================
-   * ANIMATION HERO
-   * ============================================================
-   */
+  /* =========================================================
+     ANIMATION HERO
+  ========================================================= */
 
   useEffect(() => {
     const reducedMotion = window.matchMedia(
@@ -92,61 +85,44 @@ export default function Home() {
     }
 
     const ctx = gsap.context(() => {
-      gsap.set(eyebrowRef.current, {
+      gsap.set(elements, {
         opacity: 0,
-        y: 10,
+        y: 18,
       });
 
       gsap.set(titleRef.current, {
-        opacity: 0,
-        y: 24,
-        rotationX: -15,
+        y: 30,
+        rotationX: -12,
         transformPerspective: 1000,
       });
 
-      gsap.set(textRef.current, {
-        opacity: 0,
-        y: 14,
+      const tl = gsap.timeline({
+        delay: 0.45,
       });
 
-      gsap.set(buttonRef.current, {
-        opacity: 0,
-        y: 14,
-      });
-
-      gsap.set(metaRef.current, {
-        opacity: 0,
-        y: 12,
-      });
-
-      const timeline = gsap.timeline({
-        delay: 0.65,
-      });
-
-      timeline
-        .to(eyebrowRef.current, {
-          opacity: 1,
-          y: 0,
-          duration: 0.5,
-          ease: "power2.out",
-        })
+      tl.to(eyebrowRef.current, {
+        opacity: 1,
+        y: 0,
+        duration: 0.45,
+        ease: "power2.out",
+      })
         .to(
           titleRef.current,
           {
             opacity: 1,
             y: 0,
             rotationX: 0,
-            duration: 0.95,
+            duration: 0.9,
             ease: "power3.out",
           },
-          "-=0.25"
+          "-=0.2"
         )
         .to(
           textRef.current,
           {
             opacity: 1,
             y: 0,
-            duration: 0.6,
+            duration: 0.55,
             ease: "power2.out",
           },
           "-=0.4"
@@ -166,49 +142,42 @@ export default function Home() {
           {
             opacity: 1,
             y: 0,
-            duration: 0.55,
+            duration: 0.5,
             ease: "power2.out",
           },
-          "-=0.2"
+          "-=0.25"
         );
     }, heroRef);
 
     return () => ctx.revert();
   }, []);
 
-  /*
-   * ============================================================
-   * COMPTEUR
-   * ============================================================
-   */
-
   const safeCount = count ?? 0;
-
-  const thresholdReached =
-    count !== null && safeCount >= PREORDER_GOAL;
-
   const remaining =
-    count !== null
-      ? Math.max(PREORDER_GOAL - safeCount, 0)
-      : PREORDER_GOAL;
+    count !== null ? Math.max(PREORDER_GOAL - safeCount, 0) : PREORDER_GOAL;
 
   const percent =
     count !== null
       ? Math.min((safeCount / PREORDER_GOAL) * 100, 100)
       : 0;
 
+  const thresholdReached =
+    count !== null && safeCount >= PREORDER_GOAL;
+
   return (
-    <main className="overflow-hidden bg-background text-foreground">
+    <main className="overflow-hidden bg-background pb-24 text-foreground md:pb-0">
       <HomeIntro />
 
-      {/* =======================================================
+      {/* =====================================================
           HERO
-      ======================================================== */}
+      ====================================================== */}
 
       <section
         ref={heroRef}
-        className="relative overflow-hidden border-b border-surface"
+        className="relative min-h-[calc(100svh-65px)] overflow-hidden border-b border-surface"
       >
+        {/* GRID */}
+
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.045]"
@@ -221,28 +190,34 @@ export default function Home() {
           }}
         />
 
+        {/* GHOST */}
+
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[44vw] leading-none text-foreground/[0.018] md:text-[24vw]"
+          className="pointer-events-none absolute left-1/2 top-[49%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[50vw] leading-none text-foreground/[0.018] md:text-[25vw]"
         >
           001
         </div>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-65px)] max-w-7xl flex-col px-5 pb-8 pt-12 md:px-8 md:pb-10 md:pt-20">
+        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-65px)] max-w-7xl flex-col px-5 pb-8 pt-10 md:px-8 md:pb-10 md:pt-16">
+          {/* TOP */}
+
           <div className="flex items-center justify-between">
-            <p className="text-[9px] uppercase tracking-[0.4em] text-stone/70">
+            <p className="text-[9px] uppercase tracking-[0.4em] text-stone/60">
               Drop 001 · 2026
             </p>
 
-            <p className="text-[9px] uppercase tracking-[0.4em] text-stone/50">
+            <p className="text-[9px] uppercase tracking-[0.4em] text-stone/60">
               France
             </p>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center py-12">
+          {/* CENTER */}
+
+          <div className="flex flex-1 flex-col justify-center py-10">
             <p
               ref={eyebrowRef}
-              className="text-[10px] uppercase tracking-[0.5em] text-stone opacity-0"
+              className="text-[9px] uppercase tracking-[0.48em] text-stone opacity-0"
             >
               Roses / Cerisier
             </p>
@@ -263,29 +238,49 @@ export default function Home() {
               Le reste construit son identité.
             </p>
 
+            {/* PRICE */}
+
+            <div className="mt-8 flex items-center gap-4">
+              <span className="font-display text-3xl">
+                {PRICE}
+              </span>
+
+              <span className="h-px w-8 bg-stone/30" />
+
+              <span className="text-[8px] uppercase tracking-[0.35em] text-stone">
+                Précommande ouverte
+              </span>
+            </div>
+
             <Link
               ref={buttonRef}
               href="/catalogue"
-              className="group mt-10 flex w-full max-w-md items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background opacity-0 transition duration-300 hover:scale-[0.99] md:w-fit md:min-w-[360px]"
+              className="group mt-8 flex w-full max-w-md items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background opacity-0 transition duration-300 hover:scale-[0.99] md:w-fit md:min-w-[390px]"
             >
-              <span>Découvrir Drop 001</span>
+              <span>Voir le Drop 001</span>
 
-              <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
+              <span className="text-lg transition-transform duration-300 group-hover:translate-x-1">
                 →
               </span>
             </Link>
+
+            <p className="mt-5 text-[8px] uppercase tracking-[0.3em] text-stone/45">
+              Paiement sécurisé · Série limitée
+            </p>
           </div>
+
+          {/* BOTTOM */}
 
           <div
             ref={metaRef}
             className="border-t border-surface pt-5 opacity-0"
           >
-            <div className="flex items-center justify-between gap-5">
-              <p className="text-[9px] uppercase tracking-[0.35em] text-stone">
-                Collection
+            <div className="flex items-center justify-between">
+              <p className="text-[8px] uppercase tracking-[0.35em] text-stone/55">
+                Première collection
               </p>
 
-              <p className="text-[11px] text-foreground">
+              <p className="text-[11px]">
                 Roses · Cerisier
               </p>
             </div>
@@ -293,254 +288,243 @@ export default function Home() {
         </div>
       </section>
 
-      {/* =======================================================
-          RÉASSURANCE
-      ======================================================== */}
+      {/* =====================================================
+          TRUST STRIP
+      ====================================================== */}
 
       <section className="border-b border-surface">
         <div className="mx-auto max-w-7xl px-5 md:px-8">
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 py-5 text-center text-[8px] uppercase tracking-[0.28em] text-stone md:gap-x-10 md:py-6 md:text-[9px]">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 py-5 text-center text-[8px] uppercase tracking-[0.27em] text-stone md:gap-x-8">
+            <span>39,90 €</span>
+            <span className="text-stone/25">·</span>
             <span>Paiement sécurisé</span>
-
-            <span className="text-stone/35">·</span>
-
-            <span>Production française</span>
-
-            <span className="text-stone/35">·</span>
-
-            <span>Précommande limitée</span>
-          </div>
-
-          <div className="hidden">
-            <PaymentNotice />
-            <MadeInFrance />
+            <span className="text-stone/25">·</span>
+            <span>Série limitée</span>
+            <span className="text-stone/25">·</span>
+            <span>Drop 001</span>
           </div>
         </div>
       </section>
 
-      {/* =======================================================
-          INTRO DROP
-      ======================================================== */}
+      {/* =====================================================
+          PRODUCTS INTRO
+      ====================================================== */}
 
-      <section className="border-b border-surface px-5 py-16 md:px-8 md:py-28">
+      <section className="px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8 md:grid-cols-[0.35fr_1fr] md:gap-20">
-            <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
-              01 — Drop 001
+          <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
+            01 — Drop 001
+          </p>
+
+          <div className="mt-8 grid gap-7 md:grid-cols-2 md:items-end">
+            <h2 className="font-display text-[3.5rem] leading-[0.88] tracking-[-0.04em] sm:text-6xl md:text-8xl">
+              Les
+              <br />
+              pièces.
+            </h2>
+
+            <p className="max-w-md text-[15px] leading-7 text-stone md:justify-self-end">
+              Deux dessins. Deux interprétations du végétal.
+              <br />
+              Le premier chapitre AJVEK.
             </p>
-
-            <div>
-              <h2 className="max-w-3xl font-display text-[3rem] leading-[0.9] tracking-[-0.035em] sm:text-6xl md:text-7xl">
-                Deux dessins.
-                <br />
-                Une identité.
-              </h2>
-
-              <p className="mt-7 max-w-xl text-[14px] leading-7 text-stone md:text-base">
-                Roses et Cerisier composent le premier chapitre AJVEK.
-                Deux interprétations du végétal pensées directement
-                pour le vêtement.
-              </p>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* =======================================================
-          DROP 001 — PRODUITS
-      ======================================================== */}
+      {/* =====================================================
+          PRODUCTS
+      ====================================================== */}
 
       <section className="border-b border-surface">
-        <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-24">
-          <div className="flex items-end justify-between gap-8">
-            <div>
-              <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
-                Drop 001
-              </p>
-
-              <h2 className="mt-5 font-display text-5xl leading-none tracking-[-0.04em] md:text-7xl">
-                Les pièces.
-              </h2>
-            </div>
-
-            <p className="hidden max-w-xs text-right text-sm leading-6 text-stone md:block">
-              Deux dessins. Deux interprétations.
-              <br />
-              Un même chapitre.
-            </p>
-          </div>
-        </div>
-
-        {DESIGNS.map((design, index) => (
-          <article
-            key={design.name}
-            className="border-t border-surface"
-          >
-            <div
-              className={`mx-auto grid max-w-7xl md:min-h-[82vh] md:grid-cols-2 ${
-                index % 2 === 1
-                  ? "md:[&>*:first-child]:order-2"
+        <div className="mx-auto max-w-7xl">
+          {PRODUCTS.map((product, index) => (
+            <article
+              key={product.name}
+              className={`grid md:grid-cols-2 ${
+                index !== PRODUCTS.length - 1
+                  ? "border-b border-surface"
                   : ""
               }`}
             >
-              {/* IMAGE PRINCIPALE */}
+              {/* IMAGE */}
 
               <Link
-                href={design.href}
-                className="group relative min-h-[57svh] overflow-hidden bg-[#e8e6e2] md:min-h-full"
+                href={product.href}
+                className={`group relative aspect-[4/5] overflow-hidden bg-[#d5d4d1] md:aspect-square ${
+                  index % 2 === 1 ? "md:order-2" : ""
+                }`}
               >
                 <Image
-                  src={design.image}
-                  alt={`T-shirt AJVEK ${design.name}`}
+                  src={product.image}
+                  alt={`T-shirt AJVEK ${product.name}`}
                   fill
+                  priority={index === 0}
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.025]"
+                  className="object-cover transition duration-700 group-hover:scale-[1.015]"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5" />
-
-                <div className="absolute left-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-black/80 text-[8px] tracking-[0.2em] text-white backdrop-blur md:left-8 md:top-8">
-                  {design.number}
+                <div className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-background/90 text-[9px] tracking-[0.2em] backdrop-blur-md">
+                  {product.number}
                 </div>
 
-                <div className="absolute bottom-5 left-5 md:bottom-8 md:left-8">
-                  <p className="text-[8px] uppercase tracking-[0.4em] text-white/65">
-                    AJVEK · Drop 001
-                  </p>
+                <div className="absolute bottom-5 left-5 text-[8px] uppercase tracking-[0.4em] text-black/60">
+                  AJVEK · DROP 001
                 </div>
 
-                <div className="absolute bottom-5 right-5 flex h-11 w-11 items-center justify-center rounded-full bg-white text-lg text-black transition-transform duration-300 group-hover:translate-x-1 md:bottom-8 md:right-8">
+                <div className="absolute bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-white text-xl text-black transition duration-300 group-hover:scale-105">
                   →
                 </div>
               </Link>
 
-              {/* INFORMATIONS */}
+              {/* CONTENT */}
 
-              <div className="relative flex min-h-[55svh] flex-col justify-between overflow-hidden px-5 py-9 md:min-h-full md:px-12 md:py-12 lg:px-16">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -right-10 top-1/2 -translate-y-1/2 font-display text-[70vw] leading-none text-foreground/[0.018] md:text-[30vw]"
-                >
-                  {design.letter}
-                </span>
-
-                <div className="relative z-10 flex items-center justify-between">
+              <div
+                className={`flex flex-col justify-center px-5 py-14 md:px-12 md:py-20 lg:px-16 ${
+                  index % 2 === 1 ? "md:order-1" : ""
+                }`}
+              >
+                <div className="flex items-center justify-between">
                   <p className="text-[8px] uppercase tracking-[0.4em] text-stone/60">
-                    {design.code}
+                    {product.code}
                   </p>
 
                   <p className="text-[8px] uppercase tracking-[0.4em] text-stone/60">
-                    {design.number} / 02
+                    {product.number} / 02
                   </p>
                 </div>
 
-                <div className="relative z-10 py-12 md:py-20">
-                  <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
-                    AJVEK · Drop 001
-                  </p>
+                <p className="mt-16 text-[9px] uppercase tracking-[0.4em] text-stone">
+                  AJVEK · Drop 001
+                </p>
 
-                  <h3 className="mt-6 font-display text-[4rem] leading-[0.8] tracking-[-0.045em] sm:text-7xl md:text-8xl">
-                    {design.name}
-                  </h3>
+                <h3 className="mt-6 font-display text-[3.8rem] leading-[0.85] tracking-[-0.04em] sm:text-7xl lg:text-8xl">
+                  {product.name}
+                </h3>
 
-                  <p className="mt-8 max-w-sm text-[14px] leading-7 text-stone md:text-[15px]">
-                    {design.description}
-                  </p>
+                <p className="mt-8 max-w-md text-[15px] leading-7 text-stone">
+                  {product.description}
+                </p>
 
-                  <div className="mt-9 flex flex-wrap gap-2">
-                    <span className="border border-surface px-4 py-2 text-[8px] uppercase tracking-[0.3em] text-stone">
-                      Oversize
+                {/* FEATURES */}
+
+                <div className="mt-9 flex flex-wrap gap-2">
+                  {["Oversize", "Broderie", "DTF"].map((feature) => (
+                    <span
+                      key={feature}
+                      className="border border-surface px-5 py-3 text-[8px] uppercase tracking-[0.32em] text-stone"
+                    >
+                      {feature}
                     </span>
+                  ))}
+                </div>
 
-                    <span className="border border-surface px-4 py-2 text-[8px] uppercase tracking-[0.3em] text-stone">
-                      Broderie
-                    </span>
+                {/* PRICE */}
 
-                    <span className="border border-surface px-4 py-2 text-[8px] uppercase tracking-[0.3em] text-stone">
-                      DTF
-                    </span>
+                <div className="mt-12 flex items-end justify-between border-t border-surface pt-7">
+                  <div>
+                    <p className="text-[8px] uppercase tracking-[0.35em] text-stone/50">
+                      Prix
+                    </p>
+
+                    <p className="mt-2 font-display text-4xl">
+                      {PRICE}
+                    </p>
                   </div>
+
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-stone/50">
+                    Précommande
+                  </p>
                 </div>
 
                 <Link
-                  href={design.href}
-                  className="group relative z-10 flex items-center justify-between border-t border-surface pt-6"
+                  href={product.href}
+                  className="group mt-7 flex items-center justify-between rounded-full border border-foreground px-6 py-5 text-[9px] uppercase tracking-[0.3em] transition duration-300 hover:bg-foreground hover:text-background"
                 >
-                  <span className="text-[9px] uppercase tracking-[0.4em]">
-                    Découvrir la pièce
-                  </span>
+                  <span>Précommander {product.name}</span>
 
-                  <span className="text-xl transition-transform duration-300 group-hover:translate-x-2">
+                  <span className="text-base transition-transform group-hover:translate-x-1">
                     →
                   </span>
                 </Link>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))}
+        </div>
       </section>
 
-      {/* =======================================================
-          PRÉCOMMANDES
-      ======================================================== */}
+      {/* =====================================================
+          PREORDER
+      ====================================================== */}
 
-      <section className="border-b border-surface px-5 py-16 md:px-8 md:py-24">
+      <section className="border-b border-surface px-5 py-20 md:px-8 md:py-28">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 md:grid-cols-[0.8fr_1.2fr] md:items-end md:gap-24">
+          <div className="grid gap-14 md:grid-cols-[0.85fr_1.15fr] md:items-end md:gap-24">
             <div>
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
-                Production Drop 001
+                Première série
               </p>
 
-              <div className="mt-7 flex items-end gap-3">
-                <span className="font-display text-[5.5rem] leading-[0.72] tracking-[-0.05em] md:text-[8rem]">
-                  {String(safeCount).padStart(2, "0")}
-                </span>
-
-                <span className="pb-1 font-display text-3xl text-stone md:pb-2 md:text-4xl">
-                  / {PREORDER_GOAL}
-                </span>
-              </div>
+              <h2 className="mt-7 max-w-lg font-display text-[3.5rem] leading-[0.9] tracking-[-0.04em] md:text-7xl">
+                10 pièces.
+                <br />
+                Pas plus.
+              </h2>
             </div>
 
             <div>
-              <h2 className="font-display text-4xl leading-[0.95] md:text-6xl">
-                {thresholdReached
-                  ? "La production peut commencer."
-                  : `${remaining} ${
-                      remaining > 1 ? "pièces" : "pièce"
-                    } avant production.`}
-              </h2>
-
-              <p className="mt-6 max-w-xl text-sm leading-7 text-stone md:text-base">
-                Chaque précommande payée rapproche Drop 001 du
-                lancement de sa production.
+              <p className="max-w-lg text-[15px] leading-7 text-stone">
+                Drop 001 commence par une première série de dix
+                précommandes. Une production courte pour lancer
+                AJVEK sans surproduire.
               </p>
 
-              <div className="mt-9">
-                <div className="h-px overflow-hidden bg-surface">
+              {/* PROGRESS */}
+
+              <div className="mt-10">
+                <div className="flex items-end justify-between">
+                  <p className="text-[8px] uppercase tracking-[0.35em] text-stone">
+                    Première série
+                  </p>
+
+                  {count !== null && count > 0 && (
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                      {safeCount} / {PREORDER_GOAL}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-5 h-px overflow-hidden bg-surface">
                   <div
-                    className="h-full bg-foreground transition-all duration-1000 ease-out"
+                    className="h-full bg-foreground transition-all duration-1000"
                     style={{
                       width: `${percent}%`,
                     }}
                   />
                 </div>
 
-                <div className="mt-4 flex items-center justify-between text-[8px] uppercase tracking-[0.35em] text-stone/55">
-                  <span>00</span>
-                  <span>Production</span>
-                  <span>10</span>
+                <div className="mt-4 flex justify-between text-[8px] uppercase tracking-[0.32em] text-stone/40">
+                  <span>Lancement</span>
+                  <span>10 pièces</span>
                 </div>
               </div>
 
+              <p className="mt-8 text-sm leading-6 text-stone/70">
+                {thresholdReached
+                  ? "La première série est complète."
+                  : count !== null && count > 0
+                  ? `${remaining} ${
+                      remaining > 1 ? "pièces restantes" : "pièce restante"
+                    } avant le lancement de la production.`
+                  : "Les premières précommandes sont ouvertes."}
+              </p>
+
               <Link
                 href="/catalogue"
-                className="group mt-9 flex w-full max-w-md items-center justify-between rounded-full border border-foreground px-6 py-4 text-[9px] uppercase tracking-[0.3em] transition duration-300 hover:bg-foreground hover:text-background"
+                className="group mt-9 flex w-full items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background"
               >
-                <span>Précommander</span>
-
-                <span className="transition-transform duration-300 group-hover:translate-x-1">
+                <span>Précommander · {PRICE}</span>
+                <span className="text-base transition-transform group-hover:translate-x-1">
                   →
                 </span>
               </Link>
@@ -549,40 +533,43 @@ export default function Home() {
         </div>
       </section>
 
-      {/* =======================================================
-          PROCESS ROSES
-      ======================================================== */}
+      {/* =====================================================
+          PROCESS
+      ====================================================== */}
 
-      <section className="border-b border-surface px-5 py-7 md:px-8">
+      <section className="border-b border-surface px-5 py-12 md:px-8 md:py-16">
         <div className="mx-auto max-w-7xl">
-          <div className="flex items-center justify-between">
+          <div className="grid gap-8 md:grid-cols-2 md:items-end">
             <div>
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
-                Design 01 — Roses
+                02 — Processus
               </p>
 
-              <p className="mt-3 text-xs text-stone/60">
-                L&apos;histoire du premier dessin de Drop 001.
-              </p>
+              <h2 className="mt-7 font-display text-5xl leading-[0.9] md:text-7xl">
+                Du croquis
+                <br />
+                au vêtement.
+              </h2>
             </div>
 
-            <span className="hidden text-[9px] uppercase tracking-[0.35em] text-stone/50 sm:block">
-              Processus créatif ↓
-            </span>
+            <p className="max-w-md text-[15px] leading-7 text-stone md:justify-self-end">
+              Une idée, plusieurs essais, puis une construction
+              progressive jusqu&apos;au dessin final.
+            </p>
           </div>
         </div>
       </section>
 
       <DesignProcessStory />
 
-      {/* =======================================================
-          MANIFESTE
-      ======================================================== */}
+      {/* =====================================================
+          MANIFESTO
+      ====================================================== */}
 
-      <section className="relative overflow-hidden border-t border-surface px-5 py-20 md:px-8 md:py-32">
+      <section className="relative overflow-hidden border-y border-surface px-5 py-24 md:px-8 md:py-36">
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-16 top-1/2 -translate-y-1/2 font-display text-[55vw] leading-none text-foreground/[0.018] md:right-0 md:text-[28vw]"
+          className="pointer-events-none absolute -right-10 top-1/2 -translate-y-1/2 font-display text-[65vw] leading-none text-foreground/[0.018] md:text-[30vw]"
         >
           A
         </div>
@@ -592,89 +579,100 @@ export default function Home() {
             03 — AJVEK
           </p>
 
-          <h2 className="mt-9 max-w-5xl font-display text-[2.7rem] leading-[0.95] tracking-[-0.035em] sm:text-6xl md:text-7xl">
-            Pas un motif posé
+          <h2 className="mt-10 max-w-5xl font-display text-[3.2rem] leading-[0.94] tracking-[-0.035em] sm:text-6xl md:text-8xl">
+            Dessiné.
             <br />
-            sur un vêtement.
+            Développé.
             <br />
 
             <span className="text-stone">
-              Une pièce pensée
-              <br />
-              comme un ensemble.
+              Porté.
             </span>
           </h2>
 
-          <div className="mt-12 grid gap-0 border-y border-surface md:mt-16 md:grid-cols-3">
-            {[
-              ["01", "Dessin"],
-              ["02", "Construction"],
-              ["03", "Vêtement"],
-            ].map(([number, label], index) => (
-              <div
-                key={number}
-                className={`py-6 md:px-8 md:py-9 ${
-                  index < 2
-                    ? "border-b border-surface md:border-b-0 md:border-r"
-                    : ""
-                } ${index === 0 ? "md:pl-0" : ""}`}
-              >
-                <p className="text-[9px] tracking-[0.4em] text-stone/55">
-                  {number}
-                </p>
-
-                <p className="mt-4 font-display text-3xl">
-                  {label}
-                </p>
-              </div>
-            ))}
-          </div>
+          <p className="mt-10 max-w-lg text-[15px] leading-7 text-stone">
+            AJVEK construit chaque pièce autour du dessin, de sa
+            composition et de sa place sur le vêtement.
+          </p>
         </div>
       </section>
 
-      {/* =======================================================
-          CTA FINAL
-      ======================================================== */}
+      {/* =====================================================
+          FINAL CTA
+      ====================================================== */}
 
-      <section className="relative flex min-h-[55svh] items-center overflow-hidden border-t border-surface px-5 py-20 text-center md:px-8 md:py-28">
+      <section className="relative flex min-h-[70svh] items-center overflow-hidden px-5 py-24 text-center md:px-8 md:py-32">
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[23vw] leading-none text-foreground/[0.025]"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[25vw] leading-none text-foreground/[0.02]"
         >
           DROP 001
         </div>
 
-        <div className="relative z-10 mx-auto max-w-3xl">
+        <div className="relative z-10 mx-auto w-full max-w-3xl">
           <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
             Drop 001
           </p>
 
-          <h2 className="mt-7 font-display text-5xl leading-[0.9] tracking-[-0.04em] sm:text-6xl md:text-8xl">
+          <h2 className="mt-8 font-display text-[3.6rem] leading-[0.88] tracking-[-0.04em] sm:text-7xl md:text-8xl">
             ROSES
             <span className="text-stone"> / </span>
+            <br className="sm:hidden" />
             CERISIER
           </h2>
 
-          <p className="mx-auto mt-7 max-w-md text-sm leading-7 text-stone md:text-base">
-            Le premier chapitre AJVEK est disponible en précommande.
+          <p className="mx-auto mt-8 max-w-md text-[15px] leading-7 text-stone">
+            Le premier chapitre AJVEK.
+            <br />
+            Disponible maintenant en précommande.
+          </p>
+
+          <p className="mt-7 font-display text-4xl">
+            {PRICE}
           </p>
 
           <Link
             href="/catalogue"
-            className="group mx-auto mt-9 flex w-full max-w-xl items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background transition duration-300 hover:scale-[0.99]"
+            className="group mx-auto mt-9 flex w-full max-w-xl items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition duration-300 hover:scale-[0.99]"
           >
-            <span>Entrer dans la collection</span>
+            <span>Choisir ma pièce</span>
 
-            <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
+            <span className="text-lg transition-transform duration-300 group-hover:translate-x-1">
               →
             </span>
           </Link>
 
-          <p className="mt-12 text-[8px] uppercase tracking-[0.5em] text-stone/40">
-            AJVEK · France · 2026
+          <p className="mt-12 text-[8px] uppercase tracking-[0.45em] text-stone/40">
+            AJVEK · DROP 001 · 2026
           </p>
         </div>
       </section>
+
+      {/* =====================================================
+          MOBILE STICKY BUY BAR
+      ====================================================== */}
+
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-background/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl md:hidden">
+        <div className="mx-auto flex max-w-lg items-center gap-4">
+          <div className="min-w-0 flex-1 pl-1">
+            <p className="truncate text-[8px] uppercase tracking-[0.32em] text-stone/55">
+              AJVEK · Drop 001
+            </p>
+
+            <p className="mt-1 font-display text-xl leading-none">
+              {PRICE}
+            </p>
+          </div>
+
+          <Link
+            href="/catalogue"
+            className="flex min-w-[185px] items-center justify-between rounded-full bg-foreground px-5 py-4 text-[8px] uppercase tracking-[0.25em] text-background"
+          >
+            <span>Précommander</span>
+            <span className="ml-4 text-sm">→</span>
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }
