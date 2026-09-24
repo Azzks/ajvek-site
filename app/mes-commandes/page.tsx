@@ -42,21 +42,32 @@ type Order = {
   items: OrderItem[];
 };
 
+type ProductionProgress = {
+  count: number;
+  goal: number;
+  remaining: number;
+  progress: number;
+  reached: boolean;
+};
+
 const STEPS = [
   {
     key: "preorder_received",
     label: "Précommande reçue",
-    description: "Ton paiement a été validé.",
+    description:
+      "Ton paiement a été validé. Ta précommande compte dans l’objectif de production.",
   },
   {
     key: "production",
     label: "Production lancée",
-    description: "La production de ta pièce AJVEK est lancée.",
+    description:
+      "Le seuil a été atteint et nous avons lancé la production.",
   },
   {
     key: "manufacturing",
     label: "En fabrication",
-    description: "Ta pièce est actuellement en cours de fabrication.",
+    description:
+      "Ta pièce est actuellement en cours de fabrication.",
   },
   {
     key: "shipped",
@@ -107,6 +118,10 @@ export default function MesCommandesPage() {
   const { user, loading: authLoading } = useAuth();
 
   const [orders, setOrders] = useState<Order[]>([]);
+
+  const [production, setProduction] =
+    useState<ProductionProgress | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,6 +169,16 @@ export default function MesCommandesPage() {
         }
 
         setOrders(data.orders ?? []);
+
+        setProduction(
+          data.production ?? {
+            count: 0,
+            goal: 10,
+            remaining: 10,
+            progress: 0,
+            reached: false,
+          }
+        );
       } catch (error) {
         console.error("[mes-commandes]", error);
 
@@ -269,6 +294,110 @@ export default function MesCommandesPage() {
             </div>
           )}
 
+          {/* OBJECTIF PRODUCTION */}
+
+          {!error && production && orders.length > 0 && (
+            <section className="mb-12 border border-surface px-5 py-7 md:px-8 md:py-9">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.35em] text-stone">
+                    Objectif de production
+                  </p>
+
+                  <h2 className="mt-3 font-display text-3xl md:text-4xl">
+                    {production.reached
+                      ? "Seuil atteint."
+                      : `${production.count} / ${production.goal}`}
+                  </h2>
+                </div>
+
+                {!production.reached && (
+                  <div className="sm:text-right">
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                      Encore
+                    </p>
+
+                    <p className="mt-2 font-display text-2xl">
+                      {production.remaining}
+                    </p>
+                  </div>
+                )}
+
+                {production.reached && (
+                  <div className="sm:text-right">
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                      Statut
+                    </p>
+
+                    <p className="mt-2 text-sm">
+                      Objectif atteint
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* BARRE */}
+
+              <div className="mt-7">
+                <div className="h-[3px] w-full overflow-hidden bg-surface">
+                  <div
+                    className="h-full bg-foreground transition-all duration-700"
+                    style={{
+                      width: `${Math.min(
+                        Math.max(production.progress, 0),
+                        100
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[9px] uppercase tracking-[0.25em] text-stone">
+                    {production.count} confirmé
+                    {production.count > 1 ? "s" : ""}
+                  </span>
+
+                  <span className="text-[9px] uppercase tracking-[0.25em] text-stone">
+                    Objectif {production.goal}
+                  </span>
+                </div>
+              </div>
+
+              {/* MESSAGE */}
+
+              <div className="mt-7 border-t border-surface pt-6">
+                {production.reached ? (
+                  <>
+                    <p className="text-sm text-foreground">
+                      Le seuil de production a été atteint.
+                    </p>
+
+                    <p className="mt-2 max-w-2xl text-xs leading-6 text-stone">
+                      Nous préparons maintenant le lancement de la
+                      production. Le suivi de ta commande sera mis à
+                      jour dès que la fabrication sera officiellement
+                      lancée.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-foreground">
+                      {production.remaining === 1
+                        ? "Plus qu’une précommande avant d’atteindre le seuil."
+                        : `Plus que ${production.remaining} précommandes avant d’atteindre le seuil.`}
+                    </p>
+
+                    <p className="mt-2 max-w-2xl text-xs leading-6 text-stone">
+                      La production AJVEK sera lancée à partir de{" "}
+                      {production.goal} vêtements précommandés et
+                      payés.
+                    </p>
+                  </>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* AUCUNE COMMANDE */}
 
           {!error && orders.length === 0 && (
@@ -382,8 +511,6 @@ export default function MesCommandesPage() {
                           {STEPS[activeIndex]?.label}
                         </p>
                       </div>
-
-                      {/* BARRE MOBILE */}
 
                       <div className="mt-6 h-px overflow-hidden bg-surface">
                         <div

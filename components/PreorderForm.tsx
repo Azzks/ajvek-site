@@ -197,7 +197,7 @@ export default function PreorderForm({
           ? "Chargement..."
           : thresholdReached
             ? "Le seuil de production est atteint."
-            : "Production lancée à partir de 10 vêtements précommandés et payés."}
+            : "Production lancée dès que 10 précommandes payées sont atteintes."}
       </p>
     </div>
   );

@@ -20,8 +20,16 @@ const supabaseAuth = createClient(
   }
 );
 
+const PRODUCTION_GOAL = 10;
+
 export async function GET(request: Request) {
   try {
+    /*
+     * ============================================================
+     * 1. AUTHENTIFICATION
+     * ============================================================
+     */
+
     const authorization = request.headers.get("authorization");
 
     if (!authorization?.startsWith("Bearer ")) {
@@ -44,6 +52,12 @@ export async function GET(request: Request) {
         { status: 401 }
       );
     }
+
+    /*
+     * ============================================================
+     * 2. COMMANDES PAYÉES DE L'UTILISATEUR
+     * ============================================================
+     */
 
     const { data, error } = await supabaseAdmin
       .from("preorders")
@@ -87,6 +101,56 @@ export async function GET(request: Request) {
         { status: 500 }
       );
     }
+
+    /*
+     * ============================================================
+     * 3. COMPTEUR GLOBAL DES VÊTEMENTS PAYÉS
+     * ============================================================
+     *
+     * Dans notre système :
+     * 1 ligne dans "preorders" = 1 vêtement physique.
+     *
+     * On compte donc toutes les lignes payées.
+     */
+
+    const {
+      count: paidPreorderCount,
+      error: countError,
+    } = await supabaseAdmin
+      .from("preorders")
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .eq("paid", true);
+
+    if (countError) {
+      console.error(
+        "[my-orders] Production counter error:",
+        countError
+      );
+    }
+
+    const productionCount = paidPreorderCount ?? 0;
+
+    const productionGoalReached =
+      productionCount >= PRODUCTION_GOAL;
+
+    const productionRemaining = Math.max(
+      PRODUCTION_GOAL - productionCount,
+      0
+    );
+
+    const productionProgress = Math.min(
+      (productionCount / PRODUCTION_GOAL) * 100,
+      100
+    );
+
+    /*
+     * ============================================================
+     * 4. REGROUPEMENT DES COMMANDES
+     * ============================================================
+     */
 
     const groupedOrders = new Map<
       string,
@@ -194,9 +258,23 @@ export async function GET(request: Request) {
       }
     }
 
+    /*
+     * ============================================================
+     * 5. RÉPONSE
+     * ============================================================
+     */
+
     return NextResponse.json(
       {
         orders: Array.from(groupedOrders.values()),
+
+        production: {
+          count: productionCount,
+          goal: PRODUCTION_GOAL,
+          remaining: productionRemaining,
+          progress: productionProgress,
+          reached: productionGoalReached,
+        },
       },
       {
         headers: {

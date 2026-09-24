@@ -20,6 +20,8 @@ const supabaseAuth = createClient(
   }
 );
 
+const PRODUCTION_TARGET = 10;
+
 const ALLOWED_STATUSES = [
   "preorder_received",
   "production",
@@ -63,6 +65,12 @@ async function getAdminUser(request: Request) {
 
   return user;
 }
+
+/*
+ * ============================================================
+ * GET — RÉCUPÉRER LES COMMANDES ADMIN
+ * ============================================================
+ */
 
 export async function GET(request: Request) {
   try {
@@ -116,10 +124,32 @@ export async function GET(request: Request) {
       console.error("[admin/orders] GET:", error);
 
       return NextResponse.json(
-        { error: "Impossible de récupérer les commandes." },
-        { status: 500 }
+        {
+          error: "Impossible de récupérer les commandes.",
+        },
+        {
+          status: 500,
+        }
       );
     }
+
+    /*
+     * Chaque vêtement physique payé correspond à une ligne
+     * dans la table preorders.
+     */
+    const paidClothingCount = (data ?? []).length;
+
+    /*
+     * Si au moins une commande est déjà passée au-delà du statut
+     * preorder_received, on considère que la production a été lancée.
+     */
+    const productionStarted = (data ?? []).some(
+      (row) =>
+        row.order_status === "production" ||
+        row.order_status === "manufacturing" ||
+        row.order_status === "shipped" ||
+        row.order_status === "delivered"
+    );
 
     const groupedOrders = new Map<string, any>();
 
@@ -130,7 +160,9 @@ export async function GET(request: Request) {
       if (!groupedOrders.has(groupId)) {
         groupedOrders.set(groupId, {
           checkout_group_id: groupId,
+
           created_at: row.created_at ?? null,
+
           paid_at: row.paid_at ?? null,
 
           customer: {
@@ -140,29 +172,49 @@ export async function GET(request: Request) {
             phone: row.phone ?? null,
           },
 
-          status: row.order_status || "preorder_received",
+          status:
+            row.order_status || "preorder_received",
 
-          delivery_method: row.delivery_method ?? null,
-          shipping_amount: Number(row.shipping_amount ?? 0),
+          delivery_method:
+            row.delivery_method ?? null,
+
+          shipping_amount: Number(
+            row.shipping_amount ?? 0
+          ),
 
           service_point:
             row.delivery_method === "relay"
               ? {
                   id: row.service_point_id ?? null,
-                  name: row.service_point_name ?? null,
+
+                  name:
+                    row.service_point_name ?? null,
+
                   address:
                     row.service_point_address ?? null,
+
                   postal_code:
                     row.service_point_postal_code ?? null,
-                  city: row.service_point_city ?? null,
+
+                  city:
+                    row.service_point_city ?? null,
                 }
               : null,
 
-          carrier: row.carrier ?? null,
-          tracking_number: row.tracking_number ?? null,
-          tracking_url: row.tracking_url ?? null,
-          shipped_at: row.shipped_at ?? null,
-          delivered_at: row.delivered_at ?? null,
+          carrier:
+            row.carrier ?? null,
+
+          tracking_number:
+            row.tracking_number ?? null,
+
+          tracking_url:
+            row.tracking_url ?? null,
+
+          shipped_at:
+            row.shipped_at ?? null,
+
+          delivered_at:
+            row.delivered_at ?? null,
 
           items: [],
         });
@@ -193,6 +245,14 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         orders: Array.from(groupedOrders.values()),
+
+        production: {
+          paid_count: paidClothingCount,
+          target: PRODUCTION_TARGET,
+          ready:
+            paidClothingCount >= PRODUCTION_TARGET,
+          started: productionStarted,
+        },
       },
       {
         headers: {
@@ -201,7 +261,10 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    console.error("[admin/orders] GET general:", error);
+    console.error(
+      "[admin/orders] GET general:",
+      error
+    );
 
     return NextResponse.json(
       { error: "Erreur serveur." },
@@ -209,6 +272,12 @@ export async function GET(request: Request) {
     );
   }
 }
+
+/*
+ * ============================================================
+ * PATCH — MODIFIER UNE COMMANDE
+ * ============================================================
+ */
 
 export async function PATCH(request: Request) {
   try {
@@ -244,7 +313,10 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (!status || !ALLOWED_STATUSES.includes(status)) {
+    if (
+      !status ||
+      !ALLOWED_STATUSES.includes(status)
+    ) {
       return NextResponse.json(
         { error: "Statut invalide." },
         { status: 400 }
@@ -263,7 +335,8 @@ export async function PATCH(request: Request) {
     };
 
     if (carrier !== undefined) {
-      updates.carrier = carrier?.trim() || null;
+      updates.carrier =
+        carrier?.trim() || null;
     }
 
     if (tracking_number !== undefined) {
@@ -277,26 +350,40 @@ export async function PATCH(request: Request) {
     }
 
     if (status === "shipped") {
-      updates.shipped_at = new Date().toISOString();
+      updates.shipped_at =
+        new Date().toISOString();
+
       updates.delivered_at = null;
     }
 
     if (status === "delivered") {
-      updates.delivered_at = new Date().toISOString();
+      updates.delivered_at =
+        new Date().toISOString();
     }
 
     const { error } = await supabaseAdmin
       .from("preorders")
       .update(updates)
-      .eq("checkout_group_id", checkout_group_id)
+      .eq(
+        "checkout_group_id",
+        checkout_group_id
+      )
       .eq("paid", true);
 
     if (error) {
-      console.error("[admin/orders] PATCH:", error);
+      console.error(
+        "[admin/orders] PATCH:",
+        error
+      );
 
       return NextResponse.json(
-        { error: "Impossible de modifier la commande." },
-        { status: 500 }
+        {
+          error:
+            "Impossible de modifier la commande.",
+        },
+        {
+          status: 500,
+        }
       );
     }
 
@@ -306,7 +393,144 @@ export async function PATCH(request: Request) {
       status,
     });
   } catch (error) {
-    console.error("[admin/orders] PATCH general:", error);
+    console.error(
+      "[admin/orders] PATCH general:",
+      error
+    );
+
+    return NextResponse.json(
+      { error: "Erreur serveur." },
+      { status: 500 }
+    );
+  }
+}
+
+/*
+ * ============================================================
+ * PUT — LANCER LA PRODUCTION
+ * ============================================================
+ */
+
+export async function PUT(request: Request) {
+  try {
+    const admin = await getAdminUser(request);
+
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Accès administrateur refusé." },
+        { status: 403 }
+      );
+    }
+
+    /*
+     * ==========================================================
+     * 1. COMPTER LES VÊTEMENTS PAYÉS
+     * ==========================================================
+     */
+
+    const {
+      count,
+      error: countError,
+    } = await supabaseAdmin
+      .from("preorders")
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .eq("paid", true);
+
+    if (countError) {
+      console.error(
+        "[admin/orders] Compteur production:",
+        countError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de vérifier le nombre de précommandes.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const paidCount = count ?? 0;
+
+    /*
+     * ==========================================================
+     * 2. VÉRIFIER LE SEUIL
+     * ==========================================================
+     */
+
+    if (paidCount < PRODUCTION_TARGET) {
+      return NextResponse.json(
+        {
+          error: `La production ne peut pas encore être lancée. ${paidCount}/${PRODUCTION_TARGET} vêtements payés.`,
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+     * ==========================================================
+     * 3. PASSER LES COMMANDES EN PRODUCTION
+     * ==========================================================
+     *
+     * Seulement les commandes payées encore en
+     * "preorder_received".
+     *
+     * Une commande déjà en fabrication, expédiée ou livrée
+     * n'est jamais rétrogradée.
+     */
+
+    const {
+      data: updatedOrders,
+      error: updateError,
+    } = await supabaseAdmin
+      .from("preorders")
+      .update({
+        order_status: "production",
+      })
+      .eq("paid", true)
+      .eq(
+        "order_status",
+        "preorder_received"
+      )
+      .select("id");
+
+    if (updateError) {
+      console.error(
+        "[admin/orders] Lancement production:",
+        updateError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de lancer la production.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      paid_count: paidCount,
+      target: PRODUCTION_TARGET,
+      updated_count:
+        updatedOrders?.length ?? 0,
+    });
+  } catch (error) {
+    console.error(
+      "[admin/orders] PUT general:",
+      error
+    );
 
     return NextResponse.json(
       { error: "Erreur serveur." },

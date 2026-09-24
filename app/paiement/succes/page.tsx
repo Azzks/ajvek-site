@@ -26,8 +26,8 @@ export default function PaiementSuccesPage() {
       </p>
 
       <p className="mt-3 max-w-md text-sm text-stone">
-        La production sera lancée dès que le seuil de 10 vêtements
-        précommandés et payés sera atteint.
+        La production sera lancée dès que le seuil de 10 précommandes
+        payées sera atteint.
       </p>
 
       <p className="mt-3 max-w-md text-sm text-stone">
@@ -36,6 +36,13 @@ export default function PaiementSuccesPage() {
       </p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <Link
+          href="/mes-commandes"
+          className="rounded-full bg-foreground px-6 py-3 text-xs uppercase tracking-widest text-background transition hover:opacity-85"
+        >
+          Suivre ma commande
+        </Link>
+
         <Link
           href="/catalogue"
           className="rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
