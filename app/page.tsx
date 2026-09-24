@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import gsap from "gsap";
 
@@ -20,6 +21,8 @@ const DESIGNS = [
     description:
       "Une composition construite autour du mouvement de la rose et du lettrage AJVEK.",
     href: "/catalogue",
+    image: "/images/drop-001/roses-black.jpg",
+    secondaryImage: "/images/drop-001/roses-white.jpg",
   },
   {
     number: "02",
@@ -29,6 +32,8 @@ const DESIGNS = [
     description:
       "Une seconde lecture du végétal, plus légère, pensée comme le contrepoint de Roses.",
     href: "/catalogue",
+    image: "/images/drop-001/cerisier-white.jpg",
+    secondaryImage: "/images/drop-001/cerisier-black.jpg",
   },
 ];
 
@@ -204,8 +209,6 @@ export default function Home() {
         ref={heroRef}
         className="relative overflow-hidden border-b border-surface"
       >
-        {/* GRILLE TRÈS DISCRÈTE */}
-
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.045]"
@@ -218,8 +221,6 @@ export default function Home() {
           }}
         />
 
-        {/* GRAND TEXTE FANTÔME */}
-
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[44vw] leading-none text-foreground/[0.018] md:text-[24vw]"
@@ -228,8 +229,6 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100svh-65px)] max-w-7xl flex-col px-5 pb-8 pt-12 md:px-8 md:pb-10 md:pt-20">
-          {/* PETITES INFOS */}
-
           <div className="flex items-center justify-between">
             <p className="text-[9px] uppercase tracking-[0.4em] text-stone/70">
               Drop 001 · 2026
@@ -239,8 +238,6 @@ export default function Home() {
               France
             </p>
           </div>
-
-          {/* CENTRE */}
 
           <div className="flex flex-1 flex-col justify-center py-12">
             <p
@@ -279,8 +276,6 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* BAS HERO */}
-
           <div
             ref={metaRef}
             className="border-t border-surface pt-5 opacity-0"
@@ -299,7 +294,7 @@ export default function Home() {
       </section>
 
       {/* =======================================================
-          RÉASSURANCE — BEAUCOUP PLUS COMPACTE
+          RÉASSURANCE
       ======================================================== */}
 
       <section className="border-b border-surface">
@@ -327,21 +322,21 @@ export default function Home() {
           INTRO DROP
       ======================================================== */}
 
-      <section className="border-b border-surface px-5 py-20 md:px-8 md:py-32">
+      <section className="border-b border-surface px-5 py-16 md:px-8 md:py-28">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 md:grid-cols-[0.35fr_1fr] md:gap-20">
+          <div className="grid gap-8 md:grid-cols-[0.35fr_1fr] md:gap-20">
             <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
               01 — Drop 001
             </p>
 
             <div>
-              <h2 className="max-w-3xl font-display text-[3.25rem] leading-[0.9] tracking-[-0.035em] sm:text-6xl md:text-7xl">
+              <h2 className="max-w-3xl font-display text-[3rem] leading-[0.9] tracking-[-0.035em] sm:text-6xl md:text-7xl">
                 Deux dessins.
                 <br />
                 Une identité.
               </h2>
 
-              <p className="mt-8 max-w-xl text-[15px] leading-7 text-stone md:text-base">
+              <p className="mt-7 max-w-xl text-[14px] leading-7 text-stone md:text-base">
                 Roses et Cerisier composent le premier chapitre AJVEK.
                 Deux interprétations du végétal pensées directement
                 pour le vêtement.
@@ -352,79 +347,146 @@ export default function Home() {
       </section>
 
       {/* =======================================================
-          LES 2 DESIGNS — FUSIONNÉS
+          DROP 001 — PRODUITS
       ======================================================== */}
 
       <section className="border-b border-surface">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid md:grid-cols-2">
-            {DESIGNS.map((design, index) => (
-              <Link
-                key={design.name}
-                href={design.href}
-                className={`group relative flex min-h-[62svh] flex-col justify-between overflow-hidden px-5 py-8 transition duration-500 hover:bg-white/[0.015] md:min-h-[78vh] md:px-10 md:py-10 ${
-                  index === 0
-                    ? "border-b border-surface md:border-b-0 md:border-r"
-                    : ""
-                }`}
-              >
-                {/* LETTRE FANTÔME */}
+        <div className="mx-auto max-w-7xl px-5 py-14 md:px-8 md:py-24">
+          <div className="flex items-end justify-between gap-8">
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
+                Drop 001
+              </p>
 
+              <h2 className="mt-5 font-display text-5xl leading-none tracking-[-0.04em] md:text-7xl">
+                Les pièces.
+              </h2>
+            </div>
+
+            <p className="hidden max-w-xs text-right text-sm leading-6 text-stone md:block">
+              Deux dessins. Deux interprétations.
+              <br />
+              Un même chapitre.
+            </p>
+          </div>
+        </div>
+
+        {DESIGNS.map((design, index) => (
+          <article
+            key={design.name}
+            className="border-t border-surface"
+          >
+            <div
+              className={`mx-auto grid max-w-7xl md:min-h-[82vh] md:grid-cols-2 ${
+                index % 2 === 1
+                  ? "md:[&>*:first-child]:order-2"
+                  : ""
+              }`}
+            >
+              {/* IMAGE PRINCIPALE */}
+
+              <Link
+                href={design.href}
+                className="group relative min-h-[57svh] overflow-hidden bg-[#e8e6e2] md:min-h-full"
+              >
+                <Image
+                  src={design.image}
+                  alt={`T-shirt AJVEK ${design.name}`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.025]"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5" />
+
+                <div className="absolute left-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-black/80 text-[8px] tracking-[0.2em] text-white backdrop-blur md:left-8 md:top-8">
+                  {design.number}
+                </div>
+
+                <div className="absolute bottom-5 left-5 md:bottom-8 md:left-8">
+                  <p className="text-[8px] uppercase tracking-[0.4em] text-white/65">
+                    AJVEK · Drop 001
+                  </p>
+                </div>
+
+                <div className="absolute bottom-5 right-5 flex h-11 w-11 items-center justify-center rounded-full bg-white text-lg text-black transition-transform duration-300 group-hover:translate-x-1 md:bottom-8 md:right-8">
+                  →
+                </div>
+              </Link>
+
+              {/* INFORMATIONS */}
+
+              <div className="relative flex min-h-[55svh] flex-col justify-between overflow-hidden px-5 py-9 md:min-h-full md:px-12 md:py-12 lg:px-16">
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 font-display text-[62vw] leading-none text-foreground/[0.025] transition duration-700 group-hover:scale-[1.03] group-hover:text-foreground/[0.04] md:text-[24vw]"
+                  className="pointer-events-none absolute -right-10 top-1/2 -translate-y-1/2 font-display text-[70vw] leading-none text-foreground/[0.018] md:text-[30vw]"
                 >
                   {design.letter}
                 </span>
 
-                {/* TOP */}
-
                 <div className="relative z-10 flex items-center justify-between">
-                  <p className="text-[9px] uppercase tracking-[0.4em] text-stone/60">
+                  <p className="text-[8px] uppercase tracking-[0.4em] text-stone/60">
                     {design.code}
                   </p>
 
-                  <p className="text-[9px] uppercase tracking-[0.4em] text-stone/60">
-                    {design.name}
+                  <p className="text-[8px] uppercase tracking-[0.4em] text-stone/60">
+                    {design.number} / 02
                   </p>
                 </div>
 
-                {/* BOTTOM */}
-
-                <div className="relative z-10">
-                  <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
-                    Design {design.number} / 02
+                <div className="relative z-10 py-12 md:py-20">
+                  <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
+                    AJVEK · Drop 001
                   </p>
 
-                  <h3 className="mt-5 font-display text-[4rem] leading-none tracking-[-0.035em] sm:text-7xl">
+                  <h3 className="mt-6 font-display text-[4rem] leading-[0.8] tracking-[-0.045em] sm:text-7xl md:text-8xl">
                     {design.name}
                   </h3>
 
-                  <p className="mt-7 max-w-md text-[15px] leading-7 text-stone">
+                  <p className="mt-8 max-w-sm text-[14px] leading-7 text-stone md:text-[15px]">
                     {design.description}
                   </p>
 
-                  <div className="mt-9 flex items-center gap-7 text-[9px] uppercase tracking-[0.35em] text-foreground">
-                    <span>Découvrir la pièce</span>
+                  <div className="mt-9 flex flex-wrap gap-2">
+                    <span className="border border-surface px-4 py-2 text-[8px] uppercase tracking-[0.3em] text-stone">
+                      Oversize
+                    </span>
 
-                    <span className="transition-transform duration-300 group-hover:translate-x-2">
-                      →
+                    <span className="border border-surface px-4 py-2 text-[8px] uppercase tracking-[0.3em] text-stone">
+                      Broderie
+                    </span>
+
+                    <span className="border border-surface px-4 py-2 text-[8px] uppercase tracking-[0.3em] text-stone">
+                      DTF
                     </span>
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+
+                <Link
+                  href={design.href}
+                  className="group relative z-10 flex items-center justify-between border-t border-surface pt-6"
+                >
+                  <span className="text-[9px] uppercase tracking-[0.4em]">
+                    Découvrir la pièce
+                  </span>
+
+                  <span className="text-xl transition-transform duration-300 group-hover:translate-x-2">
+                    →
+                  </span>
+                </Link>
+              </div>
+            </div>
+          </article>
+        ))}
       </section>
 
       {/* =======================================================
-          PRÉCOMMANDES — COMPACT
+          PRÉCOMMANDES
       ======================================================== */}
 
-      <section className="border-b border-surface px-5 py-20 md:px-8 md:py-28">
+      <section className="border-b border-surface px-5 py-16 md:px-8 md:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-end md:gap-24">
+          <div className="grid gap-10 md:grid-cols-[0.8fr_1.2fr] md:items-end md:gap-24">
             <div>
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
                 Production Drop 001
@@ -455,7 +517,7 @@ export default function Home() {
                 lancement de sa production.
               </p>
 
-              <div className="mt-10">
+              <div className="mt-9">
                 <div className="h-px overflow-hidden bg-surface">
                   <div
                     className="h-full bg-foreground transition-all duration-1000 ease-out"
@@ -471,6 +533,17 @@ export default function Home() {
                   <span>10</span>
                 </div>
               </div>
+
+              <Link
+                href="/catalogue"
+                className="group mt-9 flex w-full max-w-md items-center justify-between rounded-full border border-foreground px-6 py-4 text-[9px] uppercase tracking-[0.3em] transition duration-300 hover:bg-foreground hover:text-background"
+              >
+                <span>Précommander</span>
+
+                <span className="transition-transform duration-300 group-hover:translate-x-1">
+                  →
+                </span>
+              </Link>
             </div>
           </div>
         </div>
@@ -480,7 +553,7 @@ export default function Home() {
           PROCESS ROSES
       ======================================================== */}
 
-      <section className="border-b border-surface px-5 py-8 md:px-8">
+      <section className="border-b border-surface px-5 py-7 md:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between">
             <div>
@@ -503,10 +576,10 @@ export default function Home() {
       <DesignProcessStory />
 
       {/* =======================================================
-          MANIFESTE — PLUS COURT
+          MANIFESTE
       ======================================================== */}
 
-      <section className="relative overflow-hidden border-t border-surface px-5 py-24 md:px-8 md:py-36">
+      <section className="relative overflow-hidden border-t border-surface px-5 py-20 md:px-8 md:py-32">
         <div
           aria-hidden
           className="pointer-events-none absolute -right-16 top-1/2 -translate-y-1/2 font-display text-[55vw] leading-none text-foreground/[0.018] md:right-0 md:text-[28vw]"
@@ -519,7 +592,7 @@ export default function Home() {
             03 — AJVEK
           </p>
 
-          <h2 className="mt-12 max-w-5xl font-display text-[3.15rem] leading-[0.94] tracking-[-0.035em] sm:text-6xl md:text-7xl">
+          <h2 className="mt-9 max-w-5xl font-display text-[2.7rem] leading-[0.95] tracking-[-0.035em] sm:text-6xl md:text-7xl">
             Pas un motif posé
             <br />
             sur un vêtement.
@@ -532,7 +605,7 @@ export default function Home() {
             </span>
           </h2>
 
-          <div className="mt-16 grid gap-0 border-y border-surface md:grid-cols-3">
+          <div className="mt-12 grid gap-0 border-y border-surface md:mt-16 md:grid-cols-3">
             {[
               ["01", "Dessin"],
               ["02", "Construction"],
@@ -540,7 +613,7 @@ export default function Home() {
             ].map(([number, label], index) => (
               <div
                 key={number}
-                className={`py-7 md:px-8 md:py-9 ${
+                className={`py-6 md:px-8 md:py-9 ${
                   index < 2
                     ? "border-b border-surface md:border-b-0 md:border-r"
                     : ""
@@ -550,7 +623,7 @@ export default function Home() {
                   {number}
                 </p>
 
-                <p className="mt-5 font-display text-3xl">
+                <p className="mt-4 font-display text-3xl">
                   {label}
                 </p>
               </div>
@@ -563,7 +636,7 @@ export default function Home() {
           CTA FINAL
       ======================================================== */}
 
-      <section className="relative flex min-h-[65svh] items-center overflow-hidden border-t border-surface px-5 py-24 text-center md:px-8 md:py-32">
+      <section className="relative flex min-h-[55svh] items-center overflow-hidden border-t border-surface px-5 py-20 text-center md:px-8 md:py-28">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[23vw] leading-none text-foreground/[0.025]"
@@ -582,13 +655,13 @@ export default function Home() {
             CERISIER
           </h2>
 
-          <p className="mx-auto mt-8 max-w-md text-sm leading-7 text-stone md:text-base">
+          <p className="mx-auto mt-7 max-w-md text-sm leading-7 text-stone md:text-base">
             Le premier chapitre AJVEK est disponible en précommande.
           </p>
 
           <Link
             href="/catalogue"
-            className="group mx-auto mt-10 flex w-full max-w-xl items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background transition duration-300 hover:scale-[0.99]"
+            className="group mx-auto mt-9 flex w-full max-w-xl items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background transition duration-300 hover:scale-[0.99]"
           >
             <span>Entrer dans la collection</span>
 
@@ -597,7 +670,7 @@ export default function Home() {
             </span>
           </Link>
 
-          <p className="mt-16 text-[8px] uppercase tracking-[0.5em] text-stone/40">
+          <p className="mt-12 text-[8px] uppercase tracking-[0.5em] text-stone/40">
             AJVEK · France · 2026
           </p>
         </div>
