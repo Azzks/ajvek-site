@@ -35,6 +35,8 @@ const PRODUCTS = [
 ];
 
 export default function Home() {
+  const pageRef = useRef<HTMLElement>(null);
+
   const heroRef = useRef<HTMLElement>(null);
   const eyebrowRef = useRef<HTMLParagraphElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -58,7 +60,7 @@ export default function Home() {
   }, []);
 
   /* =========================================================
-     ANIMATION HERO
+     HERO
   ========================================================= */
 
   useEffect(() => {
@@ -91,19 +93,19 @@ export default function Home() {
       });
 
       gsap.set(titleRef.current, {
-        y: 30,
-        rotationX: -12,
+        y: 35,
+        rotationX: -14,
         transformPerspective: 1000,
       });
 
       const tl = gsap.timeline({
-        delay: 0.45,
+        delay: 0.4,
       });
 
       tl.to(eyebrowRef.current, {
         opacity: 1,
         y: 0,
-        duration: 0.45,
+        duration: 0.5,
         ease: "power2.out",
       })
         .to(
@@ -112,37 +114,37 @@ export default function Home() {
             opacity: 1,
             y: 0,
             rotationX: 0,
-            duration: 0.9,
+            duration: 1,
             ease: "power3.out",
           },
-          "-=0.2"
+          "-=0.25"
         )
         .to(
           textRef.current,
           {
             opacity: 1,
             y: 0,
-            duration: 0.55,
+            duration: 0.65,
             ease: "power2.out",
           },
-          "-=0.4"
+          "-=0.45"
         )
         .to(
           buttonRef.current,
           {
             opacity: 1,
             y: 0,
-            duration: 0.5,
+            duration: 0.55,
             ease: "power2.out",
           },
-          "-=0.3"
+          "-=0.35"
         )
         .to(
           metaRef.current,
           {
             opacity: 1,
             y: 0,
-            duration: 0.5,
+            duration: 0.55,
             ease: "power2.out",
           },
           "-=0.25"
@@ -152,10 +154,118 @@ export default function Home() {
     return () => ctx.revert();
   }, []);
 
+  /* =========================================================
+     ANIMATIONS AU SCROLL
+     IntersectionObserver = aucun plugin GSAP supplémentaire
+  ========================================================= */
+
+  useEffect(() => {
+    const root = pageRef.current;
+
+    if (!root) return;
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    const revealElements = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-reveal]")
+    );
+
+    const imageElements = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-image-reveal]")
+    );
+
+    if (reducedMotion) {
+      gsap.set(revealElements, {
+        opacity: 1,
+        y: 0,
+      });
+
+      gsap.set(imageElements, {
+        opacity: 1,
+        scale: 1,
+      });
+
+      return;
+    }
+
+    gsap.set(revealElements, {
+      opacity: 0,
+      y: 32,
+    });
+
+    gsap.set(imageElements, {
+      opacity: 0,
+      scale: 1.035,
+    });
+
+    const revealObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          const element = entry.target as HTMLElement;
+
+          gsap.to(element, {
+            opacity: 1,
+            y: 0,
+            duration: 0.85,
+            ease: "power3.out",
+          });
+
+          observer.unobserve(element);
+        });
+      },
+      {
+        threshold: 0.12,
+        rootMargin: "0px 0px -8% 0px",
+      }
+    );
+
+    const imageObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          const element = entry.target as HTMLElement;
+
+          gsap.to(element, {
+            opacity: 1,
+            scale: 1,
+            duration: 1.15,
+            ease: "power3.out",
+          });
+
+          observer.unobserve(element);
+        });
+      },
+      {
+        threshold: 0.15,
+        rootMargin: "0px 0px -5% 0px",
+      }
+    );
+
+    revealElements.forEach((element) => {
+      revealObserver.observe(element);
+    });
+
+    imageElements.forEach((element) => {
+      imageObserver.observe(element);
+    });
+
+    return () => {
+      revealObserver.disconnect();
+      imageObserver.disconnect();
+    };
+  }, []);
+
   const safeCount = count ?? 0;
 
   const remaining =
-    count !== null ? Math.max(PREORDER_GOAL - safeCount, 0) : PREORDER_GOAL;
+    count !== null
+      ? Math.max(PREORDER_GOAL - safeCount, 0)
+      : PREORDER_GOAL;
 
   const percent =
     count !== null
@@ -166,7 +276,10 @@ export default function Home() {
     count !== null && safeCount >= PREORDER_GOAL;
 
   return (
-    <main className="overflow-hidden bg-background text-foreground">
+    <main
+      ref={pageRef}
+      className="overflow-hidden bg-background text-foreground"
+    >
       <HomeIntro />
 
       {/* =====================================================
@@ -177,7 +290,6 @@ export default function Home() {
         ref={heroRef}
         className="relative min-h-[calc(100svh-65px)] overflow-hidden border-b border-surface"
       >
-        {/* GRID */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.045]"
@@ -190,7 +302,6 @@ export default function Home() {
           }}
         />
 
-        {/* GHOST 001 */}
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[49%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[50vw] leading-none text-foreground/[0.018] md:text-[25vw]"
@@ -199,7 +310,6 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100svh-65px)] max-w-7xl flex-col px-5 pb-8 pt-10 md:px-8 md:pb-10 md:pt-16">
-          {/* TOP */}
           <div className="flex items-center justify-between">
             <p className="text-[9px] uppercase tracking-[0.4em] text-stone/60">
               Drop 001 · 2026
@@ -210,7 +320,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* CENTER */}
           <div className="flex flex-1 flex-col justify-center py-10">
             <p
               ref={eyebrowRef}
@@ -235,9 +344,10 @@ export default function Home() {
               Le reste construit son identité.
             </p>
 
-            {/* PRICE */}
             <div className="mt-8 flex items-center gap-4">
-              <span className="font-display text-3xl">{PRICE}</span>
+              <span className="font-display text-3xl">
+                {PRICE}
+              </span>
 
               <span className="h-px w-8 bg-stone/30" />
 
@@ -249,11 +359,11 @@ export default function Home() {
             <Link
               ref={buttonRef}
               href="/catalogue"
-              className="group mt-8 flex w-full max-w-md items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background opacity-0 transition duration-300 hover:scale-[0.99] md:w-fit md:min-w-[390px]"
+              className="group mt-8 flex w-full max-w-md items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background opacity-0 transition duration-500 hover:scale-[0.985] md:w-fit md:min-w-[390px]"
             >
               <span>Voir le Drop 001</span>
 
-              <span className="text-lg transition-transform duration-300 group-hover:translate-x-1">
+              <span className="text-lg transition-transform duration-500 group-hover:translate-x-2">
                 →
               </span>
             </Link>
@@ -263,7 +373,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* BOTTOM */}
           <div
             ref={metaRef}
             className="border-t border-surface pt-5 opacity-0"
@@ -273,14 +382,16 @@ export default function Home() {
                 Première collection
               </p>
 
-              <p className="text-[11px]">Roses · Cerisier</p>
+              <p className="text-[11px]">
+                Roses · Cerisier
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* =====================================================
-          TRUST STRIP
+          TRUST
       ====================================================== */}
 
       <section className="border-b border-surface">
@@ -298,11 +409,14 @@ export default function Home() {
       </section>
 
       {/* =====================================================
-          PRODUCTS INTRO
+          INTRO PRODUITS
       ====================================================== */}
 
       <section className="px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
-        <div className="mx-auto max-w-7xl">
+        <div
+          data-reveal
+          className="mx-auto max-w-7xl"
+        >
           <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
             01 — Drop 001
           </p>
@@ -324,7 +438,7 @@ export default function Home() {
       </section>
 
       {/* =====================================================
-          PRODUCTS
+          PRODUITS
       ====================================================== */}
 
       <section className="border-b border-surface">
@@ -339,8 +453,10 @@ export default function Home() {
               }`}
             >
               {/* IMAGE */}
+
               <Link
                 href={product.href}
+                data-image-reveal
                 className={`group relative aspect-[4/5] overflow-hidden bg-[#d5d4d1] md:aspect-square ${
                   index % 2 === 1 ? "md:order-2" : ""
                 }`}
@@ -351,10 +467,12 @@ export default function Home() {
                   fill
                   priority={index === 0}
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover transition duration-700 group-hover:scale-[1.015]"
+                  className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.035]"
                 />
 
-                <div className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-background/90 text-[9px] tracking-[0.2em] backdrop-blur-md">
+                <div className="absolute inset-0 bg-black/0 transition-colors duration-700 group-hover:bg-black/[0.025]" />
+
+                <div className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-background/90 text-[9px] tracking-[0.2em] backdrop-blur-md transition-transform duration-500 group-hover:scale-105">
                   {product.number}
                 </div>
 
@@ -362,13 +480,15 @@ export default function Home() {
                   AJVEK · DROP 001
                 </div>
 
-                <div className="absolute bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-white text-xl text-black transition duration-300 group-hover:scale-105">
+                <div className="absolute bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-white text-xl text-black transition duration-500 group-hover:scale-110 group-hover:rotate-[-4deg]">
                   →
                 </div>
               </Link>
 
-              {/* CONTENT */}
+              {/* TEXTE */}
+
               <div
+                data-reveal
                 className={`flex flex-col justify-center px-5 py-14 md:px-12 md:py-20 lg:px-16 ${
                   index % 2 === 1 ? "md:order-1" : ""
                 }`}
@@ -395,19 +515,19 @@ export default function Home() {
                   {product.description}
                 </p>
 
-                {/* FEATURES */}
                 <div className="mt-9 flex flex-wrap gap-2">
-                  {["Oversize", "Broderie", "DTF"].map((feature) => (
-                    <span
-                      key={feature}
-                      className="border border-surface px-5 py-3 text-[8px] uppercase tracking-[0.32em] text-stone"
-                    >
-                      {feature}
-                    </span>
-                  ))}
+                  {["Oversize", "Broderie", "DTF"].map(
+                    (feature) => (
+                      <span
+                        key={feature}
+                        className="border border-surface px-5 py-3 text-[8px] uppercase tracking-[0.32em] text-stone transition duration-300 hover:border-stone/50 hover:text-foreground"
+                      >
+                        {feature}
+                      </span>
+                    )
+                  )}
                 </div>
 
-                {/* PRICE */}
                 <div className="mt-12 flex items-end justify-between border-t border-surface pt-7">
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.35em] text-stone/50">
@@ -426,11 +546,13 @@ export default function Home() {
 
                 <Link
                   href={product.href}
-                  className="group mt-7 flex items-center justify-between rounded-full border border-foreground px-6 py-5 text-[9px] uppercase tracking-[0.3em] transition duration-300 hover:bg-foreground hover:text-background"
+                  className="group mt-7 flex items-center justify-between rounded-full border border-foreground px-6 py-5 text-[9px] uppercase tracking-[0.3em] transition-all duration-500 hover:bg-foreground hover:text-background"
                 >
-                  <span>Précommander {product.name}</span>
+                  <span>
+                    Précommander {product.name}
+                  </span>
 
-                  <span className="text-base transition-transform group-hover:translate-x-1">
+                  <span className="text-base transition-transform duration-500 group-hover:translate-x-2">
                     →
                   </span>
                 </Link>
@@ -441,11 +563,14 @@ export default function Home() {
       </section>
 
       {/* =====================================================
-          PREORDER
+          PRÉCOMMANDES
       ====================================================== */}
 
       <section className="border-b border-surface px-5 py-20 md:px-8 md:py-28">
-        <div className="mx-auto max-w-7xl">
+        <div
+          data-reveal
+          className="mx-auto max-w-7xl"
+        >
           <div className="grid gap-14 md:grid-cols-[0.85fr_1.15fr] md:items-end md:gap-24">
             <div>
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
@@ -466,7 +591,6 @@ export default function Home() {
                 AJVEK sans surproduire.
               </p>
 
-              {/* PROGRESS */}
               <div className="mt-10">
                 <div className="flex items-end justify-between">
                   <p className="text-[8px] uppercase tracking-[0.35em] text-stone">
@@ -500,18 +624,22 @@ export default function Home() {
                   ? "La première série est complète."
                   : count !== null && count > 0
                   ? `${remaining} ${
-                      remaining > 1 ? "pièces restantes" : "pièce restante"
+                      remaining > 1
+                        ? "pièces restantes"
+                        : "pièce restante"
                     } avant le lancement de la production.`
                   : "Les premières précommandes sont ouvertes."}
               </p>
 
               <Link
                 href="/catalogue"
-                className="group mt-9 flex w-full items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background"
+                className="group mt-9 flex w-full items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition-transform duration-500 hover:scale-[0.99]"
               >
-                <span>Précommander · {PRICE}</span>
+                <span>
+                  Précommander · {PRICE}
+                </span>
 
-                <span className="text-base transition-transform group-hover:translate-x-1">
+                <span className="text-base transition-transform duration-500 group-hover:translate-x-2">
                   →
                 </span>
               </Link>
@@ -525,7 +653,10 @@ export default function Home() {
       ====================================================== */}
 
       <section className="border-b border-surface px-5 py-12 md:px-8 md:py-16">
-        <div className="mx-auto max-w-7xl">
+        <div
+          data-reveal
+          className="mx-auto max-w-7xl"
+        >
           <div className="grid gap-8 md:grid-cols-2 md:items-end">
             <div>
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
@@ -550,7 +681,7 @@ export default function Home() {
       <DesignProcessStory />
 
       {/* =====================================================
-          MANIFESTO
+          MANIFESTE
       ====================================================== */}
 
       <section className="relative overflow-hidden border-y border-surface px-5 py-24 md:px-8 md:py-36">
@@ -561,7 +692,10 @@ export default function Home() {
           A
         </div>
 
-        <div className="relative z-10 mx-auto max-w-7xl">
+        <div
+          data-reveal
+          className="relative z-10 mx-auto max-w-7xl"
+        >
           <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
             03 — AJVEK
           </p>
@@ -571,6 +705,7 @@ export default function Home() {
             <br />
             Développé.
             <br />
+
             <span className="text-stone">
               Porté.
             </span>
@@ -584,7 +719,7 @@ export default function Home() {
       </section>
 
       {/* =====================================================
-          FINAL CTA
+          CTA FINAL
       ====================================================== */}
 
       <section className="relative flex min-h-[70svh] items-center overflow-hidden px-5 py-24 text-center md:px-8 md:py-32">
@@ -595,15 +730,23 @@ export default function Home() {
           DROP 001
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-3xl">
+        <div
+          data-reveal
+          className="relative z-10 mx-auto w-full max-w-3xl"
+        >
           <p className="text-[9px] uppercase tracking-[0.45em] text-stone">
             Drop 001
           </p>
 
           <h2 className="mt-8 font-display text-[3.6rem] leading-[0.88] tracking-[-0.04em] sm:text-7xl md:text-8xl">
             ROSES
-            <span className="text-stone"> / </span>
+            <span className="text-stone">
+              {" "}
+              /{" "}
+            </span>
+
             <br className="sm:hidden" />
+
             CERISIER
           </h2>
 
@@ -619,11 +762,11 @@ export default function Home() {
 
           <Link
             href="/catalogue"
-            className="group mx-auto mt-9 flex w-full max-w-xl items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition duration-300 hover:scale-[0.99]"
+            className="group mx-auto mt-9 flex w-full max-w-xl items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition-transform duration-500 hover:scale-[0.99]"
           >
             <span>Choisir ma pièce</span>
 
-            <span className="text-lg transition-transform duration-300 group-hover:translate-x-1">
+            <span className="text-lg transition-transform duration-500 group-hover:translate-x-2">
               →
             </span>
           </Link>
