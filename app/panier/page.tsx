@@ -11,6 +11,39 @@ export default function PanierPage() {
     totalPrice,
   } = useCart();
 
+  /*
+   * =========================================================
+   * DIMINUER UNE QUANTITÉ
+   * =========================================================
+   *
+   * Si la quantité est supérieure à 1 :
+   * on retire simplement une unité.
+   *
+   * Si la quantité est égale à 1 :
+   * le bouton − retire complètement l'article du panier.
+   */
+
+  function decreaseQuantity(
+    itemId: string,
+    currentQuantity: number
+  ) {
+    if (currentQuantity <= 1) {
+      removeItem(itemId);
+      return;
+    }
+
+    updateQuantity(
+      itemId,
+      currentQuantity - 1
+    );
+  }
+
+  /*
+   * =========================================================
+   * PANIER VIDE
+   * =========================================================
+   */
+
   if (items.length === 0) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
@@ -28,6 +61,12 @@ export default function PanierPage() {
     );
   }
 
+  /*
+   * =========================================================
+   * PANIER
+   * =========================================================
+   */
+
   return (
     <main className="min-h-screen px-6 py-16">
       <h1 className="mb-10 text-center font-display text-3xl">
@@ -40,6 +79,10 @@ export default function PanierPage() {
             key={item.id}
             className="flex items-center justify-between gap-4 border-b border-surface pb-4"
           >
+            {/* =============================================
+                PRODUIT
+            ============================================== */}
+
             <div>
               <p className="text-sm uppercase tracking-widest text-foreground">
                 {item.name}
@@ -61,16 +104,25 @@ export default function PanierPage() {
               </button>
             </div>
 
+            {/* =============================================
+                QUANTITÉ
+            ============================================== */}
+
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() =>
-                  updateQuantity(
+                  decreaseQuantity(
                     item.id,
-                    item.quantity - 1
+                    item.quantity
                   )
                 }
-                className="h-7 w-7 rounded-full border border-stone/40 text-xs"
+                aria-label={
+                  item.quantity <= 1
+                    ? `Retirer ${item.name} du panier`
+                    : `Diminuer la quantité de ${item.name}`
+                }
+                className="h-7 w-7 rounded-full border border-stone/40 text-xs transition hover:border-foreground"
               >
                 −
               </button>
@@ -87,20 +139,30 @@ export default function PanierPage() {
                     item.quantity + 1
                   )
                 }
-                className="h-7 w-7 rounded-full border border-stone/40 text-xs"
+                aria-label={`Augmenter la quantité de ${item.name}`}
+                className="h-7 w-7 rounded-full border border-stone/40 text-xs transition hover:border-foreground"
               >
                 +
               </button>
             </div>
 
+            {/* =============================================
+                PRIX
+            ============================================== */}
+
             <p className="w-20 text-right text-sm text-foreground">
               {(
-                item.price * item.quantity
+                item.price *
+                item.quantity
               ).toFixed(2)}{" "}
               €
             </p>
           </div>
         ))}
+
+        {/* ===============================================
+            TOTAL
+        ================================================ */}
 
         <div className="mt-6 flex items-center justify-between">
           <p className="text-sm uppercase tracking-widest text-stone">

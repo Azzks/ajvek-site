@@ -307,7 +307,7 @@ export default function Home() {
 
             <h1
               ref={titleRef}
-              className="mt-7 font-display text-[21vw] leading-[0.75] tracking-[-0.055em] opacity-0 sm:text-[8rem] md:text-[10rem] lg:text-[12rem]"
+              className="mt-7 w-full text-center font-display text-[21vw] leading-[0.75] tracking-[-0.055em] opacity-0 sm:text-[8rem] md:text-[10rem] lg:text-[12rem]"
             >
               AJVEK
             </h1>
