@@ -52,25 +52,27 @@ type AdminOrder = {
   items: OrderItem[];
 };
 
-type ProductionState = {
-  paid_count: number;
-  target: number;
-  ready: boolean;
-  started: boolean;
+type OrderDraft = {
+  status: string;
+  carrier: string;
+  tracking_number: string;
+  tracking_url: string;
 };
+
+/*
+ * ============================================================
+ * STATUTS
+ * ============================================================
+ */
 
 const STATUS_OPTIONS = [
   {
-    value: "preorder_received",
-    label: "Précommande reçue",
+    value: "paid",
+    label: "Commande confirmée",
   },
   {
-    value: "production",
-    label: "Production lancée",
-  },
-  {
-    value: "manufacturing",
-    label: "En fabrication",
+    value: "preparing",
+    label: "En préparation",
   },
   {
     value: "shipped",
@@ -81,6 +83,41 @@ const STATUS_OPTIONS = [
     label: "Livrée",
   },
 ];
+
+/*
+ * ============================================================
+ * COMPATIBILITÉ ANCIENS STATUTS
+ * ============================================================
+ */
+
+function normalizeStatus(
+  status: string | null | undefined
+) {
+  switch (status) {
+    case "preorder_received":
+    case "awaiting_payment":
+      return "paid";
+
+    case "production":
+    case "manufacturing":
+      return "preparing";
+
+    case "shipped":
+      return "shipped";
+
+    case "delivered":
+      return "delivered";
+
+    default:
+      return "paid";
+  }
+}
+
+/*
+ * ============================================================
+ * FORMATAGE
+ * ============================================================
+ */
 
 function formatDate(
   date: string | null
@@ -101,7 +138,21 @@ function formatDate(
   ).format(new Date(date));
 }
 
-function shortOrderId(id: string) {
+function formatPrice(
+  amount: number
+) {
+  return new Intl.NumberFormat(
+    "fr-FR",
+    {
+      style: "currency",
+      currency: "EUR",
+    }
+  ).format(amount / 100);
+}
+
+function shortOrderId(
+  id: string
+) {
   if (id.startsWith("legacy-")) {
     return id
       .replace("legacy-", "")
@@ -114,6 +165,12 @@ function shortOrderId(id: string) {
     .slice(0, 8)
     .toUpperCase();
 }
+
+/*
+ * ============================================================
+ * PAGE
+ * ============================================================
+ */
 
 export default function AdminCommandesPage() {
   const [orders, setOrders] =
@@ -131,31 +188,19 @@ export default function AdminCommandesPage() {
   const [savingId, setSavingId] =
     useState<string | null>(null);
 
-  const [
-    launchingProduction,
-    setLaunchingProduction,
-  ] = useState(false);
-
-  const [production, setProduction] =
-    useState<ProductionState>({
-      paid_count: 0,
-      target: 10,
-      ready: false,
-      started: false,
-    });
-
   const [drafts, setDrafts] =
     useState<
       Record<
         string,
-        {
-          status: string;
-          carrier: string;
-          tracking_number: string;
-          tracking_url: string;
-        }
+        OrderDraft
       >
     >({});
+
+  /*
+   * ==========================================================
+   * TOKEN ADMIN
+   * ==========================================================
+   */
 
   async function getAccessToken() {
     const {
@@ -164,14 +209,15 @@ export default function AdminCommandesPage() {
       await supabase.auth.getSession();
 
     return (
-      session?.access_token ?? null
+      session?.access_token ??
+      null
     );
   }
 
   /*
-   * ============================================================
+   * ==========================================================
    * CHARGER LES COMMANDES
-   * ============================================================
+   * ==========================================================
    */
 
   async function loadOrders() {
@@ -187,21 +233,21 @@ export default function AdminCommandesPage() {
           "Tu dois être connecté avec ton compte admin."
         );
 
-        setLoading(false);
-
         return;
       }
 
-      const response = await fetch(
-        "/api/admin/orders",
-        {
-          cache: "no-store",
+      const response =
+        await fetch(
+          "/api/admin/orders",
+          {
+            cache: "no-store",
 
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          }
+        );
 
       const data =
         await response.json();
@@ -216,49 +262,49 @@ export default function AdminCommandesPage() {
       }
 
       const fetchedOrders: AdminOrder[] =
-        data.orders ?? [];
+        Array.isArray(
+          data.orders
+        )
+          ? data.orders
+          : [];
 
-      setOrders(fetchedOrders);
-
-      setProduction(
-        data.production ?? {
-          paid_count: 0,
-          target: 10,
-          ready: false,
-          started: false,
-        }
+      setOrders(
+        fetchedOrders
       );
 
       const nextDrafts: Record<
         string,
-        {
-          status: string;
-          carrier: string;
-          tracking_number: string;
-          tracking_url: string;
-        }
+        OrderDraft
       > = {};
 
-      for (const order of fetchedOrders) {
+      for (
+        const order of fetchedOrders
+      ) {
         nextDrafts[
           order.checkout_group_id
         ] = {
           status:
-            order.status ||
-            "preorder_received",
+            normalizeStatus(
+              order.status
+            ),
 
           carrier:
-            order.carrier || "",
+            order.carrier ||
+            "",
 
           tracking_number:
-            order.tracking_number || "",
+            order.tracking_number ||
+            "",
 
           tracking_url:
-            order.tracking_url || "",
+            order.tracking_url ||
+            "",
         };
       }
 
-      setDrafts(nextDrafts);
+      setDrafts(
+        nextDrafts
+      );
     } catch (error) {
       console.error(
         "[admin-commandes]",
@@ -278,9 +324,34 @@ export default function AdminCommandesPage() {
   }, []);
 
   /*
-   * ============================================================
+   * ==========================================================
+   * MODIFIER UN BROUILLON
+   * ==========================================================
+   */
+
+  function updateDraft(
+    orderId: string,
+    values: Partial<OrderDraft>
+  ) {
+    setDrafts(
+      (current) => ({
+        ...current,
+
+        [orderId]: {
+          ...current[
+            orderId
+          ],
+
+          ...values,
+        },
+      })
+    );
+  }
+
+  /*
+   * ==========================================================
    * ENREGISTRER UNE COMMANDE
-   * ============================================================
+   * ==========================================================
    */
 
   async function saveOrder(
@@ -313,34 +384,39 @@ export default function AdminCommandesPage() {
         return;
       }
 
-      const response = await fetch(
-        "/api/admin/orders",
-        {
-          method: "PATCH",
+      const response =
+        await fetch(
+          "/api/admin/orders",
+          {
+            method: "PATCH",
 
-          headers: {
-            "Content-Type":
-              "application/json",
+            headers: {
+              "Content-Type":
+                "application/json",
 
-            Authorization: `Bearer ${token}`,
-          },
+              Authorization:
+                `Bearer ${token}`,
+            },
 
-          body: JSON.stringify({
-            checkout_group_id:
-              order.checkout_group_id,
+            body:
+              JSON.stringify({
+                checkout_group_id:
+                  order.checkout_group_id,
 
-            status: draft.status,
+                status:
+                  draft.status,
 
-            carrier: draft.carrier,
+                carrier:
+                  draft.carrier,
 
-            tracking_number:
-              draft.tracking_number,
+                tracking_number:
+                  draft.tracking_number,
 
-            tracking_url:
-              draft.tracking_url,
-          }),
-        }
-      );
+                tracking_url:
+                  draft.tracking_url,
+              }),
+          }
+        );
 
       const data =
         await response.json();
@@ -365,90 +441,24 @@ export default function AdminCommandesPage() {
         "Impossible de modifier la commande."
       );
     } finally {
-      setSavingId(null);
+      setSavingId(
+        null
+      );
     }
   }
 
   /*
-   * ============================================================
-   * LANCER LA PRODUCTION
-   * ============================================================
-   */
-
-  async function launchProduction() {
-    const confirmed =
-      window.confirm(
-        "Confirmer le lancement de la production ? Toutes les précommandes payées actuellement en attente passeront en « Production lancée »."
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setLaunchingProduction(true);
-    setError(null);
-
-    try {
-      const token =
-        await getAccessToken();
-
-      if (!token) {
-        setError(
-          "Ta session a expiré."
-        );
-
-        return;
-      }
-
-      const response = await fetch(
-        "/api/admin/orders",
-        {
-          method: "PUT",
-
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        setError(
-          data.error ||
-            "Impossible de lancer la production."
-        );
-
-        return;
-      }
-
-      await loadOrders();
-    } catch (error) {
-      console.error(
-        "[admin-commandes/production]",
-        error
-      );
-
-      setError(
-        "Impossible de lancer la production."
-      );
-    } finally {
-      setLaunchingProduction(false);
-    }
-  }
-
-  /*
-   * ============================================================
+   * ==========================================================
    * RECHERCHE
-   * ============================================================
+   * ==========================================================
    */
 
   const filteredOrders =
     useMemo(() => {
-      const query = search
-        .trim()
-        .toLowerCase();
+      const query =
+        search
+          .trim()
+          .toLowerCase();
 
       if (!query) {
         return orders;
@@ -467,37 +477,86 @@ export default function AdminCommandesPage() {
           return [
             order.customer.name,
             order.customer.email,
-            order.customer.phone || "",
+            order.customer.phone ||
+              "",
             order.checkout_group_id,
             itemText,
           ]
             .join(" ")
             .toLowerCase()
-            .includes(query);
+            .includes(
+              query
+            );
         }
       );
-    }, [orders, search]);
+    }, [
+      orders,
+      search,
+    ]);
 
-  const remainingForProduction =
-    Math.max(
-      production.target -
-        production.paid_count,
+  /*
+   * ==========================================================
+   * COMPTEURS
+   * ==========================================================
+   */
+
+  const totalPieces =
+    orders.reduce(
+      (
+        total,
+        order
+      ) =>
+        total +
+        order.items.reduce(
+          (
+            itemTotal,
+            item
+          ) =>
+            itemTotal +
+            item.quantity,
+          0
+        ),
       0
     );
 
-  const productionPercentage =
-    production.target > 0
-      ? Math.min(
-          (production.paid_count /
-            production.target) *
-            100,
-          100
-        )
-      : 0;
+  const preparingCount =
+    orders.filter(
+      (order) =>
+        normalizeStatus(
+          order.status
+        ) ===
+        "preparing"
+    ).length;
+
+  const shippedCount =
+    orders.filter(
+      (order) =>
+        normalizeStatus(
+          order.status
+        ) ===
+        "shipped"
+    ).length;
+
+  const deliveredCount =
+    orders.filter(
+      (order) =>
+        normalizeStatus(
+          order.status
+        ) ===
+        "delivered"
+    ).length;
+
+  /*
+   * ==========================================================
+   * RENDER
+   * ==========================================================
+   */
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      {/* HERO */}
+      {/* =====================================================
+          HERO
+      ====================================================== */}
 
       <section className="border-b border-surface px-6 py-16 md:px-8 md:py-20">
         <div className="mx-auto max-w-7xl">
@@ -512,18 +571,23 @@ export default function AdminCommandesPage() {
               </h1>
 
               <p className="mt-5 max-w-xl text-sm leading-7 text-stone">
-                Gestion des commandes
-                payées, de la
-                précommande jusqu&apos;à
-                la livraison.
+                Gestion des
+                commandes payées,
+                de leur préparation
+                jusqu&apos;à leur
+                livraison.
               </p>
             </div>
 
             <button
               type="button"
-              onClick={loadOrders}
-              disabled={loading}
-              className="w-fit rounded-full border border-surface px-5 py-3 text-[9px] uppercase tracking-[0.25em] disabled:opacity-50"
+              onClick={
+                loadOrders
+              }
+              disabled={
+                loading
+              }
+              className="w-fit rounded-full border border-surface px-5 py-3 text-[9px] uppercase tracking-[0.25em] transition hover:border-foreground disabled:opacity-50"
             >
               {loading
                 ? "Actualisation..."
@@ -533,112 +597,107 @@ export default function AdminCommandesPage() {
         </div>
       </section>
 
+      {/* =====================================================
+          CONTENU
+      ====================================================== */}
+
       <section className="px-6 py-10 md:px-8 md:py-14">
         <div className="mx-auto max-w-7xl">
-          {/* PRODUCTION */}
 
-          <div className="mb-10 border border-surface p-5 md:p-7">
-            <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-              <div className="w-full max-w-xl">
-                <p className="text-[9px] uppercase tracking-[0.35em] text-stone">
-                  Production AJVEK
-                </p>
+          {/* =================================================
+              RÉSUMÉ
+          ================================================= */}
 
-                <div className="mt-3 flex items-end gap-3">
-                  <p className="font-display text-4xl">
-                    {
-                      production.paid_count
-                    }
-                  </p>
+          <div className="mb-10 grid grid-cols-2 gap-px bg-surface lg:grid-cols-5">
+            <div className="bg-background p-5">
+              <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+                Commandes
+              </p>
 
-                  <p className="pb-1 text-sm text-stone">
-                    /{" "}
-                    {production.target}{" "}
-                    vêtements payés
-                  </p>
-                </div>
+              <p className="mt-3 font-display text-3xl">
+                {
+                  orders.length
+                }
+              </p>
+            </div>
 
-                <div className="mt-5 h-px w-full overflow-hidden bg-surface">
-                  <div
-                    className="h-full bg-foreground transition-all duration-500"
-                    style={{
-                      width: `${productionPercentage}%`,
-                    }}
-                  />
-                </div>
+            <div className="bg-background p-5">
+              <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+                Pièces
+              </p>
 
-                <p className="mt-4 text-xs leading-5 text-stone">
-                  {production.started
-                    ? "La production AJVEK a été lancée."
-                    : production.ready
-                      ? "Le seuil est atteint. La production peut maintenant être lancée."
-                      : `${remainingForProduction} vêtement${
-                          remainingForProduction >
-                          1
-                            ? "s"
-                            : ""
-                        } restant${
-                          remainingForProduction >
-                          1
-                            ? "s"
-                            : ""
-                        } avant le seuil de production.`}
-                </p>
-              </div>
+              <p className="mt-3 font-display text-3xl">
+                {
+                  totalPieces
+                }
+              </p>
+            </div>
 
-              <div className="shrink-0 lg:text-right">
-                {production.started ? (
-                  <div className="inline-flex border border-surface px-6 py-4">
-                    <span className="text-[10px] uppercase tracking-[0.25em]">
-                      Production lancée ✓
-                    </span>
-                  </div>
-                ) : production.ready ? (
-                  <button
-                    type="button"
-                    onClick={
-                      launchProduction
-                    }
-                    disabled={
-                      launchingProduction
-                    }
-                    className="bg-foreground px-7 py-4 text-[10px] uppercase tracking-[0.25em] text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {launchingProduction
-                      ? "Lancement..."
-                      : "Lancer la production"}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="cursor-not-allowed border border-surface px-7 py-4 text-[10px] uppercase tracking-[0.25em] text-stone opacity-50"
-                  >
-                    Seuil non atteint
-                  </button>
-                )}
-              </div>
+            <div className="bg-background p-5">
+              <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+                Préparation
+              </p>
+
+              <p className="mt-3 font-display text-3xl">
+                {
+                  preparingCount
+                }
+              </p>
+            </div>
+
+            <div className="bg-background p-5">
+              <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+                Expédiées
+              </p>
+
+              <p className="mt-3 font-display text-3xl">
+                {
+                  shippedCount
+                }
+              </p>
+            </div>
+
+            <div className="bg-background p-5">
+              <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+                Livrées
+              </p>
+
+              <p className="mt-3 font-display text-3xl">
+                {
+                  deliveredCount
+                }
+              </p>
             </div>
           </div>
 
-          {/* RECHERCHE */}
+          {/* =================================================
+              RECHERCHE
+          ================================================= */}
 
-          <div className="mb-8 flex flex-col gap-4 border-b border-surface pb-8 md:flex-row md:items-center md:justify-between">
+          <div className="mb-8 flex flex-col gap-4 border-b border-surface pb-8 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
                 Commandes payées
               </p>
 
               <p className="mt-2 font-display text-2xl">
-                {orders.length}
+                {
+                  orders.length
+                }
               </p>
             </div>
 
             <input
-              value={search}
-              onChange={(event) =>
+              value={
+                search
+              }
+              onChange={(
+                event
+              ) =>
                 setSearch(
-                  event.target.value
+                  event
+                    .target
+                    .value
                 )
               }
               placeholder="Nom, email, produit..."
@@ -646,7 +705,9 @@ export default function AdminCommandesPage() {
             />
           </div>
 
-          {/* CHARGEMENT */}
+          {/* =================================================
+              CHARGEMENT
+          ================================================= */}
 
           {loading && (
             <p className="text-sm text-stone">
@@ -655,17 +716,25 @@ export default function AdminCommandesPage() {
             </p>
           )}
 
-          {/* ERREUR */}
+          {/* =================================================
+              ERREUR
+          ================================================= */}
 
           {error && (
             <div className="mb-8 border border-surface p-5">
-              <p className="text-sm">
+              <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                Erreur
+              </p>
+
+              <p className="mt-3 text-sm">
                 {error}
               </p>
             </div>
           )}
 
-          {/* VIDE */}
+          {/* =================================================
+              VIDE
+          ================================================= */}
 
           {!loading &&
             !error &&
@@ -678,408 +747,469 @@ export default function AdminCommandesPage() {
                 </p>
 
                 <h2 className="mt-5 font-display text-3xl">
-                  Aucune commande
-                  payée.
+                  {search
+                    ? "Aucun résultat."
+                    : "Aucune commande payée."}
                 </h2>
               </div>
             )}
 
-          {/* COMMANDES */}
+          {/* =================================================
+              COMMANDES
+          ================================================= */}
 
-          <div className="space-y-8">
-            {filteredOrders.map(
-              (order) => {
-                const draft =
-                  drafts[
-                    order
-                      .checkout_group_id
-                  ];
+          {!loading && (
+            <div className="space-y-8">
+              {filteredOrders.map(
+                (order) => {
+                  const draft =
+                    drafts[
+                      order
+                        .checkout_group_id
+                    ];
 
-                if (!draft) {
-                  return null;
-                }
+                  if (!draft) {
+                    return null;
+                  }
 
-                return (
-                  <article
-                    key={
-                      order.checkout_group_id
-                    }
-                    className="border border-surface"
-                  >
-                    {/* HEADER */}
+                  const pieceCount =
+                    order.items.reduce(
+                      (
+                        total,
+                        item
+                      ) =>
+                        total +
+                        item.quantity,
+                      0
+                    );
 
-                    <div className="border-b border-surface px-5 py-6 md:px-7">
-                      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                            Commande
-                          </p>
+                  return (
+                    <article
+                      key={
+                        order.checkout_group_id
+                      }
+                      className="border border-surface"
+                    >
+                      {/* =====================================
+                          HEADER
+                      ====================================== */}
 
-                          <h2 className="mt-2 font-display text-2xl">
-                            #
-                            {shortOrderId(
-                              order.checkout_group_id
-                            )}
-                          </h2>
+                      <div className="border-b border-surface px-5 py-6 md:px-7">
+                        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                              Commande
+                            </p>
 
-                          <p className="mt-4 text-sm">
-                            {
-                              order
-                                .customer
-                                .name
-                            }
-                          </p>
+                            <h2 className="mt-2 font-display text-2xl">
+                              #
+                              {shortOrderId(
+                                order.checkout_group_id
+                              )}
+                            </h2>
 
-                          <p className="mt-1 text-xs text-stone">
-                            {
-                              order
-                                .customer
-                                .email
-                            }
-                          </p>
+                            <p className="mt-4 text-sm">
+                              {
+                                order
+                                  .customer
+                                  .name
+                              }
+                            </p>
 
-                          {order
-                            .customer
-                            .phone && (
                             <p className="mt-1 text-xs text-stone">
                               {
                                 order
                                   .customer
-                                  .phone
+                                  .email
                               }
                             </p>
-                          )}
-                        </div>
 
-                        <div className="md:text-right">
-                          <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                            Paiement
-                          </p>
-
-                          <p className="mt-2 text-xs">
-                            {formatDate(
-                              order.paid_at
+                            {order
+                              .customer
+                              .phone && (
+                              <p className="mt-1 text-xs text-stone">
+                                {
+                                  order
+                                    .customer
+                                    .phone
+                                }
+                              </p>
                             )}
-                          </p>
+                          </div>
+
+                          <div className="md:text-right">
+                            <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                              Paiement
+                            </p>
+
+                            <p className="mt-2 text-xs">
+                              {formatDate(
+                                order.paid_at
+                              )}
+                            </p>
+
+                            <p className="mt-3 text-[10px] text-stone">
+                              {
+                                pieceCount
+                              }{" "}
+                              pièce
+                              {pieceCount >
+                              1
+                                ? "s"
+                                : ""}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="grid lg:grid-cols-[1fr_0.9fr]">
-                      {/* ARTICLES */}
+                      <div className="grid lg:grid-cols-[1fr_0.9fr]">
 
-                      <div className="border-b border-surface p-5 md:p-7 lg:border-b-0 lg:border-r">
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                          Articles
-                        </p>
+                        {/* ===================================
+                            ARTICLES
+                        ==================================== */}
 
-                        <div className="mt-5 divide-y divide-surface border-y border-surface">
-                          {order.items.map(
-                            (
-                              item,
-                              index
-                            ) => (
-                              <div
-                                key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
-                                className="flex items-start justify-between gap-4 py-4"
-                              >
-                                <div>
-                                  <p className="font-display text-lg">
+                        <div className="border-b border-surface p-5 md:p-7 lg:border-b-0 lg:border-r">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                            Articles
+                          </p>
+
+                          <div className="mt-5 divide-y divide-surface border-y border-surface">
+                            {order.items.map(
+                              (
+                                item,
+                                index
+                              ) => (
+                                <div
+                                  key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
+                                  className="flex items-start justify-between gap-4 py-4"
+                                >
+                                  <div>
+                                    <p className="font-display text-lg">
+                                      {
+                                        item.product_name
+                                      }
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-stone">
+                                      {
+                                        item.color
+                                      }{" "}
+                                      ·
+                                      Taille{" "}
+                                      {
+                                        item.size
+                                      }
+                                    </p>
+                                  </div>
+
+                                  <p className="text-xs text-stone">
+                                    ×{" "}
                                     {
-                                      item.product_name
-                                    }
-                                  </p>
-
-                                  <p className="mt-1 text-xs text-stone">
-                                    {
-                                      item.color
-                                    }{" "}
-                                    · Taille{" "}
-                                    {
-                                      item.size
+                                      item.quantity
                                     }
                                   </p>
                                 </div>
+                              )
+                            )}
+                          </div>
 
-                                <p className="text-xs text-stone">
-                                  ×{" "}
-                                  {
-                                    item.quantity
-                                  }
+                          {/* ===============================
+                              LIVRAISON
+                          ================================ */}
+
+                          <div className="mt-7">
+                            <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                              Livraison
+                            </p>
+
+                            <p className="mt-3 text-sm">
+                              {order.delivery_method ===
+                              "relay"
+                                ? "Point Relais Mondial Relay"
+                                : "Livraison à domicile"}
+                            </p>
+
+                            <p className="mt-2 text-xs text-stone">
+                              {order.shipping_amount ===
+                              0
+                                ? "Livraison offerte"
+                                : formatPrice(
+                                    order.shipping_amount
+                                  )}
+                            </p>
+
+                            {order.service_point && (
+                              <div className="mt-4 text-xs leading-5 text-stone">
+                                <p className="text-foreground">
+                                  {order
+                                    .service_point
+                                    .name ||
+                                    "Point Relais"}
                                 </p>
-                              </div>
-                            )
-                          )}
-                        </div>
 
-                        {/* LIVRAISON */}
-
-                        <div className="mt-7">
-                          <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                            Livraison
-                          </p>
-
-                          <p className="mt-3 text-sm">
-                            {order.delivery_method ===
-                            "relay"
-                              ? "Point Relais"
-                              : "Domicile"}
-                          </p>
-
-                          {order.service_point && (
-                            <div className="mt-3 text-xs leading-5 text-stone">
-                              <p>
                                 {order
                                   .service_point
-                                  .name ||
-                                  "Point Relais"}
-                              </p>
+                                  .address && (
+                                  <p className="mt-1">
+                                    {
+                                      order
+                                        .service_point
+                                        .address
+                                    }
+                                  </p>
+                                )}
 
-                              {order
-                                .service_point
-                                .address && (
-                                <p>
-                                  {
-                                    order
-                                      .service_point
-                                      .address
-                                  }
+                                {(order
+                                  .service_point
+                                  .postal_code ||
+                                  order
+                                    .service_point
+                                    .city) && (
+                                  <p>
+                                    {
+                                      order
+                                        .service_point
+                                        .postal_code
+                                    }{" "}
+                                    {
+                                      order
+                                        .service_point
+                                        .city
+                                    }
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ===============================
+                              DATES LOGISTIQUES
+                          ================================ */}
+
+                          {(order.shipped_at ||
+                            order.delivered_at) && (
+                            <div className="mt-7 border-t border-surface pt-6">
+                              {order.shipped_at && (
+                                <p className="text-xs text-stone">
+                                  Expédiée :{" "}
+                                  <span className="text-foreground">
+                                    {formatDate(
+                                      order.shipped_at
+                                    )}
+                                  </span>
                                 </p>
                               )}
 
-                              <p>
-                                {
-                                  order
-                                    .service_point
-                                    .postal_code
-                                }{" "}
-                                {
-                                  order
-                                    .service_point
-                                    .city
-                                }
-                              </p>
+                              {order.delivered_at && (
+                                <p className="mt-2 text-xs text-stone">
+                                  Livrée :{" "}
+                                  <span className="text-foreground">
+                                    {formatDate(
+                                      order.delivered_at
+                                    )}
+                                  </span>
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>
-                      </div>
 
-                      {/* GESTION */}
+                        {/* ===================================
+                            GESTION
+                        ==================================== */}
 
-                      <div className="p-5 md:p-7">
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                          Gestion
-                        </p>
+                        <div className="p-5 md:p-7">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+                            Gestion
+                          </p>
 
-                        <div className="mt-5 space-y-5">
-                          {/* STATUT */}
+                          <div className="mt-5 space-y-5">
 
-                          <div>
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
-                              Statut
-                            </label>
+                            {/* =============================
+                                STATUT
+                            ============================== */}
 
-                            <select
-                              value={
-                                draft.status
-                              }
-                              onChange={(
-                                event
-                              ) =>
-                                setDrafts(
-                                  (
-                                    current
-                                  ) => ({
-                                    ...current,
+                            <div>
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
+                                Statut
+                              </label>
 
-                                    [order.checkout_group_id]:
-                                      {
-                                        ...current[
-                                          order
-                                            .checkout_group_id
-                                        ],
-
-                                        status:
-                                          event
-                                            .target
-                                            .value,
-                                      },
-                                  })
-                                )
-                              }
-                              className="mt-2 w-full border border-surface bg-background px-4 py-3 text-sm outline-none"
-                            >
-                              {STATUS_OPTIONS.map(
-                                (
-                                  status
-                                ) => (
-                                  <option
-                                    key={
-                                      status.value
-                                    }
-                                    value={
-                                      status.value
-                                    }
-                                  >
+                              <select
+                                value={
+                                  draft.status
+                                }
+                                onChange={(
+                                  event
+                                ) =>
+                                  updateDraft(
+                                    order.checkout_group_id,
                                     {
-                                      status.label
+                                      status:
+                                        event
+                                          .target
+                                          .value,
                                     }
-                                  </option>
-                                )
-                              )}
-                            </select>
-                          </div>
-
-                          {/* TRANSPORTEUR */}
-
-                          <div>
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
-                              Transporteur
-                            </label>
-
-                            <input
-                              value={
-                                draft.carrier
-                              }
-                              onChange={(
-                                event
-                              ) =>
-                                setDrafts(
+                                  )
+                                }
+                                className="mt-2 w-full border border-surface bg-background px-4 py-3 text-sm outline-none"
+                              >
+                                {STATUS_OPTIONS.map(
                                   (
-                                    current
-                                  ) => ({
-                                    ...current,
-
-                                    [order.checkout_group_id]:
+                                    status
+                                  ) => (
+                                    <option
+                                      key={
+                                        status.value
+                                      }
+                                      value={
+                                        status.value
+                                      }
+                                    >
                                       {
-                                        ...current[
-                                          order
-                                            .checkout_group_id
-                                        ],
+                                        status.label
+                                      }
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </div>
 
-                                        carrier:
-                                          event
-                                            .target
-                                            .value,
-                                      },
-                                  })
+                            {/* =============================
+                                TRANSPORTEUR
+                            ============================== */}
+
+                            <div>
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
+                                Transporteur
+                              </label>
+
+                              <input
+                                value={
+                                  draft.carrier
+                                }
+                                onChange={(
+                                  event
+                                ) =>
+                                  updateDraft(
+                                    order.checkout_group_id,
+                                    {
+                                      carrier:
+                                        event
+                                          .target
+                                          .value,
+                                    }
+                                  )
+                                }
+                                placeholder="Mondial Relay"
+                                className="mt-2 w-full border border-surface bg-transparent px-4 py-3 text-sm outline-none"
+                              />
+                            </div>
+
+                            {/* =============================
+                                NUMÉRO DE SUIVI
+                            ============================== */}
+
+                            <div>
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
+                                Numéro de suivi
+                              </label>
+
+                              <input
+                                value={
+                                  draft.tracking_number
+                                }
+                                onChange={(
+                                  event
+                                ) =>
+                                  updateDraft(
+                                    order.checkout_group_id,
+                                    {
+                                      tracking_number:
+                                        event
+                                          .target
+                                          .value,
+                                    }
+                                  )
+                                }
+                                placeholder="123456789"
+                                className="mt-2 w-full border border-surface bg-transparent px-4 py-3 text-sm outline-none"
+                              />
+                            </div>
+
+                            {/* =============================
+                                LIEN DE SUIVI
+                            ============================== */}
+
+                            <div>
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
+                                Lien de suivi
+                              </label>
+
+                              <input
+                                value={
+                                  draft.tracking_url
+                                }
+                                onChange={(
+                                  event
+                                ) =>
+                                  updateDraft(
+                                    order.checkout_group_id,
+                                    {
+                                      tracking_url:
+                                        event
+                                          .target
+                                          .value,
+                                    }
+                                  )
+                                }
+                                placeholder="https://..."
+                                className="mt-2 w-full border border-surface bg-transparent px-4 py-3 text-sm outline-none"
+                              />
+                            </div>
+
+                            {/* =============================
+                                ENREGISTRER
+                            ============================== */}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                saveOrder(
+                                  order
                                 )
                               }
-                              placeholder="Mondial Relay"
-                              className="mt-2 w-full border border-surface bg-transparent px-4 py-3 text-sm outline-none"
-                            />
-                          </div>
-
-                          {/* SUIVI */}
-
-                          <div>
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
-                              Numéro de
-                              suivi
-                            </label>
-
-                            <input
-                              value={
-                                draft.tracking_number
+                              disabled={
+                                savingId ===
+                                order.checkout_group_id
                               }
-                              onChange={(
-                                event
-                              ) =>
-                                setDrafts(
-                                  (
-                                    current
-                                  ) => ({
-                                    ...current,
-
-                                    [order.checkout_group_id]:
-                                      {
-                                        ...current[
-                                          order
-                                            .checkout_group_id
-                                        ],
-
-                                        tracking_number:
-                                          event
-                                            .target
-                                            .value,
-                                      },
-                                  })
-                                )
-                              }
-                              placeholder="123456789"
-                              className="mt-2 w-full border border-surface bg-transparent px-4 py-3 text-sm outline-none"
-                            />
-                          </div>
-
-                          {/* URL */}
-
-                          <div>
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
-                              Lien de
-                              suivi
-                            </label>
-
-                            <input
-                              value={
-                                draft.tracking_url
-                              }
-                              onChange={(
-                                event
-                              ) =>
-                                setDrafts(
-                                  (
-                                    current
-                                  ) => ({
-                                    ...current,
-
-                                    [order.checkout_group_id]:
-                                      {
-                                        ...current[
-                                          order
-                                            .checkout_group_id
-                                        ],
-
-                                        tracking_url:
-                                          event
-                                            .target
-                                            .value,
-                                      },
-                                  })
-                                )
-                              }
-                              placeholder="https://..."
-                              className="mt-2 w-full border border-surface bg-transparent px-4 py-3 text-sm outline-none"
-                            />
-                          </div>
-
-                          {/* SAVE */}
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              saveOrder(
-                                order
-                              )
-                            }
-                            disabled={
-                              savingId ===
+                              className="w-full bg-foreground px-5 py-4 text-[10px] uppercase tracking-[0.25em] text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {savingId ===
                               order.checkout_group_id
-                            }
-                            className="w-full bg-foreground px-5 py-4 text-[10px] uppercase tracking-[0.25em] text-background disabled:opacity-50"
-                          >
-                            {savingId ===
-                            order.checkout_group_id
-                              ? "Enregistrement..."
-                              : "Enregistrer les modifications"}
-                          </button>
+                                ? "Enregistrement..."
+                                : "Enregistrer les modifications"}
+                            </button>
+
+                            {draft.status ===
+                              "shipped" &&
+                              !draft.tracking_number && (
+                                <p className="text-[10px] leading-5 text-stone">
+                                  Pense à renseigner
+                                  le numéro de suivi
+                                  avant de passer la
+                                  commande en
+                                  « Expédiée ».
+                                </p>
+                              )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                );
-              }
-            )}
-          </div>
+                    </article>
+                  );
+                }
+              )}
+            </div>
+          )}
         </div>
       </section>
     </main>

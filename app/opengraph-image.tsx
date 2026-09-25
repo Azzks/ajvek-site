@@ -131,7 +131,7 @@ export default function OpenGraphImage() {
             color: "#8a8178",
           }}
         >
-          <span>Collection en précommande</span>
+          <span>Drop 001 · Bientôt disponible</span>
           <span>ajvek.fr</span>
         </div>
       </div>

@@ -4,11 +4,22 @@ import Stripe from "stripe";
 import { randomUUID } from "crypto";
 import { getProduct } from "@/lib/products";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const stripe = new Stripe(
+  process.env.STRIPE_SECRET_KEY!
+);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
 const supabaseAuth = createClient(
@@ -22,6 +33,8 @@ const supabaseAuth = createClient(
   }
 );
 
+const SITE_URL = "https://ajvek.fr";
+
 type CheckoutItem = {
   product_slug: string;
   color: string;
@@ -29,7 +42,9 @@ type CheckoutItem = {
   quantity: number;
 };
 
-type DeliveryMethod = "relay" | "home";
+type DeliveryMethod =
+  | "relay"
+  | "home";
 
 type ServicePoint = {
   id: number | string;
@@ -50,20 +65,82 @@ type ValidatedItem = {
   priceValue: number;
 };
 
-export async function POST(request: Request) {
+type StockRow = {
+  product_slug: string;
+  color: string;
+  size: string;
+  stock_quantity: number;
+  sales_enabled: boolean;
+};
+
+/*
+ * ============================================================
+ * NORMALISATION
+ * ============================================================
+ */
+
+function normalize(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase("fr-FR");
+}
+
+/*
+ * ============================================================
+ * SUPPRESSION COMMANDE TEMPORAIRE
+ * ============================================================
+ */
+
+async function deleteTemporaryOrder(
+  checkoutGroupId: string
+) {
+  const { error } = await supabaseAdmin
+    .from("preorders")
+    .delete()
+    .eq(
+      "checkout_group_id",
+      checkoutGroupId
+    )
+    .eq("paid", false);
+
+  if (error) {
+    console.error(
+      "[create-checkout] Impossible de supprimer la commande temporaire :",
+      error
+    );
+  }
+}
+
+/*
+ * ============================================================
+ * ROUTE
+ * ============================================================
+ */
+
+export async function POST(
+  request: Request
+) {
   try {
     /*
-     * ============================================================
+     * ========================================================
      * 1. AUTHENTIFICATION
-     * ============================================================
+     * ========================================================
      */
 
-    const authorization = request.headers.get("authorization");
+    const authorization =
+      request.headers.get(
+        "authorization"
+      );
 
-    if (!authorization?.startsWith("Bearer ")) {
+    if (
+      !authorization?.startsWith(
+        "Bearer "
+      )
+    ) {
       return NextResponse.json(
         {
-          error: "Connexion requise.",
+          error:
+            "Connexion requise pour passer commande.",
         },
         {
           status: 401,
@@ -71,17 +148,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const accessToken = authorization.replace("Bearer ", "");
+    const accessToken =
+      authorization.replace(
+        "Bearer ",
+        ""
+      );
 
     const {
       data: { user },
       error: userError,
-    } = await supabaseAuth.auth.getUser(accessToken);
+    } =
+      await supabaseAuth.auth.getUser(
+        accessToken
+      );
 
-    if (userError || !user || !user.email) {
+    if (
+      userError ||
+      !user ||
+      !user.email
+    ) {
       return NextResponse.json(
         {
-          error: "Session utilisateur invalide ou expirée.",
+          error:
+            "Session utilisateur invalide ou expirée.",
         },
         {
           status: 401,
@@ -90,12 +179,34 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ============================================================
+     * ========================================================
      * 2. DONNÉES
-     * ============================================================
+     * ========================================================
      */
 
-    const body = await request.json();
+    let body: {
+      name?: string;
+      phone?: string;
+      items?: CheckoutItem[];
+      delivery_method?: DeliveryMethod;
+      service_point?:
+        | ServicePoint
+        | null;
+    };
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            "Données de commande invalides.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
     const {
       name,
@@ -103,12 +214,6 @@ export async function POST(request: Request) {
       items,
       delivery_method,
       service_point,
-    }: {
-      name: string;
-      phone?: string;
-      items: CheckoutItem[];
-      delivery_method: DeliveryMethod;
-      service_point?: ServicePoint | null;
     } = body;
 
     if (!name?.trim()) {
@@ -122,10 +227,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
+    if (
+      !Array.isArray(items) ||
+      items.length === 0
+    ) {
       return NextResponse.json(
         {
-          error: "Ta précommande est vide.",
+          error:
+            "Ton panier est vide.",
         },
         {
           status: 400,
@@ -139,7 +248,8 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error: "Mode de livraison invalide.",
+          error:
+            "Mode de livraison invalide.",
         },
         {
           status: 400,
@@ -149,13 +259,18 @@ export async function POST(request: Request) {
 
     if (
       delivery_method === "relay" &&
-      (!service_point?.id ||
+      (
+        service_point?.id ===
+          undefined ||
+        service_point?.id === null ||
         !service_point?.postalCode ||
-        !service_point?.city)
+        !service_point?.city
+      )
     ) {
       return NextResponse.json(
         {
-          error: "Choisis un Point Relais valide.",
+          error:
+            "Choisis un Point Relais valide.",
         },
         {
           status: 400,
@@ -164,27 +279,35 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ============================================================
-     * 3. VALIDATION + FUSION DES DOUBLONS
-     * ============================================================
+     * ========================================================
+     * 3. VALIDATION DES ARTICLES
+     * ========================================================
      */
 
-    const mergedItems = new Map<string, ValidatedItem>();
+    const mergedItems =
+      new Map<
+        string,
+        ValidatedItem
+      >();
 
     for (const item of items) {
-      const quantity = Number(item.quantity);
+      const quantity =
+        Number(item.quantity);
 
       if (
         !item.product_slug ||
         !item.color ||
         !item.size ||
-        !Number.isInteger(quantity) ||
+        !Number.isInteger(
+          quantity
+        ) ||
         quantity < 1 ||
         quantity > 10
       ) {
         return NextResponse.json(
           {
-            error: "Un article de la précommande est invalide.",
+            error:
+              "Un article du panier est invalide.",
           },
           {
             status: 400,
@@ -192,12 +315,16 @@ export async function POST(request: Request) {
         );
       }
 
-      const product = getProduct(item.product_slug);
+      const product =
+        getProduct(
+          item.product_slug
+        );
 
       if (!product) {
         return NextResponse.json(
           {
-            error: `Produit introuvable : ${item.product_slug}`,
+            error:
+              `Produit introuvable : ${item.product_slug}`,
           },
           {
             status: 404,
@@ -205,20 +332,77 @@ export async function POST(request: Request) {
         );
       }
 
-      const cleanColor = item.color.trim();
-      const cleanSize = item.size.trim();
+      /*
+       * Vérification de la couleur
+       */
+
+      const colorway =
+        product.colorways.find(
+          (colorway) =>
+            normalize(
+              colorway.label
+            ) ===
+            normalize(item.color)
+        );
+
+      if (!colorway) {
+        return NextResponse.json(
+          {
+            error:
+              `Couleur invalide pour ${product.name}.`,
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      /*
+       * Vérification de la taille
+       */
+
+      const validSize =
+        product.sizes.find(
+          (productSize) =>
+            normalize(
+              productSize
+            ) ===
+            normalize(item.size)
+        );
+
+      if (!validSize) {
+        return NextResponse.json(
+          {
+            error:
+              `Taille invalide pour ${product.name}.`,
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      const cleanColor =
+        colorway.label;
+
+      const cleanSize =
+        validSize;
 
       const itemKey = [
         product.slug,
-        cleanColor.toLowerCase(),
-        cleanSize.toLowerCase(),
+        normalize(cleanColor),
+        normalize(cleanSize),
       ].join("::");
 
-      const existingItem = mergedItems.get(itemKey);
+      const existingItem =
+        mergedItems.get(
+          itemKey
+        );
 
       if (existingItem) {
         const newQuantity =
-          existingItem.quantity + quantity;
+          existingItem.quantity +
+          quantity;
 
         if (newQuantity > 10) {
           return NextResponse.json(
@@ -232,31 +416,50 @@ export async function POST(request: Request) {
           );
         }
 
-        existingItem.quantity = newQuantity;
+        existingItem.quantity =
+          newQuantity;
       } else {
-        mergedItems.set(itemKey, {
-          product_slug: product.slug,
-          product_name: product.name,
-          color: cleanColor,
-          size: cleanSize,
-          quantity,
-          priceValue: product.priceValue,
-        });
+        mergedItems.set(
+          itemKey,
+          {
+            product_slug:
+              product.slug,
+
+            product_name:
+              product.name,
+
+            color:
+              cleanColor,
+
+            size:
+              cleanSize,
+
+            quantity,
+
+            priceValue:
+              product.priceValue,
+          }
+        );
       }
     }
 
-    const validatedItems = Array.from(mergedItems.values());
+    const validatedItems =
+      Array.from(
+        mergedItems.values()
+      );
 
-    const totalQuantity = validatedItems.reduce(
-      (total, item) => total + item.quantity,
-      0
-    );
+    const totalQuantity =
+      validatedItems.reduce(
+        (total, item) =>
+          total + item.quantity,
+        0
+      );
 
     if (totalQuantity > 20) {
       return NextResponse.json(
         {
           error:
-            "La quantité maximale autorisée est de 20 vêtements.",
+            "La quantité maximale autorisée est de 20 vêtements par commande.",
         },
         {
           status: 400,
@@ -265,28 +468,185 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ============================================================
-     * 4. LIVRAISON
-     * ============================================================
+     * ========================================================
+     * 4. RÉCUPÉRATION DU STOCK
+     * ========================================================
+     */
+
+    const {
+      data: stockData,
+      error: stockError,
+    } = await supabaseAdmin
+      .from("product_stock")
+      .select(
+        `
+        product_slug,
+        color,
+        size,
+        stock_quantity,
+        sales_enabled
+        `
+      );
+
+    if (stockError) {
+      console.error(
+        "[create-checkout] Erreur récupération stock :",
+        stockError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de vérifier le stock actuellement.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const stockRows =
+      (stockData ??
+        []) as StockRow[];
+
+    /*
+     * ========================================================
+     * 5. VÉRIFICATION STOCK + OUVERTURE DES VENTES
+     * ========================================================
+     */
+
+    for (
+      const item of validatedItems
+    ) {
+      const stockRow =
+        stockRows.find(
+          (row) =>
+            row.product_slug ===
+              item.product_slug &&
+            normalize(row.color) ===
+              normalize(
+                item.color
+              ) &&
+            normalize(row.size) ===
+              normalize(
+                item.size
+              )
+        );
+
+      /*
+       * Combinaison inexistante
+       */
+
+      if (!stockRow) {
+        return NextResponse.json(
+          {
+            error:
+              `${item.product_name} — ${item.color} — Taille ${item.size} n'est pas disponible.`,
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      /*
+       * Drop pas encore ouvert
+       */
+
+      if (
+        stockRow.sales_enabled !==
+        true
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              `${item.product_name} — ${item.color} — Taille ${item.size} sera bientôt disponible.`,
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      const availableStock =
+        Math.max(
+          Number(
+            stockRow.stock_quantity ??
+              0
+          ),
+          0
+        );
+
+      /*
+       * Rupture
+       */
+
+      if (availableStock <= 0) {
+        return NextResponse.json(
+          {
+            error:
+              `${item.product_name} — ${item.color} — Taille ${item.size} est épuisé.`,
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      /*
+       * Quantité demandée supérieure
+       * au stock réel
+       */
+
+      if (
+        item.quantity >
+        availableStock
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              `Il ne reste que ${availableStock} exemplaire${
+                availableStock > 1
+                  ? "s"
+                  : ""
+              } de ${item.product_name} — ${item.color} — Taille ${item.size}.`,
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+    }
+
+    /*
+     * ========================================================
+     * 6. LIVRAISON
+     * ========================================================
      */
 
     let shippingAmount = 0;
 
     if (totalQuantity < 3) {
       shippingAmount =
-        delivery_method === "relay" ? 490 : 790;
+        delivery_method ===
+        "relay"
+          ? 490
+          : 790;
     }
 
     /*
-     * ============================================================
-     * 5. IDENTIFIANT DE COMMANDE
-     * ============================================================
+     * ========================================================
+     * 7. IDENTIFIANT UNIQUE DE COMMANDE
+     * ========================================================
      */
 
-    const checkoutGroupId = randomUUID();
+    const checkoutGroupId =
+      randomUUID();
 
     const servicePointAddress =
-      delivery_method === "relay" && service_point
+      delivery_method ===
+        "relay" &&
+      service_point
         ? [
             service_point.houseNumber,
             service_point.street,
@@ -296,92 +656,134 @@ export async function POST(request: Request) {
         : null;
 
     /*
-     * ============================================================
-     * 6. CRÉATION DES LIGNES SUPABASE
-     * ============================================================
+     * ========================================================
+     * 8. CRÉATION DES LIGNES DE COMMANDE
+     * ========================================================
+     *
+     * On conserve pour l'instant la table "preorders"
+     * afin de ne pas casser :
+     *
+     * - le suivi client
+     * - l'administration
+     * - le webhook Stripe
+     * - les emails
+     *
+     * Mais ces lignes représentent maintenant
+     * de vraies COMMANDES SUR STOCK.
      *
      * 1 vêtement physique = 1 ligne.
+     * ========================================================
      */
 
-    const preorderRows = validatedItems.flatMap((item) =>
-      Array.from(
-        {
-          length: item.quantity,
-        },
-        () => ({
-          user_id: user.id,
+    const orderRows =
+      validatedItems.flatMap(
+        (item) =>
+          Array.from(
+            {
+              length:
+                item.quantity,
+            },
+            () => ({
+              user_id:
+                user.id,
 
-          name: name.trim(),
+              name:
+                name.trim(),
 
-          email: user.email!,
+              email:
+                user.email!,
 
-          phone: phone?.trim() || null,
+              phone:
+                phone?.trim() ||
+                null,
 
-          product_slug: item.product_slug,
+              product_slug:
+                item.product_slug,
 
-          product_name: item.product_name,
+              product_name:
+                item.product_name,
 
-          color: item.color,
+              color:
+                item.color,
 
-          size: item.size,
+              size:
+                item.size,
 
-          paid: false,
+              paid: false,
 
-          checkout_group_id: checkoutGroupId,
+              checkout_group_id:
+                checkoutGroupId,
 
-          delivery_method,
+              delivery_method,
 
-          shipping_amount: shippingAmount,
+              shipping_amount:
+                shippingAmount,
 
-          service_point_id:
-            delivery_method === "relay"
-              ? String(service_point?.id ?? "")
-              : null,
+              order_status:
+                "awaiting_payment",
 
-          service_point_name:
-            delivery_method === "relay"
-              ? service_point?.name || null
-              : null,
+              service_point_id:
+                delivery_method ===
+                "relay"
+                  ? String(
+                      service_point?.id ??
+                        ""
+                    )
+                  : null,
 
-          service_point_address:
-            delivery_method === "relay"
-              ? servicePointAddress
-              : null,
+              service_point_name:
+                delivery_method ===
+                "relay"
+                  ? service_point?.name ||
+                    null
+                  : null,
 
-          service_point_postal_code:
-            delivery_method === "relay"
-              ? service_point?.postalCode || null
-              : null,
+              service_point_address:
+                delivery_method ===
+                "relay"
+                  ? servicePointAddress
+                  : null,
 
-          service_point_city:
-            delivery_method === "relay"
-              ? service_point?.city || null
-              : null,
-        })
-      )
-    );
+              service_point_postal_code:
+                delivery_method ===
+                "relay"
+                  ? service_point?.postalCode ||
+                    null
+                  : null,
+
+              service_point_city:
+                delivery_method ===
+                "relay"
+                  ? service_point?.city ||
+                    null
+                  : null,
+            })
+          )
+      );
 
     const {
-      data: createdPreorders,
-      error: preorderError,
+      data: createdOrders,
+      error: orderError,
     } = await supabaseAdmin
       .from("preorders")
-      .insert(preorderRows)
+      .insert(orderRows)
       .select();
 
     if (
-      preorderError ||
-      !createdPreorders ||
-      createdPreorders.length === 0
+      orderError ||
+      !createdOrders ||
+      createdOrders.length ===
+        0
     ) {
       console.error(
-        "[create-preorder-checkout] Erreur création précommandes:",
-        preorderError
+        "[create-checkout] Erreur création commande :",
+        orderError
       );
 
       return NextResponse.json(
         {
-          error: "Impossible de créer la précommande.",
+          error:
+            "Impossible de créer la commande.",
         },
         {
           status: 500,
@@ -390,155 +792,209 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ============================================================
-     * 7. ARTICLES STRIPE
-     * ============================================================
+     * ========================================================
+     * 9. ARTICLES STRIPE
+     * ========================================================
      */
 
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
-      validatedItems.map((item) => ({
-        price_data: {
-          currency: "eur",
+    const lineItems:
+      Stripe.Checkout.SessionCreateParams.LineItem[] =
+      validatedItems.map(
+        (item) => ({
+          price_data: {
+            currency: "eur",
 
-          product_data: {
-            name: `${item.product_name} — ${item.color} — Taille ${item.size}`,
+            product_data: {
+              name:
+                `${item.product_name} — ${item.color} — Taille ${item.size}`,
 
-            description: "Précommande AJVEK",
+              description:
+                "AJVEK · Drop 001",
+            },
+
+            unit_amount:
+              Math.round(
+                item.priceValue *
+                  100
+              ),
           },
 
-          unit_amount: Math.round(item.priceValue * 100),
-        },
-
-        quantity: item.quantity,
-      }));
+          quantity:
+            item.quantity,
+        })
+      );
 
     const shippingLabel =
-      delivery_method === "relay"
+      delivery_method ===
+      "relay"
         ? "Mondial Relay — Point Relais"
         : "Livraison à domicile";
 
     /*
-     * ============================================================
-     * 8. SESSION STRIPE
-     * ============================================================
+     * ========================================================
+     * 10. SESSION STRIPE
+     * ========================================================
      */
 
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      mode: "payment",
+    const sessionParams:
+      Stripe.Checkout.SessionCreateParams =
+      {
+        mode: "payment",
 
-      customer_email: user.email,
+        customer_email:
+          user.email,
 
-      payment_method_types: ["card"],
+        payment_method_types: [
+          "card",
+        ],
 
-      allow_promotion_codes: true,
+        allow_promotion_codes:
+          true,
 
-      /*
-       * IMPORTANT :
-       *
-       * Ces métadonnées sont copiées directement dans le
-       * PaymentIntent Stripe.
-       *
-       * Donc si Stripe envoie :
-       *
-       * payment_intent.payment_failed
-       *
-       * notre webhook sait immédiatement à quelle commande AJVEK
-       * correspond l'échec.
-       */
+        /*
+         * Métadonnées du PaymentIntent.
+         *
+         * Elles permettent notamment
+         * d'identifier la commande si
+         * le paiement échoue.
+         */
 
-      payment_intent_data: {
-        metadata: {
-          checkout_group_id: checkoutGroupId,
-          user_id: user.id,
-        },
-      },
+        payment_intent_data: {
+          metadata: {
+            checkout_group_id:
+              checkoutGroupId,
 
-      line_items: lineItems,
+            user_id:
+              user.id,
 
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-
-            fixed_amount: {
-              amount: shippingAmount,
-              currency: "eur",
-            },
-
-            display_name:
-              shippingAmount === 0
-                ? `${shippingLabel} — offerte`
-                : shippingLabel,
+            order_type:
+              "stock",
           },
         },
-      ],
 
-      /*
-       * On garde aussi les métadonnées sur la Checkout Session
-       * pour le webhook de paiement réussi.
-       */
+        line_items:
+          lineItems,
 
-      metadata: {
-        checkout_group_id: checkoutGroupId,
+        shipping_options: [
+          {
+            shipping_rate_data:
+              {
+                type:
+                  "fixed_amount",
 
-        user_id: user.id,
+                fixed_amount: {
+                  amount:
+                    shippingAmount,
 
-        item_count: String(totalQuantity),
+                  currency:
+                    "eur",
+                },
 
-        delivery_method,
+                display_name:
+                  shippingAmount ===
+                  0
+                    ? `${shippingLabel} — offerte`
+                    : shippingLabel,
+              },
+          },
+        ],
 
-        service_point_id:
-          delivery_method === "relay"
-            ? String(service_point?.id ?? "")
-            : "",
-      },
+        /*
+         * Métadonnées Checkout.
+         */
 
-      success_url:
-        "https://ajvek.fr/paiement/succes?session_id={CHECKOUT_SESSION_ID}",
+        metadata: {
+          checkout_group_id:
+            checkoutGroupId,
 
-      cancel_url:
-        "https://ajvek.fr/paiement/annule",
-    };
+          user_id:
+            user.id,
 
-    if (delivery_method === "home") {
-      sessionParams.shipping_address_collection = {
-        allowed_countries: ["FR"],
+          item_count:
+            String(
+              totalQuantity
+            ),
+
+          delivery_method,
+
+          order_type:
+            "stock",
+
+          service_point_id:
+            delivery_method ===
+            "relay"
+              ? String(
+                  service_point?.id ??
+                    ""
+                )
+              : "",
+        },
+
+        success_url:
+          `${SITE_URL}/paiement/succes?session_id={CHECKOUT_SESSION_ID}`,
+
+        cancel_url:
+          `${SITE_URL}/paiement/annule`,
       };
+
+    /*
+     * Adresse demandée par Stripe
+     * uniquement pour livraison
+     * à domicile.
+     */
+
+    if (
+      delivery_method ===
+      "home"
+    ) {
+      sessionParams.shipping_address_collection =
+        {
+          allowed_countries: [
+            "FR",
+          ],
+        };
     }
 
     /*
-     * ============================================================
-     * 9. CRÉATION STRIPE
-     * ============================================================
+     * ========================================================
+     * 11. CRÉATION SESSION STRIPE
+     * ========================================================
      */
 
-    let session: Stripe.Checkout.Session;
+    let session:
+      Stripe.Checkout.Session;
 
     try {
-      session = await stripe.checkout.sessions.create(
-        sessionParams
-      );
+      session =
+        await stripe.checkout.sessions.create(
+          sessionParams
+        );
     } catch (error) {
       /*
-       * La session Stripe n'a même pas pu être créée.
-       * On supprime donc les lignes temporaires.
+       * Stripe n'a pas pu créer
+       * la session.
+       *
+       * On supprime donc la
+       * commande temporaire.
        */
 
-      await supabaseAdmin
-        .from("preorders")
-        .delete()
-        .eq("checkout_group_id", checkoutGroupId)
-        .eq("paid", false);
+      await deleteTemporaryOrder(
+        checkoutGroupId
+      );
 
       throw error;
     }
 
+    /*
+     * ========================================================
+     * 12. VÉRIFICATION URL STRIPE
+     * ========================================================
+     */
+
     if (!session.url) {
-      await supabaseAdmin
-        .from("preorders")
-        .delete()
-        .eq("checkout_group_id", checkoutGroupId)
-        .eq("paid", false);
+      await deleteTemporaryOrder(
+        checkoutGroupId
+      );
 
       return NextResponse.json(
         {
@@ -552,47 +1008,72 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ============================================================
-     * 10. SAUVEGARDE DE LA SESSION
-     * ============================================================
+     * ========================================================
+     * 13. SAUVEGARDE SESSION STRIPE
+     * ========================================================
      */
 
-    const { error: updateError } = await supabaseAdmin
+    const {
+      error: updateError,
+    } = await supabaseAdmin
       .from("preorders")
       .update({
-        stripe_session_id: session.id,
-        checkout_url: session.url,
+        stripe_session_id:
+          session.id,
+
+        checkout_url:
+          session.url,
       })
-      .eq("checkout_group_id", checkoutGroupId);
+      .eq(
+        "checkout_group_id",
+        checkoutGroupId
+      );
 
     if (updateError) {
       console.error(
-        "[create-preorder-checkout] Erreur sauvegarde Stripe:",
+        "[create-checkout] Erreur sauvegarde session Stripe :",
         updateError
       );
     }
 
     /*
-     * ============================================================
-     * 11. RÉPONSE
-     * ============================================================
+     * ========================================================
+     * 14. RÉPONSE
+     * ========================================================
      */
 
-    return NextResponse.json({
-      url: session.url,
-      itemCount: totalQuantity,
-      shippingAmount,
-      deliveryMethod: delivery_method,
-    });
+    return NextResponse.json(
+      {
+        url:
+          session.url,
+
+        checkoutGroupId,
+
+        itemCount:
+          totalQuantity,
+
+        shippingAmount,
+
+        deliveryMethod:
+          delivery_method,
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error(
-      "[create-preorder-checkout] Erreur générale:",
+      "[create-checkout] Erreur générale :",
       error
     );
 
     return NextResponse.json(
       {
-        error: "Erreur serveur.",
+        error:
+          "Erreur serveur.",
       },
       {
         status: 500,

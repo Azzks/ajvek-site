@@ -6,10 +6,6 @@ const FOOTER_LINKS = [
     label: "Collection",
   },
   {
-    href: "/precommande",
-    label: "Ma précommande",
-  },
-  {
     href: "/lookbook",
     label: "Lookbook",
   },
@@ -105,8 +101,7 @@ export default function SiteFooter() {
           <p>© 2026 AJVEK</p>
 
           <p>
-            Précommande · Paiement
-            sécurisé · France
+            Paiement sécurisé · France
           </p>
         </div>
       </div>

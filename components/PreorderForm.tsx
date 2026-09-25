@@ -1,12 +1,5 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-} from "react";
-import Link from "next/link";
-
-import { useAuth } from "@/components/AuthContext";
 import type {
   Product,
   Colorway,
@@ -14,298 +7,260 @@ import type {
 
 import MadeInFrance from "@/components/MadeInFrance";
 
-const PREORDER_GOAL = 10;
-
-const STORAGE_KEY =
-  "ajvek-preorder-cart";
-
-type PreorderCartItem = {
+type StockItem = {
   product_slug: string;
-  product_name: string;
   color: string;
   size: string;
-  quantity: number;
+  stock_quantity: number;
+  sales_enabled: boolean;
+  available: boolean;
 };
 
 export default function PreorderForm({
   product,
   colorway,
   size,
+  selectedStock,
+  stockLoading,
+  stockError,
 }: {
   product: Product;
   colorway: Colorway;
   size: string | null;
+  selectedStock: StockItem | null;
+  stockLoading: boolean;
+  stockError: boolean;
 }) {
-  const {
-    user,
-    loading: authLoading,
-  } = useAuth();
+  /*
+   * =========================================================
+   * ÉTAT DE LA VENTE
+   * =========================================================
+   *
+   * Tant que sales_enabled = false dans Supabase,
+   * aucune commande ne peut être passée.
+   */
 
-  const [count, setCount] =
-    useState<number | null>(null);
+  const salesEnabled =
+    selectedStock?.sales_enabled === true;
 
-  const [added, setAdded] =
-    useState(false);
-
-  const [cartCount, setCartCount] =
-    useState(0);
-
-  const [error, setError] =
-    useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/preorder-count")
-      .then((res) => res.json())
-      .then((data) =>
-        setCount(data.count ?? 0)
-      )
-      .catch(() => setCount(0));
-  }, []);
-
-  useEffect(() => {
-    updateCartCount();
-  }, []);
-
-  function getCart(): PreorderCartItem[] {
-    try {
-      const stored =
-        localStorage.getItem(
-          STORAGE_KEY
-        );
-
-      if (!stored) return [];
-
-      const parsed =
-        JSON.parse(stored);
-
-      return Array.isArray(parsed)
-        ? parsed
-        : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function updateCartCount() {
-    const cart = getCart();
-
-    const total = cart.reduce(
-      (sum, item) =>
-        sum +
-        Number(
-          item.quantity || 0
-        ),
+  const quantity =
+    Math.max(
+      Number(
+        selectedStock?.stock_quantity ?? 0
+      ),
       0
     );
 
-    setCartCount(total);
+  const available =
+    salesEnabled &&
+    quantity > 0;
+
+  const soldOut =
+    salesEnabled &&
+    quantity <= 0;
+
+  /*
+   * =========================================================
+   * TEXTE PRINCIPAL
+   * =========================================================
+   */
+
+  let statusTitle =
+    "Bientôt disponible";
+
+  let statusDescription =
+    "Le premier stock AJVEK arrive bientôt. Quantités limitées pour ce premier drop.";
+
+  if (stockLoading) {
+    statusTitle =
+      "Vérification des disponibilités";
+
+    statusDescription =
+      "Chargement des informations du premier drop.";
+  } else if (stockError) {
+    statusTitle =
+      "Bientôt disponible";
+
+    statusDescription =
+      "Les disponibilités sont momentanément indisponibles. Réessaie dans quelques instants.";
+  } else if (
+    size &&
+    soldOut
+  ) {
+    statusTitle = "Épuisé";
+
+    statusDescription =
+      `La taille ${size} est actuellement épuisée en ${colorway.label}.`;
+  } else if (
+    size &&
+    available
+  ) {
+    statusTitle = "Disponible";
+
+    statusDescription =
+      `${quantity} pièce${
+        quantity > 1 ? "s" : ""
+      } disponible${
+        quantity > 1 ? "s" : ""
+      } en ${colorway.label}, taille ${size}.`;
   }
 
-  function addToPreorder() {
-    setError(null);
-    setAdded(false);
+  /*
+   * =========================================================
+   * BOUTON
+   * =========================================================
+   *
+   * IMPORTANT :
+   *
+   * On prépare ici l'état visuel.
+   *
+   * Le bouton reste volontairement désactivé
+   * tant que le système d'ajout au panier
+   * n'est pas activé dans cette étape.
+   *
+   * Donc aujourd'hui :
+   *
+   * sales_enabled = false
+   * => "Bientôt disponible"
+   * => impossible de commander.
+   */
 
-    if (!size) {
-      setError(
-        "Choisis une taille avant d'ajouter le vêtement."
-      );
+  let buttonLabel =
+    "Bientôt disponible";
 
-      return;
-    }
-
-    const cart = getCart();
-
-    const existingIndex =
-      cart.findIndex(
-        (item) =>
-          item.product_slug ===
-            product.slug &&
-          item.color ===
-            colorway.label &&
-          item.size === size
-      );
-
-    if (existingIndex >= 0) {
-      cart[existingIndex]
-        .quantity += 1;
-    } else {
-      cart.push({
-        product_slug:
-          product.slug,
-
-        product_name:
-          product.name,
-
-        color:
-          colorway.label,
-
-        size,
-
-        quantity: 1,
-      });
-    }
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(cart)
-    );
-
-    updateCartCount();
-    setAdded(true);
-  }
-
-  const thresholdReached =
-    count !== null &&
-    count >= PREORDER_GOAL;
-
-  const progress =
-    count === null
-      ? 0
-      : Math.min(
-          (count / PREORDER_GOAL) *
-            100,
-          100
-        );
-
-  const counterDisplay = (
-    <div>
-      <div className="flex items-end justify-between gap-4">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-stone">
-          Précommandes payées
-        </p>
-
-        <p className="font-display text-lg text-foreground">
-          {count === null
-            ? "—"
-            : thresholdReached
-              ? `${count}`
-              : `${count} / ${PREORDER_GOAL}`}
-        </p>
-      </div>
-
-      <div className="mt-3 h-[2px] w-full overflow-hidden bg-stone/20">
-        <div
-          className="h-full bg-foreground transition-all duration-700"
-          style={{
-            width: `${progress}%`,
-          }}
-        />
-      </div>
-
-      <p className="mt-3 text-[10px] leading-5 text-stone">
-        {count === null
-          ? "Chargement..."
-          : thresholdReached
-            ? "Le seuil de production est atteint."
-            : "Production lancée dès que 10 précommandes payées sont atteintes."}
-      </p>
-    </div>
-  );
-
-  if (authLoading) {
-    return (
-      <div className="space-y-5">
-        {counterDisplay}
-
-        <div className="border-t border-surface pt-5">
-          <MadeInFrance />
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div>
-        {counterDisplay}
-
-        <div className="mt-6 border-t border-surface pt-6">
-          <p className="text-sm leading-6 text-stone">
-            Connecte-toi pour
-            ajouter ce vêtement à
-            ta précommande.
-          </p>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <Link
-              href="/connexion"
-              className="flex items-center justify-center rounded-full border border-foreground px-5 py-3.5 text-[10px] uppercase tracking-[0.25em] text-foreground transition hover:bg-foreground hover:text-background"
-            >
-              Se connecter
-            </Link>
-
-            <Link
-              href="/inscription"
-              className="flex items-center justify-center rounded-full border border-stone/40 px-5 py-3.5 text-[10px] uppercase tracking-[0.25em] text-stone transition hover:border-foreground hover:text-foreground"
-            >
-              Créer un compte
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-6 border-t border-surface pt-5">
-          <MadeInFrance />
-        </div>
-      </div>
-    );
+  if (stockLoading) {
+    buttonLabel = "Chargement...";
+  } else if (stockError) {
+    buttonLabel =
+      "Indisponible momentanément";
+  } else if (!size) {
+    buttonLabel = salesEnabled
+      ? "Choisir une taille"
+      : "Bientôt disponible";
+  } else if (soldOut) {
+    buttonLabel = "Épuisé";
+  } else if (available) {
+    /*
+     * Le stock est techniquement ouvert.
+     * L'ajout panier sera branché ensuite.
+     */
+    buttonLabel = "Disponible";
   }
 
   return (
     <div>
-      {counterDisplay}
+      {/* =====================================================
+          DISPONIBILITÉ
+      ====================================================== */}
 
-      <div className="mt-6 border-t border-surface pt-6">
+      <div>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-stone">
+              DROP 001
+            </p>
+
+            <p className="mt-2 font-display text-xl text-foreground">
+              {statusTitle}
+            </p>
+          </div>
+
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${
+              available
+                ? "bg-foreground"
+                : "bg-stone/40"
+            }`}
+          />
+        </div>
+
+        <p className="mt-4 max-w-md text-xs leading-6 text-stone">
+          {statusDescription}
+        </p>
+      </div>
+
+      {/* =====================================================
+          OFFRE LANCEMENT
+      ====================================================== */}
+
+      <div className="mt-6 border-y border-surface py-6">
+        <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+          Offre de lancement
+        </p>
+
+        <p className="mt-3 font-display text-lg leading-7 text-foreground">
+          Les 10 premières commandes participent
+          au tirage au sort.
+        </p>
+
+        <p className="mt-2 text-xs leading-5 text-stone">
+          Une chance de gagner un bon
+          d&apos;achat de -30 % valable sur une
+          prochaine commande AJVEK.
+        </p>
+      </div>
+
+      {/* =====================================================
+          PRODUIT SÉLECTIONNÉ
+      ====================================================== */}
+
+      <div className="mt-6">
+        <div className="border border-surface px-4 py-4">
+          <p className="text-[9px] uppercase tracking-[0.25em] text-stone">
+            Sélection
+          </p>
+
+          <p className="mt-2 text-xs text-foreground">
+            {product.name} ·{" "}
+            {colorway.label}
+            {size
+              ? ` · Taille ${size}`
+              : ""}
+          </p>
+
+          {size &&
+            available && (
+              <p className="mt-2 text-[10px] text-stone">
+                {quantity} pièce
+                {quantity > 1
+                  ? "s"
+                  : ""}{" "}
+                disponible
+                {quantity > 1
+                  ? "s"
+                  : ""}
+              </p>
+            )}
+        </div>
+      </div>
+
+      {/* =====================================================
+          BOUTON
+      ====================================================== */}
+
+      <div className="mt-5">
         <button
           type="button"
-          onClick={addToPreorder}
-          className="w-full rounded-full bg-foreground px-6 py-4 text-[10px] uppercase tracking-[0.25em] text-background transition hover:opacity-85"
+          disabled
+          className="w-full cursor-not-allowed rounded-full border border-surface bg-surface px-6 py-4 text-[10px] uppercase tracking-[0.25em] text-stone opacity-70"
         >
-          Ajouter à ma précommande
+          {buttonLabel}
         </button>
 
-        {error && (
-          <p className="mt-3 text-xs leading-5 text-stone">
-            {error}
-          </p>
-        )}
-
-        {added && (
-          <div className="mt-4 border border-surface p-4">
-            <p className="text-xs text-foreground">
-              {product.name} —{" "}
-              {colorway.label} —
-              Taille {size}
-            </p>
-
-            <p className="mt-1 text-xs text-stone">
-              Ajouté à ta
-              précommande.
-            </p>
-
-            <Link
-              href="/precommande"
-              className="mt-4 inline-flex rounded-full bg-foreground px-5 py-2.5 text-[10px] uppercase tracking-widest text-background"
-            >
-              Voir ma précommande (
-              {cartCount})
-            </Link>
-          </div>
-        )}
-
-        {!added &&
-          cartCount > 0 && (
-            <Link
-              href="/precommande"
-              className="mt-4 inline-block text-[10px] uppercase tracking-widest text-stone underline underline-offset-4"
-            >
-              Ma précommande —{" "}
-              {cartCount} vêtement
-              {cartCount > 1
-                ? "s"
-                : ""}
-            </Link>
-          )}
+        <p className="mt-3 text-center text-[10px] leading-5 text-stone">
+          {!salesEnabled
+            ? "Les achats seront ouverts dès l'arrivée du premier stock."
+            : soldOut
+              ? "Cette taille n'est plus disponible."
+              : !size
+                ? "Sélectionne une taille pour continuer."
+                : "Les commandes seront bientôt accessibles."}
+        </p>
       </div>
+
+      {/* =====================================================
+          MADE IN FRANCE
+      ====================================================== */}
 
       <div className="mt-6 border-t border-surface pt-5">
         <MadeInFrance />

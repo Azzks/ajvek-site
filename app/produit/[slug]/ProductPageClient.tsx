@@ -1,11 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import { notFound } from "next/navigation";
 
 import { getProduct } from "@/lib/products";
 import ProductViewer3D from "@/components/ProductViewer3D";
 import PreorderForm from "@/components/PreorderForm";
+
+type StockItem = {
+  product_slug: string;
+  color: string;
+  size: string;
+  stock_quantity: number;
+  sales_enabled: boolean;
+  available: boolean;
+};
 
 export default function ProductPageClient({
   slug,
@@ -18,19 +30,142 @@ export default function ProductPageClient({
 
   const initialColorIndex = product
     ? Math.min(
-        Math.max(parseInt(colorParam ?? "0", 10) || 0, 0),
+        Math.max(
+          parseInt(colorParam ?? "0", 10) || 0,
+          0
+        ),
         product.colorways.length - 1
       )
     : 0;
 
-  const [colorIndex, setColorIndex] = useState(initialColorIndex);
-  const [size, setSize] = useState<string | null>(null);
+  const [colorIndex, setColorIndex] =
+    useState(initialColorIndex);
+
+  const [size, setSize] =
+    useState<string | null>(null);
+
+  const [stock, setStock] =
+    useState<StockItem[]>([]);
+
+  const [stockLoading, setStockLoading] =
+    useState(true);
+
+  const [stockError, setStockError] =
+    useState(false);
+
+  /* =========================================================
+     CHARGEMENT DU STOCK
+  ========================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStock() {
+      setStockLoading(true);
+      setStockError(false);
+
+      try {
+        const response = await fetch(
+          "/api/stock",
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Impossible de charger le stock."
+          );
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setStock(
+            Array.isArray(data.stock)
+              ? data.stock
+              : []
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[product-stock]",
+          error
+        );
+
+        if (!cancelled) {
+          setStock([]);
+          setStockError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setStockLoading(false);
+        }
+      }
+    }
+
+    loadStock();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!product) {
     return notFound();
   }
 
-  const colorway = product.colorways[colorIndex];
+  const productSlug = product.slug;
+
+  const colorway =
+    product.colorways[colorIndex];
+
+  /* =========================================================
+     STOCK DE LA TAILLE
+  ========================================================= */
+
+  function getStockForSize(
+    selectedSize: string
+  ) {
+    return stock.find(
+      (item) =>
+        item.product_slug === productSlug &&
+        item.color.toLowerCase() ===
+          colorway.label.toLowerCase() &&
+        item.size.toUpperCase() ===
+          selectedSize.toUpperCase()
+    );
+  }
+
+  /*
+   * Stock correspondant exactement à la
+   * couleur + taille actuellement choisies.
+   */
+
+  const selectedStock = size
+    ? getStockForSize(size) ?? null
+    : null;
+
+  /*
+   * Les ventes sont ouvertes pour cette
+   * couleur uniquement si au moins une taille
+   * possède sales_enabled = true.
+   *
+   * Tant que les vêtements ne sont pas arrivés,
+   * sales_enabled reste false dans Supabase.
+   */
+
+  const salesOpen =
+    !stockLoading &&
+    !stockError &&
+    product.sizes.some((currentSize) => {
+      const item =
+        getStockForSize(currentSize);
+
+      return (
+        item?.sales_enabled === true
+      );
+    });
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -45,12 +180,14 @@ export default function ProductPageClient({
 
         <div className="md:sticky md:top-24 md:self-start">
           <div className="overflow-hidden bg-[#111110]">
-            <ProductViewer3D colorway={colorway} />
+            <ProductViewer3D
+              colorway={colorway}
+            />
           </div>
 
           <div className="mt-3 flex items-center justify-between border-t border-surface pt-3 text-[9px] uppercase tracking-[0.28em] text-stone">
             <span>AJVEK</span>
-            <span>Précommande</span>
+            <span>Drop 001</span>
           </div>
         </div>
 
@@ -63,7 +200,7 @@ export default function ProductPageClient({
 
           <div>
             <p className="text-[10px] uppercase tracking-[0.38em] text-stone">
-              Collection actuelle
+              Drop 001
             </p>
 
             <h1 className="mt-4 font-display text-4xl leading-none md:text-5xl">
@@ -76,7 +213,9 @@ export default function ProductPageClient({
               </p>
 
               <span className="rounded-full border border-surface px-3 py-1 text-[9px] uppercase tracking-[0.25em] text-stone">
-                Précommande
+                {salesOpen
+                  ? "Disponible"
+                  : "Bientôt disponible"}
               </span>
             </div>
 
@@ -95,24 +234,31 @@ export default function ProductPageClient({
                 Couleur
               </p>
 
-              <p className="text-xs text-foreground">{colorway.label}</p>
+              <p className="text-xs text-foreground">
+                {colorway.label}
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {product.colorways.map((cw, index) => (
-                <button
-                  key={cw.label}
-                  type="button"
-                  onClick={() => setColorIndex(index)}
-                  className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition ${
-                    index === colorIndex
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
-                  }`}
-                >
-                  {cw.label}
-                </button>
-              ))}
+              {product.colorways.map(
+                (cw, index) => (
+                  <button
+                    key={cw.label}
+                    type="button"
+                    onClick={() => {
+                      setColorIndex(index);
+                      setSize(null);
+                    }}
+                    className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition ${
+                      index === colorIndex
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
+                    }`}
+                  >
+                    {cw.label}
+                  </button>
+                )
+              )}
             </div>
           </div>
 
@@ -132,32 +278,90 @@ export default function ProductPageClient({
             </div>
 
             <div className="grid grid-cols-4 gap-2">
-              {product.sizes.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSize(s)}
-                  className={`h-12 border text-xs uppercase tracking-[0.2em] transition ${
-                    s === size
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+              {product.sizes.map((s) => {
+                const stockItem =
+                  getStockForSize(s);
+
+                /*
+                 * Une taille est indiquée comme
+                 * épuisée uniquement lorsque
+                 * les ventes sont ouvertes.
+                 */
+
+                const soldOut =
+                  salesOpen &&
+                  stockItem?.sales_enabled ===
+                    true &&
+                  Number(
+                    stockItem.stock_quantity
+                  ) <= 0;
+
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={
+                      stockLoading ||
+                      stockError ||
+                      soldOut
+                    }
+                    onClick={() =>
+                      setSize(s)
+                    }
+                    className={`relative h-12 border text-xs uppercase tracking-[0.2em] transition ${
+                      soldOut
+                        ? "cursor-not-allowed border-surface text-stone/30 line-through"
+                        : s === size
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
+                    } ${
+                      stockLoading ||
+                      stockError
+                        ? "cursor-not-allowed opacity-50"
+                        : ""
+                    }`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
             </div>
 
-            {!size && (
+            {stockLoading && (
               <p className="mt-3 text-[11px] leading-5 text-stone">
-                Sélectionne ta taille avant d&apos;ajouter le vêtement à ta
-                précommande.
+                Chargement des disponibilités...
               </p>
             )}
+
+            {!stockLoading &&
+              stockError && (
+                <p className="mt-3 text-[11px] leading-5 text-stone">
+                  Disponibilités momentanément
+                  indisponibles.
+                </p>
+              )}
+
+            {!stockLoading &&
+              !stockError &&
+              !salesOpen && (
+                <p className="mt-3 text-[11px] leading-5 text-stone">
+                  Le premier stock AJVEK arrive
+                  bientôt.
+                </p>
+              )}
+
+            {!stockLoading &&
+              !stockError &&
+              salesOpen &&
+              !size && (
+                <p className="mt-3 text-[11px] leading-5 text-stone">
+                  Sélectionne une taille.
+                </p>
+              )}
           </div>
 
           {/* =================================================
-              PREORDER
+              DROP / COMMANDE
           ================================================== */}
 
           <div className="mt-8 border-t border-surface pt-7">
@@ -175,7 +379,7 @@ export default function ProductPageClient({
               <p className="text-right text-[8px] uppercase leading-5 tracking-[0.28em] text-stone/60">
                 Drop 001
                 <br />
-                Précommande
+                Stock limité
               </p>
             </div>
 
@@ -183,22 +387,32 @@ export default function ProductPageClient({
               product={product}
               colorway={colorway}
               size={size}
+              selectedStock={selectedStock}
+              stockLoading={stockLoading}
+              stockError={stockError}
             />
           </div>
 
           {/* =================================================
-              PRODUCTION + LIVRAISON
+              STOCK + LIVRAISON
           ================================================== */}
 
           <div className="mt-10 border-y border-surface">
             <div className="grid grid-cols-1 divide-y divide-surface sm:grid-cols-2 sm:divide-x sm:divide-y-0">
               <div className="py-5 sm:pr-6">
                 <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                  Production
+                  Premier drop
                 </p>
 
                 <p className="mt-3 text-sm leading-6 text-foreground">
-                  Lancée à partir de 10 vêtements précommandés et payés.
+                  Première série produite en
+                  quantité limitée.
+                </p>
+
+                <p className="mt-2 text-[11px] leading-5 text-stone">
+                  {salesOpen
+                    ? "Disponible dans la limite du stock."
+                    : "Le premier stock arrive bientôt."}
                 </p>
               </div>
 
@@ -208,8 +422,9 @@ export default function ProductPageClient({
                 </p>
 
                 <p className="mt-3 text-sm leading-6 text-foreground">
-                  Mondial Relay 4,90 € · domicile 7,90 € · offerte dès 3
-                  vêtements.
+                  Mondial Relay 4,90 € ·
+                  domicile 7,90 € · offerte dès
+                  3 vêtements.
                 </p>
               </div>
             </div>
@@ -252,11 +467,11 @@ export default function ProductPageClient({
 
             <div className="bg-background p-4">
               <p className="text-[10px] text-foreground">
-                Précommande
+                Stock limité
               </p>
 
               <p className="mt-2 text-[11px] leading-5 text-stone">
-                Paiement = confirmation.
+                Première série de 32 pièces.
               </p>
             </div>
           </div>
@@ -287,8 +502,8 @@ export default function ProductPageClient({
           </p>
 
           <p className="mx-auto mt-6 max-w-sm text-sm leading-7 text-stone">
-            Une première série pensée autour du dessin et produite en quantité
-            limitée.
+            Une première série pensée autour du
+            dessin et produite en quantité limitée.
           </p>
         </div>
       </section>

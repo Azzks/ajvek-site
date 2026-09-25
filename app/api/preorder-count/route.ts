@@ -1,70 +1,58 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/*
+ * ============================================================
+ * ANCIEN COMPTEUR DE PRÉCOMMANDES
+ * ============================================================
+ *
+ * Cette route appartenait à l'ancien fonctionnement AJVEK :
+ *
+ * 10 vêtements payés
+ *        ↓
+ * lancement de la production
+ *
+ * Ce fonctionnement n'est plus utilisé.
+ *
+ * Les commandes suivent maintenant :
+ *
+ * paid
+ *   ↓
+ * preparing
+ *   ↓
+ * shipped
+ *   ↓
+ * delivered
+ *
+ * L'opération "10 commandes" est indépendante et utilise :
+ *
+ * /api/promo-order-count
+ *
+ * qui compte les COMMANDES PAYÉES distinctes
+ * grâce au checkout_group_id.
+ * ============================================================
+ */
 
 export async function GET() {
-  try {
-    const { count, error } = await supabaseAdmin
-      .from("preorders")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("paid", true);
+  return NextResponse.json(
+    {
+      ok: false,
 
-    if (error) {
-      console.error(
-        "[preorder-count] Erreur Supabase :",
-        error
-      );
+      error:
+        "Cette ancienne route de compteur de précommandes n'est plus utilisée.",
 
-      return NextResponse.json(
-        {
-          count: 0,
-          error: "Impossible de récupérer le compteur.",
-        },
-        {
-          status: 500,
-          headers: {
-            "Cache-Control": "no-store",
-          },
-        }
-      );
+      replacement:
+        "/api/promo-order-count",
+    },
+    {
+      status: 410,
+
+      headers: {
+        "Cache-Control":
+          "no-store, no-cache, must-revalidate, max-age=0",
+      },
     }
-
-    return NextResponse.json(
-      {
-        count: count ?? 0,
-      },
-      {
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
-    );
-  } catch (error) {
-    console.error(
-      "[preorder-count] Erreur générale :",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        count: 0,
-        error: "Erreur serveur.",
-      },
-      {
-        status: 500,
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
-    );
-  }
+  );
 }

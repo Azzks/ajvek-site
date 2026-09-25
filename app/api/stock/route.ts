@@ -34,46 +34,32 @@ export async function GET() {
     const supabaseAdmin =
       getSupabaseAdmin();
 
-    /*
-     * ============================================================
-     * NOMBRE DE PIÈCES AJVEK PAYÉES
-     * ============================================================
-     *
-     * La table "preorders" conserve son ancien nom,
-     * mais elle contient désormais les commandes AJVEK.
-     *
-     * 1 ligne = 1 vêtement physique.
-     *
-     * Ce compteur n'est PAS le compteur du tirage promotionnel.
-     *
-     * Le tirage des 10 premières commandes distinctes
-     * est géré séparément par :
-     *
-     * /api/promo-order-count
-     * ============================================================
-     */
-
-    const {
-      count,
-      error,
-    } = await supabaseAdmin
-      .from("preorders")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("paid", true);
+    const { data, error } =
+      await supabaseAdmin
+        .from("product_stock")
+        .select(
+          `
+          product_slug,
+          color,
+          size,
+          stock_quantity,
+          sales_enabled
+          `
+        )
+        .order("product_slug")
+        .order("color")
+        .order("size");
 
     if (error) {
       console.error(
-        "[preorder-count] Erreur Supabase :",
+        "[stock] Erreur Supabase :",
         error
       );
 
       return NextResponse.json(
         {
           error:
-            "Impossible de récupérer le nombre de pièces payées.",
+            "Impossible de récupérer le stock.",
         },
         {
           status: 500,
@@ -85,9 +71,38 @@ export async function GET() {
       );
     }
 
+    const stock = (data ?? []).map(
+      (item) => ({
+        product_slug:
+          item.product_slug,
+
+        color:
+          item.color,
+
+        size:
+          item.size,
+
+        stock_quantity: Math.max(
+          Number(
+            item.stock_quantity ?? 0
+          ),
+          0
+        ),
+
+        sales_enabled:
+          item.sales_enabled === true,
+
+        available:
+          item.sales_enabled === true &&
+          Number(
+            item.stock_quantity ?? 0
+          ) > 0,
+      })
+    );
+
     return NextResponse.json(
       {
-        count: count ?? 0,
+        stock,
       },
       {
         headers: {
@@ -98,7 +113,7 @@ export async function GET() {
     );
   } catch (error) {
     console.error(
-      "[preorder-count] Erreur générale :",
+      "[stock] Erreur générale :",
       error
     );
 

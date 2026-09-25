@@ -6,7 +6,13 @@ export const revalidate = 0;
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
 const supabaseAuth = createClient(
@@ -20,69 +26,149 @@ const supabaseAuth = createClient(
   }
 );
 
-const PRODUCTION_GOAL = 10;
+type OrderItem = {
+  product_slug: string;
+  product_name: string;
+  color: string;
+  size: string;
+  quantity: number;
+};
+
+type GroupedOrder = {
+  checkout_group_id: string;
+
+  created_at: string | null;
+  paid_at: string | null;
+
+  status: string;
+
+  delivery_method: string | null;
+  shipping_amount: number;
+
+  service_point: {
+    id: string | null;
+    name: string | null;
+    address: string | null;
+    postal_code: string | null;
+    city: string | null;
+  } | null;
+
+  carrier: string | null;
+
+  tracking_number: string | null;
+  tracking_url: string | null;
+
+  shipped_at: string | null;
+  delivered_at: string | null;
+
+  items: OrderItem[];
+};
+
+/*
+ * ============================================================
+ * ROUTE
+ * ============================================================
+ */
 
 export async function GET(request: Request) {
   try {
     /*
-     * ============================================================
+     * ========================================================
      * 1. AUTHENTIFICATION
-     * ============================================================
+     * ========================================================
      */
 
-    const authorization = request.headers.get("authorization");
+    const authorization =
+      request.headers.get("authorization");
 
-    if (!authorization?.startsWith("Bearer ")) {
+    if (
+      !authorization?.startsWith("Bearer ")
+    ) {
       return NextResponse.json(
-        { error: "Connexion requise." },
-        { status: 401 }
+        {
+          error: "Connexion requise.",
+        },
+        {
+          status: 401,
+        }
       );
     }
 
-    const accessToken = authorization.replace("Bearer ", "");
+    const accessToken =
+      authorization.replace("Bearer ", "");
 
     const {
       data: { user },
       error: userError,
-    } = await supabaseAuth.auth.getUser(accessToken);
+    } =
+      await supabaseAuth.auth.getUser(
+        accessToken
+      );
 
-    if (userError || !user) {
+    if (
+      userError ||
+      !user
+    ) {
       return NextResponse.json(
-        { error: "Session invalide ou expirée." },
-        { status: 401 }
+        {
+          error:
+            "Session invalide ou expirée.",
+        },
+        {
+          status: 401,
+        }
       );
     }
 
     /*
-     * ============================================================
-     * 2. COMMANDES PAYÉES DE L'UTILISATEUR
-     * ============================================================
+     * ========================================================
+     * 2. RÉCUPÉRATION DES COMMANDES PAYÉES
+     * ========================================================
+     *
+     * La table s'appelle encore "preorders"
+     * pour compatibilité avec le reste du site,
+     * mais elle contient désormais nos commandes
+     * sur stock.
+     *
+     * 1 ligne = 1 vêtement physique.
+     * ========================================================
      */
 
-    const { data, error } = await supabaseAdmin
+    const {
+      data,
+      error,
+    } = await supabaseAdmin
       .from("preorders")
       .select(
         `
         id,
         created_at,
+
         product_slug,
         product_name,
         color,
         size,
+
         paid,
         paid_at,
+
         checkout_group_id,
+
         delivery_method,
         shipping_amount,
+
         service_point_id,
         service_point_name,
         service_point_address,
         service_point_postal_code,
         service_point_city,
+
         order_status,
+
         carrier,
         tracking_number,
         tracking_url,
+
         shipped_at,
         delivered_at
         `
@@ -94,200 +180,293 @@ export async function GET(request: Request) {
       });
 
     if (error) {
-      console.error("[my-orders] Supabase error:", error);
+      console.error(
+        "[my-orders] Erreur Supabase :",
+        error
+      );
 
       return NextResponse.json(
-        { error: "Impossible de récupérer les commandes." },
-        { status: 500 }
+        {
+          error:
+            "Impossible de récupérer tes commandes.",
+        },
+        {
+          status: 500,
+        }
       );
     }
 
     /*
-     * ============================================================
-     * 3. COMPTEUR GLOBAL DES VÊTEMENTS PAYÉS
-     * ============================================================
-     *
-     * Dans notre système :
-     * 1 ligne dans "preorders" = 1 vêtement physique.
-     *
-     * On compte donc toutes les lignes payées.
+     * ========================================================
+     * 3. REGROUPEMENT PAR COMMANDE
+     * ========================================================
      */
 
-    const {
-      count: paidPreorderCount,
-      error: countError,
-    } = await supabaseAdmin
-      .from("preorders")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("paid", true);
-
-    if (countError) {
-      console.error(
-        "[my-orders] Production counter error:",
-        countError
-      );
-    }
-
-    const productionCount = paidPreorderCount ?? 0;
-
-    const productionGoalReached =
-      productionCount >= PRODUCTION_GOAL;
-
-    const productionRemaining = Math.max(
-      PRODUCTION_GOAL - productionCount,
-      0
-    );
-
-    const productionProgress = Math.min(
-      (productionCount / PRODUCTION_GOAL) * 100,
-      100
-    );
-
-    /*
-     * ============================================================
-     * 4. REGROUPEMENT DES COMMANDES
-     * ============================================================
-     */
-
-    const groupedOrders = new Map<
-      string,
-      {
-        checkout_group_id: string;
-        created_at: string | null;
-        paid_at: string | null;
-        status: string;
-        delivery_method: string | null;
-        shipping_amount: number;
-        service_point: {
-          id: string | null;
-          name: string | null;
-          address: string | null;
-          postal_code: string | null;
-          city: string | null;
-        } | null;
-        carrier: string | null;
-        tracking_number: string | null;
-        tracking_url: string | null;
-        shipped_at: string | null;
-        delivered_at: string | null;
-        items: Array<{
-          product_slug: string;
-          product_name: string;
-          color: string;
-          size: string;
-          quantity: number;
-        }>;
-      }
-    >();
+    const groupedOrders =
+      new Map<
+        string,
+        GroupedOrder
+      >();
 
     for (const row of data ?? []) {
+      /*
+       * Anciennes commandes éventuelles :
+       * on conserve un identifiant de secours.
+       */
+
       const groupId =
-        row.checkout_group_id || `legacy-${row.id}`;
+        row.checkout_group_id ||
+        `legacy-${row.id}`;
 
-      if (!groupedOrders.has(groupId)) {
-        groupedOrders.set(groupId, {
-          checkout_group_id: groupId,
+      /*
+       * Création de la commande
+       */
 
-          created_at: row.created_at ?? null,
+      if (
+        !groupedOrders.has(
+          groupId
+        )
+      ) {
+        groupedOrders.set(
+          groupId,
+          {
+            checkout_group_id:
+              groupId,
 
-          paid_at: row.paid_at ?? null,
+            created_at:
+              row.created_at ??
+              null,
 
-          status:
-            row.order_status || "preorder_received",
+            paid_at:
+              row.paid_at ??
+              null,
 
-          delivery_method:
-            row.delivery_method ?? null,
+            /*
+             * Une commande payée sans
+             * statut explicite est considérée
+             * comme confirmée.
+             */
 
-          shipping_amount: Number(
-            row.shipping_amount ?? 0
-          ),
+            status:
+              row.order_status ||
+              "paid",
 
-          service_point:
-            row.delivery_method === "relay"
-              ? {
-                  id: row.service_point_id ?? null,
-                  name: row.service_point_name ?? null,
-                  address:
-                    row.service_point_address ?? null,
-                  postal_code:
-                    row.service_point_postal_code ?? null,
-                  city: row.service_point_city ?? null,
-                }
-              : null,
+            delivery_method:
+              row.delivery_method ??
+              null,
 
-          carrier: row.carrier ?? null,
+            shipping_amount:
+              Number(
+                row.shipping_amount ??
+                  0
+              ),
 
-          tracking_number:
-            row.tracking_number ?? null,
+            service_point:
+              row.delivery_method ===
+              "relay"
+                ? {
+                    id:
+                      row.service_point_id ??
+                      null,
 
-          tracking_url:
-            row.tracking_url ?? null,
+                    name:
+                      row.service_point_name ??
+                      null,
 
-          shipped_at:
-            row.shipped_at ?? null,
+                    address:
+                      row.service_point_address ??
+                      null,
 
-          delivered_at:
-            row.delivered_at ?? null,
+                    postal_code:
+                      row.service_point_postal_code ??
+                      null,
 
-          items: [],
-        });
+                    city:
+                      row.service_point_city ??
+                      null,
+                  }
+                : null,
+
+            carrier:
+              row.carrier ??
+              null,
+
+            tracking_number:
+              row.tracking_number ??
+              null,
+
+            tracking_url:
+              row.tracking_url ??
+              null,
+
+            shipped_at:
+              row.shipped_at ??
+              null,
+
+            delivered_at:
+              row.delivered_at ??
+              null,
+
+            items: [],
+          }
+        );
       }
 
-      const order = groupedOrders.get(groupId)!;
+      const order =
+        groupedOrders.get(
+          groupId
+        )!;
 
-      const existingItem = order.items.find(
-        (item) =>
-          item.product_slug === row.product_slug &&
-          item.color === row.color &&
-          item.size === row.size
-      );
+      /*
+       * ======================================================
+       * 4. REGROUPEMENT DES ARTICLES IDENTIQUES
+       * ======================================================
+       */
+
+      const existingItem =
+        order.items.find(
+          (item) =>
+            item.product_slug ===
+              row.product_slug &&
+            item.color ===
+              row.color &&
+            item.size ===
+              row.size
+        );
 
       if (existingItem) {
         existingItem.quantity += 1;
       } else {
         order.items.push({
-          product_slug: row.product_slug,
-          product_name: row.product_name,
-          color: row.color,
-          size: row.size,
+          product_slug:
+            row.product_slug,
+
+          product_name:
+            row.product_name ||
+            "AJVEK",
+
+          color:
+            row.color ||
+            "-",
+
+          size:
+            row.size ||
+            "-",
+
           quantity: 1,
         });
+      }
+
+      /*
+       * ======================================================
+       * 5. SYNCHRONISATION DES INFORMATIONS DE COMMANDE
+       * ======================================================
+       *
+       * Normalement toutes les lignes d'une même commande
+       * possèdent les mêmes informations.
+       *
+       * On récupère néanmoins les informations les plus
+       * complètes disponibles.
+       * ======================================================
+       */
+
+      if (row.order_status) {
+        order.status =
+          row.order_status;
+      }
+
+      if (row.paid_at) {
+        order.paid_at =
+          row.paid_at;
+      }
+
+      if (row.carrier) {
+        order.carrier =
+          row.carrier;
+      }
+
+      if (row.tracking_number) {
+        order.tracking_number =
+          row.tracking_number;
+      }
+
+      if (row.tracking_url) {
+        order.tracking_url =
+          row.tracking_url;
+      }
+
+      if (row.shipped_at) {
+        order.shipped_at =
+          row.shipped_at;
+      }
+
+      if (row.delivered_at) {
+        order.delivered_at =
+          row.delivered_at;
       }
     }
 
     /*
-     * ============================================================
-     * 5. RÉPONSE
-     * ============================================================
+     * ========================================================
+     * 6. TRI DES COMMANDES
+     * ========================================================
+     *
+     * Les plus récentes en premier.
+     * ========================================================
+     */
+
+    const orders =
+      Array.from(
+        groupedOrders.values()
+      ).sort((a, b) => {
+        const aDate =
+          new Date(
+            a.paid_at ||
+              a.created_at ||
+              0
+          ).getTime();
+
+        const bDate =
+          new Date(
+            b.paid_at ||
+              b.created_at ||
+              0
+          ).getTime();
+
+        return bDate - aDate;
+      });
+
+    /*
+     * ========================================================
+     * 7. RÉPONSE
+     * ========================================================
      */
 
     return NextResponse.json(
       {
-        orders: Array.from(groupedOrders.values()),
-
-        production: {
-          count: productionCount,
-          goal: PRODUCTION_GOAL,
-          remaining: productionRemaining,
-          progress: productionProgress,
-          reached: productionGoalReached,
-        },
+        orders,
       },
       {
         headers: {
-          "Cache-Control": "no-store, max-age=0",
+          "Cache-Control":
+            "no-store, max-age=0",
         },
       }
     );
   } catch (error) {
-    console.error("[my-orders] General error:", error);
+    console.error(
+      "[my-orders] Erreur générale :",
+      error
+    );
 
     return NextResponse.json(
-      { error: "Erreur serveur." },
-      { status: 500 }
+      {
+        error:
+          "Erreur serveur.",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

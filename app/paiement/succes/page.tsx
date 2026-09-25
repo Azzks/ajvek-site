@@ -1,38 +1,33 @@
-"use client";
-
-import { useEffect } from "react";
 import Link from "next/link";
 
-const STORAGE_KEY = "ajvek-preorder-cart";
+import ClearPreorderCart from "@/components/ClearPreorderCart";
 
 export default function PaiementSuccesPage() {
-  useEffect(() => {
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
-
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+      <ClearPreorderCart />
+
       <p className="mb-4 text-xs uppercase tracking-[0.3em] text-stone">
         Paiement confirmé
       </p>
 
       <h1 className="font-display text-3xl sm:text-5xl">
-        Précommande confirmée
+        Commande confirmée
       </h1>
 
       <p className="mt-6 max-w-md text-stone">
-        Ton paiement a bien été reçu. Ta précommande AJVEK est maintenant
-        confirmée et comptabilisée dans l&apos;objectif de production.
+        Ton paiement a bien été reçu. Ta commande AJVEK est maintenant
+        confirmée.
       </p>
 
       <p className="mt-3 max-w-md text-sm text-stone">
-        La production sera lancée dès que le seuil de 10 précommandes
-        payées sera atteint.
+        Ta pièce est réservée. Tu peux suivre l&apos;avancement de ta commande
+        directement depuis ton espace AJVEK.
       </p>
 
       <p className="mt-3 max-w-md text-sm text-stone">
         Tu vas également recevoir un email de confirmation avec le
-        récapitulatif de ta précommande.
+        récapitulatif de ta commande.
       </p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">

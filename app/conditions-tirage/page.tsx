@@ -23,8 +23,8 @@ export default function ConditionsTiragePage() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-sm leading-7 text-stone md:text-base">
-            À l&apos;occasion des premières commandes AJVEK, un tirage au sort
-            sera organisé lorsque la dixième commande payée aura été
+            À l&apos;occasion du lancement du premier drop AJVEK, un tirage au
+            sort sera organisé lorsque la dixième commande payée aura été
             enregistrée.
           </p>
         </div>
@@ -73,7 +73,8 @@ export default function ConditionsTiragePage() {
 
               <p className="mt-4 max-w-2xl text-sm leading-7 text-stone">
                 Le compteur affiché sur le site est donné à titre informatif et
-                évolue en fonction des commandes effectivement payées.
+                évolue en fonction des commandes effectivement payées et
+                validées.
               </p>
             </article>
 
@@ -184,9 +185,9 @@ export default function ConditionsTiragePage() {
               </h2>
 
               <p className="mt-4 max-w-2xl text-sm leading-7 text-stone">
-                Les informations associées aux commandes sont utilisées
-                uniquement afin d&apos;identifier les participations éligibles
-                et de contacter le gagnant.
+                Les informations associées aux commandes sont utilisées afin
+                d&apos;identifier les participations éligibles, d&apos;effectuer
+                le tirage au sort et de contacter le gagnant.
               </p>
 
               <p className="mt-4 max-w-2xl text-sm leading-7 text-stone">
@@ -210,11 +211,10 @@ export default function ConditionsTiragePage() {
             </p>
 
             <p className="mt-4 max-w-2xl text-sm leading-7 text-stone">
-              Cette opération promotionnelle est organisée indépendamment du
-              seuil de production des précommandes. Le compteur de production
-              peut compter plusieurs vêtements au sein d&apos;une même
-              commande, tandis que cette opération compte les commandes
-              distinctes.
+              Le compteur de cette opération correspond au nombre de commandes
+              distinctes effectivement payées et validées. Une commande
+              contenant plusieurs vêtements reste comptabilisée comme une
+              seule commande pour le tirage au sort.
             </p>
           </div>
 

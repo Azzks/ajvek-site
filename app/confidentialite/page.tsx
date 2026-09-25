@@ -15,7 +15,11 @@ export default function ConfidentialitePage() {
         </h1>
 
         <div className="space-y-6 text-sm leading-relaxed text-stone">
-          <p>Dernière mise à jour : 20 septembre 2026</p>
+          <p>Dernière mise à jour : 25 septembre 2026</p>
+
+          {/* =====================================================
+              1. RESPONSABLE DU TRAITEMENT
+          ====================================================== */}
 
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
@@ -54,15 +58,19 @@ export default function ConfidentialitePage() {
             </p>
           </section>
 
+          {/* =====================================================
+              2. DONNÉES COLLECTÉES
+          ====================================================== */}
+
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
               2. Données personnelles collectées
             </h2>
 
             <p>
-              Dans le cadre de l&apos;utilisation du site, de la création d&apos;un
-              compte et de la réalisation d&apos;une précommande, AJVEK peut
-              notamment collecter les informations suivantes :
+              Dans le cadre de l&apos;utilisation du site, de la création
+              d&apos;un compte et de la réalisation d&apos;une précommande,
+              AJVEK peut notamment collecter les informations suivantes :
             </p>
 
             <ul className="mt-3 list-disc space-y-1 pl-5">
@@ -71,17 +79,26 @@ export default function ConfidentialitePage() {
               <li>numéro de téléphone ;</li>
               <li>adresse de livraison lorsque nécessaire ;</li>
               <li>informations liées au compte utilisateur ;</li>
+
               <li>
                 informations relatives aux produits, tailles, couleurs,
                 quantités et précommandes ;
               </li>
+
               <li>
                 mode de livraison choisi et informations relatives au Point
                 Relais sélectionné lorsque cette option est utilisée ;
               </li>
+
               <li>
                 informations nécessaires au suivi et à la gestion du paiement ;
               </li>
+
+              <li>
+                informations nécessaires à la gestion des opérations
+                promotionnelles auxquelles une commande peut être éligible ;
+              </li>
+
               <li>
                 données techniques nécessaires au fonctionnement, à la sécurité
                 et à l&apos;administration du site.
@@ -95,6 +112,10 @@ export default function ConfidentialitePage() {
             </p>
           </section>
 
+          {/* =====================================================
+              3. FINALITÉS
+          ====================================================== */}
+
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
               3. Finalités du traitement
@@ -104,27 +125,46 @@ export default function ConfidentialitePage() {
 
             <ul className="mt-3 list-disc space-y-1 pl-5">
               <li>créer et administrer les comptes utilisateurs ;</li>
+
               <li>enregistrer et gérer les précommandes ;</li>
+
               <li>traiter et confirmer les paiements ;</li>
+
               <li>
                 informer les clients de l&apos;avancement de leur précommande ;
               </li>
+
               <li>
                 organiser la livraison à domicile ou en Point Relais ;
               </li>
+
               <li>assurer le suivi des commandes et livraisons ;</li>
+
               <li>répondre aux demandes adressées à AJVEK ;</li>
+
+              <li>
+                gérer les opérations promotionnelles organisées par AJVEK,
+                notamment identifier les commandes éligibles à un tirage au
+                sort, effectuer le tirage et contacter le gagnant ;
+              </li>
+
               <li>
                 respecter les obligations légales, comptables et fiscales
                 applicables ;
               </li>
+
               <li>prévenir la fraude et sécuriser le site ;</li>
+
               <li>
                 mesurer de manière générale la fréquentation et les performances
                 du site.
               </li>
             </ul>
           </section>
+
+          {/* =====================================================
+              4. BASES LÉGALES
+          ====================================================== */}
 
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
@@ -141,24 +181,38 @@ export default function ConfidentialitePage() {
                 l&apos;exécution de mesures précontractuelles pour les démarches
                 précédant la validation d&apos;une précommande ;
               </li>
+
               <li>
                 l&apos;exécution du contrat pour le paiement, la préparation et
                 la livraison des produits ;
               </li>
+
+              <li>
+                l&apos;exécution des conditions de l&apos;opération
+                promotionnelle lorsqu&apos;un client participe à un tirage au
+                sort lié à sa commande ;
+              </li>
+
               <li>
                 le respect des obligations légales, notamment comptables et
                 fiscales ;
               </li>
+
               <li>
                 l&apos;intérêt légitime d&apos;AJVEK pour la sécurité, la
                 prévention de la fraude et le bon fonctionnement du site ;
               </li>
+
               <li>
                 le consentement lorsque celui-ci est requis par la
                 réglementation.
               </li>
             </ul>
           </section>
+
+          {/* =====================================================
+              5. DONNÉES OBLIGATOIRES
+          ====================================================== */}
 
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
@@ -178,6 +232,10 @@ export default function ConfidentialitePage() {
             </p>
           </section>
 
+          {/* =====================================================
+              6. DESTINATAIRES
+          ====================================================== */}
+
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
               6. Destinataires et prestataires
@@ -196,16 +254,25 @@ export default function ConfidentialitePage() {
                 Supabase pour l&apos;authentification et l&apos;hébergement de
                 certaines données ;
               </li>
-              <li>Stripe pour le traitement sécurisé des paiements ;</li>
-              <li>Resend pour l&apos;envoi d&apos;emails transactionnels ;</li>
+
+              <li>
+                Stripe pour le traitement sécurisé des paiements ;
+              </li>
+
+              <li>
+                Resend pour l&apos;envoi d&apos;emails transactionnels ;
+              </li>
+
               <li>
                 Sendcloud pour la gestion de certaines informations liées à la
                 livraison et aux Points Relais ;
               </li>
+
               <li>
                 Mondial Relay lorsque ce transporteur est sélectionné pour la
                 livraison ;
               </li>
+
               <li>
                 Vercel pour l&apos;hébergement du site et ses services associés.
               </li>
@@ -226,6 +293,10 @@ export default function ConfidentialitePage() {
             </p>
           </section>
 
+          {/* =====================================================
+              7. TRANSFERTS INTERNATIONAUX
+          ====================================================== */}
+
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
               7. Transferts de données hors de l&apos;Union européenne
@@ -245,37 +316,60 @@ export default function ConfidentialitePage() {
             </p>
           </section>
 
+          {/* =====================================================
+              8. CONSERVATION
+          ====================================================== */}
+
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
               8. Durée de conservation
             </h2>
 
             <p>
-              AJVEK ne conserve pas les données personnelles plus longtemps que
-              nécessaire au regard de la finalité pour laquelle elles ont été
-              collectées.
+              AJVEK conserve les données personnelles uniquement pendant la
+              durée nécessaire aux finalités pour lesquelles elles ont été
+              collectées, sous réserve des obligations légales de conservation
+              applicables.
             </p>
 
             <p className="mt-2">
-              Les données nécessaires à la gestion de la relation client et des
-              précommandes sont conservées pendant la durée nécessaire à
-              l&apos;exécution et au suivi de cette relation.
+              Les données nécessaires à la gestion des commandes, des paiements,
+              de la livraison et de la relation client sont conservées pendant
+              la durée nécessaire à l&apos;exécution et au suivi de la relation
+              commerciale.
             </p>
 
             <p className="mt-2">
-              Les pièces comptables et justificatifs devant être conservés en
-              application de la réglementation peuvent être archivés pendant
-              une durée pouvant aller jusqu&apos;à 10 ans à compter de la
-              clôture de l&apos;exercice concerné.
+              Certaines données relatives aux commandes et à la facturation
+              peuvent ensuite être archivées pendant la durée imposée par les
+              obligations légales, comptables ou fiscales applicables.
+            </p>
+
+            <p className="mt-2">
+              Les documents comptables et pièces justificatives devant être
+              conservés en application de la réglementation peuvent notamment
+              être archivés pendant une durée de 10 ans.
             </p>
 
             <p className="mt-2">
               Les données liées à un compte utilisateur sont conservées pendant
               la durée d&apos;utilisation du compte puis supprimées ou
               anonymisées lorsqu&apos;elles ne sont plus nécessaires, sous
-              réserve des obligations légales de conservation applicables.
+              réserve des données devant être conservées pour respecter une
+              obligation légale ou assurer la constatation, l&apos;exercice ou
+              la défense de droits en justice.
+            </p>
+
+            <p className="mt-2">
+              Les données techniques et journaux nécessaires à la sécurité du
+              site sont conservés pendant une durée proportionnée à leur
+              finalité et aux besoins de sécurité du service.
             </p>
           </section>
+
+          {/* =====================================================
+              9. DROITS
+          ====================================================== */}
 
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
@@ -294,7 +388,11 @@ export default function ConfidentialitePage() {
               <li>droit à l&apos;effacement ;</li>
               <li>droit à la limitation du traitement ;</li>
               <li>droit d&apos;opposition ;</li>
-              <li>droit à la portabilité lorsque celui-ci est applicable ;</li>
+
+              <li>
+                droit à la portabilité lorsque celui-ci est applicable ;
+              </li>
+
               <li>
                 droit de retirer votre consentement lorsque le traitement repose
                 sur celui-ci.
@@ -304,6 +402,7 @@ export default function ConfidentialitePage() {
             <p className="mt-3">
               Pour exercer vos droits, vous pouvez contacter AJVEK à :
               <br />
+
               <a
                 href="mailto:ajvek.contact@gmail.com"
                 className="text-foreground underline underline-offset-4"
@@ -333,6 +432,10 @@ export default function ConfidentialitePage() {
               www.cnil.fr
             </a>
           </section>
+
+          {/* =====================================================
+              10. COOKIES
+          ====================================================== */}
 
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
@@ -374,6 +477,10 @@ export default function ConfidentialitePage() {
             </p>
           </section>
 
+          {/* =====================================================
+              11. SÉCURITÉ
+          ====================================================== */}
+
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">
               11. Sécurité
@@ -392,6 +499,10 @@ export default function ConfidentialitePage() {
               pas destinés à être accessibles publiquement.
             </p>
           </section>
+
+          {/* =====================================================
+              12. MODIFICATIONS
+          ====================================================== */}
 
           <section>
             <h2 className="mb-2 text-base font-display text-foreground">

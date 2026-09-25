@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Conditions générales de vente — AJVEK",
 };
@@ -10,15 +12,19 @@ export default function CGVPage() {
           AJVEK
         </p>
 
-        <h1 className="mb-8 text-3xl font-display">
+        <h1 className="mb-8 font-display text-3xl">
           Conditions générales de vente
         </h1>
 
         <div className="space-y-8 text-sm leading-relaxed text-stone">
-          <p>Dernière mise à jour : 20 septembre 2026</p>
+          <p>Dernière mise à jour : 25 septembre 2026</p>
+
+          {/* =====================================================
+              1. IDENTITÉ DU VENDEUR
+          ====================================================== */}
 
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
+            <h2 className="mb-2 font-display text-base text-foreground">
               1. Identité du vendeur
             </h2>
 
@@ -56,54 +62,75 @@ export default function CGVPage() {
             </p>
           </section>
 
+          {/* =====================================================
+              2. OBJET
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
+            <h2 className="mb-2 font-display text-base text-foreground">
               2. Objet
             </h2>
 
             <p>
               Les présentes conditions générales de vente définissent les
-              droits et obligations applicables aux ventes et précommandes de
-              produits AJVEK réalisées sur le site ajvek.fr.
+              droits et obligations applicables aux ventes de produits AJVEK
+              réalisées sur le site ajvek.fr.
             </p>
 
             <p className="mt-2">
-              Toute précommande implique l&apos;acceptation des présentes
+              Toute commande implique l&apos;acceptation des présentes
               conditions générales de vente dans leur version en vigueur au
-              moment de la validation du paiement.
+              moment de la validation de la commande.
             </p>
           </section>
 
+          {/* =====================================================
+              3. PRODUITS
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
+            <h2 className="mb-2 font-display text-base text-foreground">
               3. Produits
             </h2>
 
             <p>
               AJVEK commercialise principalement des vêtements streetwear,
-              notamment des tee-shirts issus de collections originales.
+              notamment des tee-shirts issus de collections originales et
+              proposés en séries limitées.
             </p>
 
             <p className="mt-2">
               Les caractéristiques essentielles de chaque produit, notamment
-              son design, sa couleur, sa taille, sa composition et son prix,
-              sont présentées sur sa fiche produit.
+              son design, sa couleur, les tailles proposées, sa composition et
+              son prix, sont présentées sur sa fiche produit.
             </p>
 
             <p className="mt-2">
-              Les photographies et visuels ont pour objectif de présenter les
-              produits aussi fidèlement que possible. De légères différences
-              de couleur ou de rendu peuvent toutefois exister selon
-              l&apos;écran utilisé ou les procédés de fabrication.
+              Les photographies, représentations 3D, illustrations et autres
+              visuels ont pour objectif de présenter les produits aussi
+              fidèlement que possible.
+            </p>
+
+            <p className="mt-2">
+              De légères différences de couleur, de texture, de positionnement
+              ou de rendu peuvent néanmoins exister en raison notamment de
+              l&apos;affichage des écrans et des procédés de fabrication,
+              d&apos;impression ou de broderie.
             </p>
           </section>
 
+          {/* =====================================================
+              4. PRIX
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
+            <h2 className="mb-2 font-display text-base text-foreground">
               4. Prix
             </h2>
 
-            <p>Les prix sont indiqués en euros.</p>
+            <p>
+              Les prix des produits sont indiqués en euros.
+            </p>
 
             <p className="mt-2">
               AJVEK relève actuellement de la franchise en base de TVA. La TVA
@@ -111,8 +138,8 @@ export default function CGVPage() {
             </p>
 
             <p className="mt-2">
-              Les frais de livraison sont indiqués avant la validation du
-              paiement.
+              Les frais de livraison applicables sont indiqués au client avant
+              la validation définitive de sa commande.
             </p>
 
             <p className="mt-2">
@@ -127,94 +154,107 @@ export default function CGVPage() {
             </ul>
 
             <p className="mt-2">
-              AJVEK se réserve la possibilité de modifier ses prix et frais de
-              livraison à tout moment. Les montants applicables sont ceux
-              affichés au moment de la validation de la précommande.
+              AJVEK peut modifier ses prix ou ses frais de livraison pour les
+              commandes futures. Les montants applicables à une commande sont
+              ceux affichés au client avant sa validation.
             </p>
           </section>
 
+          {/* =====================================================
+              5. DISPONIBILITÉ ET STOCK
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              5. Fonctionnement des précommandes
+            <h2 className="mb-2 font-display text-base text-foreground">
+              5. Disponibilité et stock
             </h2>
 
             <p>
-              Les produits AJVEK peuvent être commercialisés dans le cadre
-              d&apos;un système de précommande.
+              Les produits AJVEK sont proposés à la vente dans la limite des
+              stocks disponibles.
             </p>
 
             <p className="mt-2">
-              La précommande est payée immédiatement au moment de sa validation.
-              Le paiement est encaissé avant le lancement de la production.
+              La disponibilité peut varier selon le produit, la couleur et la
+              taille sélectionnés.
             </p>
 
             <p className="mt-2">
-              La production d&apos;une collection est lancée à partir de
-              l&apos;atteinte d&apos;un seuil de 10 vêtements précommandés et
-              payés.
+              Lorsqu&apos;une taille ou une variante est indiquée comme
+              indisponible ou épuisée, elle ne peut normalement plus être
+              commandée.
             </p>
 
             <p className="mt-2">
-              Le seuil de 10 vêtements constitue un seuil de lancement de
-              production et non une limite de vente. Les précommandes peuvent
-              continuer à être enregistrées après l&apos;atteinte de ce seuil.
+              La présence d&apos;un produit dans le panier ne constitue pas à
+              elle seule une réservation définitive du stock.
             </p>
 
             <p className="mt-2">
-              Le nombre de précommandes payées peut être affiché sur le site à
-              titre informatif.
-            </p>
-
-            <p className="mt-2">
-              Si AJVEK devait finalement renoncer à la production d&apos;un
-              produit précommandé ou se trouver dans l&apos;impossibilité
-              définitive de l&apos;exécuter, les sommes versées pour le produit
-              concerné seraient remboursées.
+              En cas d&apos;indisponibilité exceptionnelle constatée après le
+              paiement, notamment en raison d&apos;une erreur de stock ou
+              d&apos;un incident technique, AJVEK en informe le client dans les
+              meilleurs délais et procède, lorsque la commande ne peut être
+              exécutée, au remboursement des sommes dues pour le produit
+              concerné.
             </p>
           </section>
 
+          {/* =====================================================
+              6. PASSAGE DE LA COMMANDE
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              6. Validation de la précommande
+            <h2 className="mb-2 font-display text-base text-foreground">
+              6. Passage et validation de la commande
             </h2>
 
             <p>
-              Le client sélectionne le produit souhaité, sa taille, sa couleur,
-              sa quantité et son mode de livraison avant de confirmer sa
-              précommande.
+              Le client sélectionne le produit souhaité, sa couleur, sa taille
+              et sa quantité puis l&apos;ajoute à son panier.
             </p>
 
             <p className="mt-2">
-              Pour une livraison en Point Relais, le client sélectionne le Point
-              Relais proposé lors du parcours de commande.
+              Avant le paiement, le client peut vérifier les éléments de sa
+              commande et les informations communiquées.
+            </p>
+
+            <p className="mt-2">
+              Le client sélectionne également le mode de livraison proposé par
+              AJVEK.
+            </p>
+
+            <p className="mt-2">
+              Pour une livraison en Point Relais, le client sélectionne le
+              Point Relais proposé lors du parcours de commande.
             </p>
 
             <p className="mt-2">
               Le client est responsable de l&apos;exactitude des informations
-              communiquées, notamment son nom, son adresse email, son numéro de
-              téléphone, son adresse de livraison et, le cas échéant, le Point
-              Relais sélectionné.
+              communiquées, notamment son nom, son adresse électronique, son
+              numéro de téléphone, son adresse de livraison et, le cas échéant,
+              le Point Relais sélectionné.
             </p>
 
             <p className="mt-2">
-              Une précommande est considérée comme validée après acceptation du
-              paiement par le prestataire de paiement.
-            </p>
-
-            <p className="mt-2">
-              Une confirmation peut être transmise au client par email après
-              validation du paiement.
+              La commande est définitivement prise en compte après validation
+              du paiement, sous réserve de la confirmation de la transaction et
+              de la disponibilité du produit.
             </p>
           </section>
 
+          {/* =====================================================
+              7. PAIEMENT
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
+            <h2 className="mb-2 font-display text-base text-foreground">
               7. Paiement
             </h2>
 
             <p>
-              Les paiements en ligne sont traités par le prestataire de paiement
-              sécurisé Stripe.
+              Les paiements en ligne sont traités par le prestataire de
+              paiement sécurisé Stripe.
             </p>
 
             <p className="mt-2">
@@ -223,111 +263,162 @@ export default function CGVPage() {
             </p>
 
             <p className="mt-2">
-              La précommande est considérée comme payée lorsque le paiement est
-              effectivement accepté par Stripe.
+              La commande est considérée comme payée lorsque le paiement est
+              effectivement accepté par le prestataire de paiement.
             </p>
 
             <p className="mt-2">
-              En cas de refus, d&apos;annulation ou d&apos;échec du paiement, la
-              précommande n&apos;est pas considérée comme validée.
+              En cas de refus, d&apos;annulation ou d&apos;échec du paiement,
+              la commande n&apos;est pas considérée comme payée.
+            </p>
+
+            <p className="mt-2">
+              Une confirmation de commande peut être transmise au client par
+              voie électronique après validation du paiement.
             </p>
           </section>
 
+          {/* =====================================================
+              8. OPÉRATIONS PROMOTIONNELLES
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              8. Production et disponibilité
+            <h2 className="mb-2 font-display text-base text-foreground">
+              8. Opérations promotionnelles
             </h2>
 
             <p>
-              Les produits proposés en précommande ne sont pas nécessairement
-              disponibles immédiatement en stock.
+              AJVEK peut organiser ponctuellement des opérations
+              promotionnelles, concours, tirages au sort ou objectifs
+              commerciaux.
             </p>
 
             <p className="mt-2">
-              Leur fabrication intervient après le lancement de la production,
-              notamment lorsque le seuil de précommandes indiqué sur le site est
-              atteint.
+              Ces opérations peuvent notamment être associées à un nombre
+              déterminé de commandes payées.
             </p>
 
             <p className="mt-2">
-              Les délais de production et d&apos;expédition communiqués sur le
-              site sont des estimations lorsque leur date définitive dépend du
-              processus de fabrication ou d&apos;éléments extérieurs à AJVEK.
+              Lorsqu&apos;une opération fait référence aux 10 premières
+              commandes, une commande payée est comptabilisée comme une
+              commande, indépendamment du nombre d&apos;articles qu&apos;elle
+              contient, sauf indication contraire dans les conditions de
+              l&apos;opération.
             </p>
 
             <p className="mt-2">
-              En cas d&apos;impossibilité définitive de fournir un produit déjà
-              payé, AJVEK informera le client et procédera au remboursement des
-              sommes dues.
+              Un objectif promotionnel affiché sur le site ne conditionne pas
+              la fabrication, la disponibilité ou l&apos;expédition des
+              produits, sauf indication expresse contraire communiquée avant
+              la commande.
             </p>
+
+            <p className="mt-2">
+              Les modalités particulières d&apos;une opération sont précisées
+              sur le site ou dans les conditions spécifiques correspondantes.
+            </p>
+
+            <Link
+              href="/conditions-tirage"
+              className="mt-2 inline-block text-foreground underline underline-offset-4"
+            >
+              Consulter les conditions du tirage au sort
+            </Link>
           </section>
 
+          {/* =====================================================
+              9. LIVRAISON
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
+            <h2 className="mb-2 font-display text-base text-foreground">
               9. Livraison
             </h2>
 
             <p>
-              Les commandes sont actuellement livrées en France selon les modes
-              proposés lors de la précommande.
+              Les commandes sont actuellement livrées en France selon les
+              modes de livraison proposés au moment de la commande.
             </p>
 
             <p className="mt-2">
-              Le client peut notamment choisir entre :
+              Le client peut notamment choisir, lorsque ces options sont
+              disponibles, entre :
             </p>
 
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>un Point Relais Mondial Relay ;</li>
+              <li>une livraison en Point Relais Mondial Relay ;</li>
               <li>une livraison à domicile.</li>
             </ul>
 
             <p className="mt-2">
-              En cas de livraison à domicile, le produit est envoyé à
+              En cas de livraison à domicile, la commande est expédiée à
               l&apos;adresse renseignée par le client.
             </p>
 
             <p className="mt-2">
-              En cas de livraison en Point Relais, le produit est envoyé au
-              Point Relais sélectionné par le client lors de sa précommande.
+              En cas de livraison en Point Relais, la commande est expédiée au
+              Point Relais sélectionné par le client.
             </p>
 
             <p className="mt-2">
-              Le client doit vérifier l&apos;exactitude de ses coordonnées et du
-              lieu de livraison choisi avant validation.
+              Le client doit vérifier l&apos;exactitude de ses coordonnées et
+              du lieu de livraison avant la validation de la commande.
             </p>
 
             <p className="mt-2">
-              Les délais estimés de production et de livraison sont communiqués
-              sur le site lorsqu&apos;ils sont connus.
+              La date ou le délai de livraison applicable est indiqué au client
+              avant la conclusion de la commande.
             </p>
 
             <p className="mt-2">
-              En cas de retard ou de difficulté de livraison, les droits légaux
-              du consommateur demeurent applicables.
+              En cas de retard de livraison, le consommateur conserve
+              l&apos;ensemble des droits qui lui sont reconnus par la
+              réglementation applicable.
             </p>
           </section>
 
+          {/* =====================================================
+              10. RÉCEPTION
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              10. Droit de rétractation
+            <h2 className="mb-2 font-display text-base text-foreground">
+              10. Réception de la commande
             </h2>
 
             <p>
-              Pour les produits pour lesquels le droit de rétractation est
-              applicable, le consommateur dispose d&apos;un délai de 14 jours à
-              compter de la réception du produit pour exercer son droit de
-              rétractation.
+              Lors de la réception de sa commande, le client est invité à
+              vérifier l&apos;état des produits reçus.
             </p>
 
             <p className="mt-2">
-              L&apos;exercice du droit de rétractation ne nécessite pas de
-              justification.
+              En cas de produit manquant, endommagé ou manifestement différent
+              du produit commandé, le client est invité à contacter AJVEK dans
+              les meilleurs délais afin de permettre le traitement de sa
+              demande, sans préjudice de ses garanties légales.
+            </p>
+          </section>
+
+          {/* =====================================================
+              11. RÉTRACTATION
+          ====================================================== */}
+
+          <section>
+            <h2 className="mb-2 font-display text-base text-foreground">
+              11. Droit de rétractation
+            </h2>
+
+            <p>
+              Lorsque le droit de rétractation est applicable, le consommateur
+              dispose d&apos;un délai de 14 jours à compter de la réception du
+              produit pour exercer ce droit, sans avoir à motiver sa décision.
             </p>
 
             <p className="mt-2">
-              Pour exercer ce droit, le client doit informer AJVEK de sa
-              décision au moyen d&apos;une déclaration claire ou du formulaire
-              type figurant à la fin des présentes CGV.
+              Pour exercer son droit de rétractation, le client doit informer
+              AJVEK de sa décision au moyen d&apos;une déclaration dénuée
+              d&apos;ambiguïté ou en utilisant le formulaire type figurant à la
+              fin des présentes CGV.
             </p>
 
             <p className="mt-2">
@@ -344,27 +435,48 @@ export default function CGVPage() {
             </p>
 
             <p className="mt-2">
-              Les produits doivent être retournés dans un état permettant leur
-              remise en vente, sous réserve des manipulations nécessaires pour
-              en vérifier la nature et les caractéristiques.
+              Après avoir communiqué sa décision de se rétracter, le
+              consommateur doit restituer le produit dans le délai légal
+              applicable.
             </p>
 
             <p className="mt-2">
-              Les frais directs de retour restent à la charge du client sauf
-              lorsque le produit livré est défectueux, non conforme ou lorsqu&apos;AJVEK
-              indique expressément prendre ces frais en charge.
+              Le consommateur peut manipuler le produit dans la mesure
+              nécessaire pour en établir la nature, les caractéristiques et le
+              bon fonctionnement. Sa responsabilité peut être engagée en cas de
+              dépréciation résultant de manipulations excédant ce qui est
+              nécessaire à cette vérification.
+            </p>
+
+            <p className="mt-2">
+              Les frais directs de retour restent à la charge du client, sauf
+              lorsque le produit livré est défectueux ou non conforme, ou
+              lorsqu&apos;AJVEK indique expressément prendre ces frais en
+              charge.
             </p>
           </section>
 
+          {/* =====================================================
+              12. REMBOURSEMENT
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              11. Remboursement après rétractation
+            <h2 className="mb-2 font-display text-base text-foreground">
+              12. Remboursement après rétractation
             </h2>
 
             <p>
               Lorsque le droit de rétractation est valablement exercé, AJVEK
               rembourse les sommes dues conformément à la réglementation
               applicable.
+            </p>
+
+            <p className="mt-2">
+              Le remboursement comprend, dans les conditions prévues par la
+              réglementation, les frais de livraison standard initialement
+              facturés. Les éventuels coûts supplémentaires résultant du choix
+              d&apos;un mode de livraison plus coûteux que le mode standard
+              proposé ne sont pas nécessairement remboursés.
             </p>
 
             <p className="mt-2">
@@ -377,13 +489,17 @@ export default function CGVPage() {
             <p className="mt-2">
               AJVEK peut différer le remboursement jusqu&apos;à récupération du
               produit ou jusqu&apos;à réception d&apos;une preuve de son
-              expédition, lorsque la réglementation le permet.
+              expédition lorsque la réglementation le permet.
             </p>
           </section>
 
+          {/* =====================================================
+              13. PRODUITS PERSONNALISÉS
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              12. Produits personnalisés
+            <h2 className="mb-2 font-display text-base text-foreground">
+              13. Produits personnalisés
             </h2>
 
             <p>
@@ -399,24 +515,78 @@ export default function CGVPage() {
             </p>
           </section>
 
+          {/* =====================================================
+              14. GARANTIES LÉGALES
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              13. Garanties légales
+            <h2 className="mb-2 font-display text-base text-foreground">
+              14. Garanties légales
             </h2>
 
             <p>
-              Le consommateur bénéficie des garanties légales applicables aux
-              produits vendus, notamment de la garantie légale de conformité et
-              de la garantie contre les vices cachés dans les conditions prévues
-              par la loi.
+              Le vendeur répond des garanties légales applicables aux produits
+              vendus.
             </p>
 
-            <p className="mt-2">
-              En cas de produit défectueux, endommagé ou non conforme, le client
-              peut contacter AJVEK à :
+            <div className="mt-4 rounded-xl border border-stone/20 p-4">
+              <p className="font-medium text-foreground">
+                Garantie légale de conformité
+              </p>
+
+              <p className="mt-3">
+                Le consommateur dispose d&apos;un délai de deux ans à compter
+                de la délivrance du bien pour obtenir la mise en œuvre de la
+                garantie légale de conformité en cas d&apos;apparition d&apos;un
+                défaut de conformité.
+              </p>
+
+              <p className="mt-2">
+                La garantie légale de conformité permet notamment, dans les
+                conditions prévues par le Code de la consommation, d&apos;obtenir
+                la réparation ou le remplacement du bien sans frais et dans le
+                délai légal applicable.
+              </p>
+
+              <p className="mt-2">
+                Dans les situations prévues par la loi, le consommateur peut
+                également obtenir une réduction du prix ou la résolution du
+                contrat.
+              </p>
+
+              <p className="mt-4 font-medium text-foreground">
+                Garantie des vices cachés
+              </p>
+
+              <p className="mt-3">
+                Le consommateur bénéficie également de la garantie légale des
+                vices cachés prévue par les articles 1641 à 1649 du Code civil.
+              </p>
+
+              <p className="mt-2">
+                Cette garantie peut notamment permettre au consommateur, dans
+                les conditions prévues par la loi, d&apos;obtenir une réduction
+                du prix s&apos;il conserve le bien ou un remboursement contre
+                restitution du bien.
+              </p>
+            </div>
+
+            <p className="mt-4">
+              Le professionnel répondant de ces garanties est :
             </p>
 
-            <p className="mt-2">
+            <p className="mt-3">
+              <strong className="text-foreground">
+                Julien GORMAND – Entrepreneur individuel – AJVEK
+              </strong>
+              <br />
+              95 avenue du Groupe Morgan
+              <br />
+              06700 Saint-Laurent-du-Var
+              <br />
+              France
+              <br />
+              Email :{" "}
               <a
                 href="mailto:ajvek.contact@gmail.com"
                 className="text-foreground underline underline-offset-4"
@@ -426,9 +596,13 @@ export default function CGVPage() {
             </p>
           </section>
 
+          {/* =====================================================
+              15. RESPONSABILITÉ
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              14. Responsabilité
+            <h2 className="mb-2 font-display text-base text-foreground">
+              15. Responsabilité
             </h2>
 
             <p>
@@ -439,20 +613,27 @@ export default function CGVPage() {
 
             <p className="mt-2">
               AJVEK ne saurait être tenu responsable d&apos;une mauvaise
-              utilisation du produit par le client ou d&apos;un dommage résultant
-              d&apos;une utilisation contraire à sa destination normale.
+              utilisation du produit par le client ou d&apos;un dommage
+              résultant d&apos;une utilisation contraire à sa destination
+              normale, sous réserve des dispositions légales impératives
+              applicables.
             </p>
           </section>
 
+          {/* =====================================================
+              16. PROPRIÉTÉ INTELLECTUELLE
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              15. Propriété intellectuelle
+            <h2 className="mb-2 font-display text-base text-foreground">
+              16. Propriété intellectuelle
             </h2>
 
             <p>
               Les créations, designs, motifs, photographies, textes, logos,
               éléments graphiques et contenus utilisés par AJVEK sont protégés
-              par les règles applicables en matière de propriété intellectuelle.
+              par les règles applicables en matière de propriété
+              intellectuelle.
             </p>
 
             <p className="mt-2">
@@ -462,33 +643,42 @@ export default function CGVPage() {
             </p>
           </section>
 
+          {/* =====================================================
+              17. DONNÉES PERSONNELLES
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              16. Données personnelles
+            <h2 className="mb-2 font-display text-base text-foreground">
+              17. Données personnelles
             </h2>
 
             <p>
-              Les modalités relatives à la collecte et au traitement des données
-              personnelles sont présentées dans la politique de confidentialité
-              d&apos;AJVEK.
+              Les modalités relatives à la collecte et au traitement des
+              données personnelles sont présentées dans la politique de
+              confidentialité d&apos;AJVEK.
             </p>
 
-            <a
+            <Link
               href="/confidentialite"
               className="mt-2 inline-block text-foreground underline underline-offset-4"
             >
               Consulter la politique de confidentialité
-            </a>
+            </Link>
           </section>
 
+          {/* =====================================================
+              18. RÉCLAMATIONS
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              17. Réclamations
+            <h2 className="mb-2 font-display text-base text-foreground">
+              18. Réclamations
             </h2>
 
             <p>
-              Pour toute question ou réclamation concernant une précommande ou
-              une commande, le client peut contacter AJVEK à :
+              Pour toute question ou réclamation concernant une commande, un
+              paiement, une livraison ou un produit, le client peut contacter
+              AJVEK à :
             </p>
 
             <p className="mt-2">
@@ -505,41 +695,50 @@ export default function CGVPage() {
             </p>
           </section>
 
+          {/* =====================================================
+              19. MÉDIATION
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              18. Médiation de la consommation
+            <h2 className="mb-2 font-display text-base text-foreground">
+              19. Médiation de la consommation
             </h2>
 
             <p>
               Conformément aux dispositions applicables à la médiation de la
               consommation, le consommateur peut, après une réclamation écrite
               préalable auprès d&apos;AJVEK restée sans solution satisfaisante,
-              recourir gratuitement au médiateur de la consommation compétent.
+              recourir gratuitement au médiateur de la consommation dont relève
+              AJVEK.
             </p>
 
-            <p className="mt-2 font-medium text-foreground">
-              Médiateur de la consommation :
-            </p>
+            <div className="mt-4 rounded-xl border border-stone/20 p-4">
+              <p className="font-medium text-foreground">
+                À COMPLÉTER AVANT L&apos;OUVERTURE DES VENTES
+              </p>
 
-            <p className="mt-2">
-              À compléter avec le nom, l&apos;adresse postale et l&apos;adresse
-              du site internet du médiateur auquel AJVEK a effectivement adhéré.
-            </p>
-
-            <p className="mt-2">
-              Cette information doit être complétée avant l&apos;ouverture
-              commerciale du site au public.
-            </p>
+              <p className="mt-2">
+                Nom du médiateur :
+                <br />
+                Adresse postale :
+                <br />
+                Site internet :
+              </p>
+            </div>
           </section>
 
+          {/* =====================================================
+              20. DROIT APPLICABLE
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              19. Droit applicable
+            <h2 className="mb-2 font-display text-base text-foreground">
+              20. Droit applicable
             </h2>
 
             <p>
-              Les présentes conditions générales de vente sont soumises au droit
-              français.
+              Les présentes conditions générales de vente sont soumises au
+              droit français.
             </p>
 
             <p className="mt-2">
@@ -548,9 +747,13 @@ export default function CGVPage() {
             </p>
           </section>
 
+          {/* =====================================================
+              21. MODIFICATION DES CGV
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              20. Modification des CGV
+            <h2 className="mb-2 font-display text-base text-foreground">
+              21. Modification des CGV
             </h2>
 
             <p>
@@ -565,13 +768,17 @@ export default function CGVPage() {
             </p>
           </section>
 
+          {/* =====================================================
+              22. FORMULAIRE DE RÉTRACTATION
+          ====================================================== */}
+
           <section>
-            <h2 className="mb-2 text-base font-display text-foreground">
-              21. Formulaire type de rétractation
+            <h2 className="mb-2 font-display text-base text-foreground">
+              22. Formulaire type de rétractation
             </h2>
 
             <p>
-              Le présent formulaire peut être utilisé uniquement si le client
+              Le présent formulaire peut être utilisé si le consommateur
               souhaite exercer son droit de rétractation.
             </p>
 
@@ -601,7 +808,10 @@ export default function CGVPage() {
               <p>Nom du consommateur :</p>
               <p>Adresse du consommateur :</p>
               <p>Date :</p>
-              <p>Signature, uniquement en cas d&apos;envoi sur papier :</p>
+              <p>
+                Signature, uniquement en cas d&apos;envoi du formulaire sur
+                papier :
+              </p>
             </div>
           </section>
         </div>

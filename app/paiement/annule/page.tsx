@@ -13,19 +13,28 @@ export default function PaiementAnnulePage() {
 
       <p className="mt-6 max-w-md text-stone">
         Ton paiement a été annulé et aucune somme n&apos;a été débitée.
-        Ta précommande est toujours conservée dans ton panier.
       </p>
 
       <p className="mt-3 max-w-md text-sm text-stone">
-        Tu peux la modifier ou relancer le paiement quand tu veux.
+        Tes articles sont toujours présents dans ton panier. Tu peux
+        modifier ta commande ou relancer le paiement quand tu veux.
       </p>
 
-      <Link
-        href="/precommande"
-        className="mt-8 rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
-      >
-        Retour à ma précommande
-      </Link>
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <Link
+          href="/precommande"
+          className="rounded-full bg-foreground px-6 py-3 text-xs uppercase tracking-widest text-background transition hover:opacity-85"
+        >
+          Retour à mon panier
+        </Link>
+
+        <Link
+          href="/catalogue"
+          className="rounded-full border border-foreground px-6 py-3 text-xs uppercase tracking-widest text-foreground transition hover:bg-foreground hover:text-background"
+        >
+          Voir la collection
+        </Link>
+      </div>
     </main>
   );
 }

@@ -11,9 +11,8 @@ import ServicePointPicker, {
 } from "@/components/ServicePointPicker";
 
 const STORAGE_KEY = "ajvek-preorder-cart";
-const PRODUCTION_GOAL = 10;
 
-type PreorderCartItem = {
+type CartItem = {
   product_slug: string;
   product_name: string;
   color: string;
@@ -23,14 +22,34 @@ type PreorderCartItem = {
 
 type DeliveryMethod = "relay" | "home";
 
+type StockItem = {
+  product_slug: string;
+  color: string;
+  size: string;
+  stock_quantity: number;
+  sales_enabled: boolean;
+  available: boolean;
+};
+
 function formatPrice(value: number) {
   return `${value.toFixed(2).replace(".", ",")} €`;
+}
+
+function stockKey(
+  productSlug: string,
+  color: string,
+  size: string
+) {
+  return `${productSlug}::${color.toLowerCase()}::${size.toLowerCase()}`;
 }
 
 export default function PrecommandePage() {
   const { user, loading: authLoading } = useAuth();
 
-  const [items, setItems] = useState<PreorderCartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [stock, setStock] = useState<StockItem[]>([]);
+  const [stockLoading, setStockLoading] = useState(true);
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
 
@@ -72,6 +91,44 @@ export default function PrecommandePage() {
 
   /*
    * ============================================================
+   * STOCK
+   * ============================================================
+   */
+
+  useEffect(() => {
+    async function loadStock() {
+      try {
+        const response = await fetch("/api/stock", {
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          console.error("[Panier] Erreur stock :", data);
+          return;
+        }
+
+        setStock(
+          Array.isArray(data.stock)
+            ? data.stock
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "[Panier] Impossible de récupérer le stock :",
+          error
+        );
+      } finally {
+        setStockLoading(false);
+      }
+    }
+
+    loadStock();
+  }, []);
+
+  /*
+   * ============================================================
    * UTILISATEUR
    * ============================================================
    */
@@ -82,7 +139,13 @@ export default function PrecommandePage() {
     }
   }, [user]);
 
-  function saveItems(nextItems: PreorderCartItem[]) {
+  /*
+   * ============================================================
+   * FONCTIONS PANIER
+   * ============================================================
+   */
+
+  function saveItems(nextItems: CartItem[]) {
     setItems(nextItems);
 
     localStorage.setItem(
@@ -91,7 +154,58 @@ export default function PrecommandePage() {
     );
   }
 
+  function getStockItem(item: CartItem) {
+    const key = stockKey(
+      item.product_slug,
+      item.color,
+      item.size
+    );
+
+    return stock.find(
+      (stockItem) =>
+        stockKey(
+          stockItem.product_slug,
+          stockItem.color,
+          stockItem.size
+        ) === key
+    );
+  }
+
   function increaseQuantity(index: number) {
+    setError(null);
+
+    const current = items[index];
+    const stockItem = getStockItem(current);
+
+    if (!stockItem) {
+      setError(
+        "Impossible de vérifier le stock de cette pièce."
+      );
+      return;
+    }
+
+    if (!stockItem.sales_enabled) {
+      setError(
+        "Cette pièce n'est pas encore disponible à la vente."
+      );
+      return;
+    }
+
+    if (
+      current.quantity >=
+      stockItem.stock_quantity
+    ) {
+      setError(
+        `Il reste seulement ${stockItem.stock_quantity} pièce${
+          stockItem.stock_quantity > 1 ? "s" : ""
+        } disponible${
+          stockItem.stock_quantity > 1 ? "s" : ""
+        } pour cette variante.`
+      );
+
+      return;
+    }
+
     const nextItems = items.map((item, i) =>
       i === index
         ? {
@@ -105,6 +219,8 @@ export default function PrecommandePage() {
   }
 
   function decreaseQuantity(index: number) {
+    setError(null);
+
     const current = items[index];
 
     if (current.quantity <= 1) {
@@ -125,12 +241,18 @@ export default function PrecommandePage() {
   }
 
   function removeItem(index: number) {
-    const nextItems = items.filter((_, i) => i !== index);
+    setError(null);
+
+    const nextItems = items.filter(
+      (_, i) => i !== index
+    );
 
     saveItems(nextItems);
   }
 
-  function changeDeliveryMethod(method: DeliveryMethod) {
+  function changeDeliveryMethod(
+    method: DeliveryMethod
+  ) {
     setDeliveryMethod(method);
     setError(null);
 
@@ -147,20 +269,27 @@ export default function PrecommandePage() {
 
   const totalQuantity = useMemo(() => {
     return items.reduce(
-      (sum, item) => sum + Number(item.quantity || 0),
+      (sum, item) =>
+        sum + Number(item.quantity || 0),
       0
     );
   }, [items]);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => {
-      const product = getProduct(item.product_slug);
+      const product = getProduct(
+        item.product_slug
+      );
 
       if (!product) {
         return sum;
       }
 
-      return sum + product.priceValue * item.quantity;
+      return (
+        sum +
+        product.priceValue *
+          item.quantity
+      );
     }, 0);
   }, [items]);
 
@@ -173,10 +302,41 @@ export default function PrecommandePage() {
       return 0;
     }
 
-    return deliveryMethod === "relay" ? 4.9 : 7.9;
+    return deliveryMethod === "relay"
+      ? 4.9
+      : 7.9;
   }, [totalQuantity, deliveryMethod]);
 
   const total = subtotal + shipping;
+
+  const cartStockValid = useMemo(() => {
+    if (stockLoading) {
+      return false;
+    }
+
+    return items.every((item) => {
+      const stockItem = stock.find(
+        (candidate) =>
+          stockKey(
+            candidate.product_slug,
+            candidate.color,
+            candidate.size
+          ) ===
+          stockKey(
+            item.product_slug,
+            item.color,
+            item.size
+          )
+      );
+
+      return (
+        !!stockItem &&
+        stockItem.sales_enabled &&
+        stockItem.stock_quantity >=
+          item.quantity
+      );
+    });
+  }, [items, stock, stockLoading]);
 
   /*
    * ============================================================
@@ -186,7 +346,9 @@ export default function PrecommandePage() {
 
   async function handleCheckout() {
     if (!user) {
-      setError("Connecte-toi pour finaliser ta précommande.");
+      setError(
+        "Connecte-toi pour finaliser ta commande."
+      );
       return;
     }
 
@@ -196,11 +358,28 @@ export default function PrecommandePage() {
     }
 
     if (items.length === 0) {
-      setError("Ta précommande est vide.");
+      setError("Ton panier est vide.");
       return;
     }
 
-    if (deliveryMethod === "relay" && !selectedPoint) {
+    if (stockLoading) {
+      setError(
+        "Vérification du stock en cours."
+      );
+      return;
+    }
+
+    if (!cartStockValid) {
+      setError(
+        "Une ou plusieurs pièces de ton panier ne sont plus disponibles dans la quantité demandée."
+      );
+      return;
+    }
+
+    if (
+      deliveryMethod === "relay" &&
+      !selectedPoint
+    ) {
       setError(
         "Choisis ton Point Relais avant de continuer."
       );
@@ -230,32 +409,45 @@ export default function PrecommandePage() {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${session.access_token}`,
           },
 
           body: JSON.stringify({
             name: name.trim(),
+
             phone: phone.trim(),
 
-            delivery_method: deliveryMethod,
+            delivery_method:
+              deliveryMethod,
 
             service_point:
               deliveryMethod === "relay"
                 ? selectedPoint
                 : null,
 
-            items: items.map((item) => ({
-              product_slug: item.product_slug,
-              color: item.color,
-              size: item.size,
-              quantity: item.quantity,
-            })),
+            items: items.map(
+              (item) => ({
+                product_slug:
+                  item.product_slug,
+
+                color: item.color,
+
+                size: item.size,
+
+                quantity:
+                  item.quantity,
+              })
+            ),
           }),
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok || !data.url) {
         setError(
@@ -267,10 +459,11 @@ export default function PrecommandePage() {
         return;
       }
 
-      window.location.href = data.url;
+      window.location.href =
+        data.url;
     } catch (error) {
       console.error(
-        "[PrecommandePage] Erreur checkout :",
+        "[Panier] Erreur checkout :",
         error
       );
 
@@ -297,13 +490,13 @@ export default function PrecommandePage() {
           </p>
 
           <h1 className="mt-5 font-display text-4xl">
-            Précommande
+            Panier
           </h1>
 
           <div className="mt-8 h-px w-full bg-surface" />
 
           <p className="mt-6 text-sm text-stone">
-            Chargement de ta précommande...
+            Chargement de ton panier...
           </p>
         </div>
       </main>
@@ -334,12 +527,13 @@ export default function PrecommandePage() {
               <h1 className="mt-5 font-display text-[3.4rem] leading-[0.88] tracking-[-0.04em] md:text-7xl">
                 Finaliser
                 <br />
-                ma précommande.
+                ma commande.
               </h1>
 
               <p className="mt-6 max-w-lg text-sm leading-7 text-stone md:text-[15px]">
-                Vérifie ta sélection, choisis ta livraison
-                puis finalise ton paiement.
+                Vérifie ta sélection,
+                choisis ta livraison puis
+                finalise ton paiement.
               </p>
             </div>
 
@@ -351,7 +545,9 @@ export default function PrecommandePage() {
                   </p>
 
                   <p className="mt-2 font-display text-2xl">
-                    {String(totalQuantity).padStart(2, "0")}
+                    {String(
+                      totalQuantity
+                    ).padStart(2, "0")}
                   </p>
                 </div>
 
@@ -383,24 +579,29 @@ export default function PrecommandePage() {
               ["01", "Pièces"],
               ["02", "Livraison"],
               ["03", "Paiement"],
-            ].map(([number, label], index) => (
-              <div
-                key={number}
-                className={`py-5 ${
-                  index > 0
-                    ? "border-l border-surface pl-4 md:pl-8"
-                    : ""
-                }`}
-              >
-                <p className="text-[8px] tracking-[0.35em] text-stone/40">
-                  {number}
-                </p>
+            ].map(
+              (
+                [number, label],
+                index
+              ) => (
+                <div
+                  key={number}
+                  className={`py-5 ${
+                    index > 0
+                      ? "border-l border-surface pl-4 md:pl-8"
+                      : ""
+                  }`}
+                >
+                  <p className="text-[8px] tracking-[0.35em] text-stone/40">
+                    {number}
+                  </p>
 
-                <p className="mt-2 text-[9px] uppercase tracking-[0.25em]">
-                  {label}
-                </p>
-              </div>
-            ))}
+                  <p className="mt-2 text-[9px] uppercase tracking-[0.25em]">
+                    {label}
+                  </p>
+                </div>
+              )
+            )}
           </div>
         </section>
       )}
@@ -411,22 +612,18 @@ export default function PrecommandePage() {
 
       <section className="mx-auto max-w-7xl px-5 py-10 md:px-8 md:py-16">
         {items.length === 0 ? (
-          /* ===================================================
-             PANIER VIDE
-          =================================================== */
-
           <div className="mx-auto max-w-2xl py-16 text-center md:py-24">
             <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
               AJVEK · Drop 001
             </p>
 
             <h2 className="mt-6 font-display text-4xl md:text-5xl">
-              Aucune pièce.
+              Ton panier est vide.
             </h2>
 
             <p className="mx-auto mt-5 max-w-sm text-sm leading-7 text-stone">
-              Sélectionne une pièce de Drop 001 pour commencer
-              ta précommande.
+              Découvre les pièces du
+              Drop 001.
             </p>
 
             <Link
@@ -444,10 +641,6 @@ export default function PrecommandePage() {
           </div>
         ) : (
           <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20">
-            {/* =================================================
-                COLONNE GAUCHE
-            ================================================= */}
-
             <div>
               {/* ===============================================
                   01 — PIÈCES
@@ -467,135 +660,195 @@ export default function PrecommandePage() {
 
                   <p className="text-[9px] uppercase tracking-[0.25em] text-stone">
                     {totalQuantity}{" "}
-                    {totalQuantity > 1 ? "pièces" : "pièce"}
+                    {totalQuantity > 1
+                      ? "pièces"
+                      : "pièce"}
                   </p>
                 </div>
 
                 <div className="mt-8 border-t border-surface">
-                  {items.map((item, index) => {
-                    const product = getProduct(item.product_slug);
+                  {items.map(
+                    (item, index) => {
+                      const product =
+                        getProduct(
+                          item.product_slug
+                        );
 
-                    const itemPrice =
-                      product?.priceValue ?? 0;
+                      const itemPrice =
+                        product?.priceValue ??
+                        0;
 
-                    const lineTotal =
-                      itemPrice * item.quantity;
+                      const lineTotal =
+                        itemPrice *
+                        item.quantity;
 
-                    const image =
-                      `/catalogue/${item.product_slug}-${item.color.toLowerCase()}.png`;
+                      const image =
+                        `/catalogue/${item.product_slug}-${item.color.toLowerCase()}.png`;
 
-                    return (
-                      <article
-                        key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
-                        className="group border-b border-surface py-6 md:py-8"
-                      >
-                        <div className="grid grid-cols-[105px_minmax(0,1fr)] gap-5 md:grid-cols-[150px_minmax(0,1fr)] md:gap-8">
-                          {/* IMAGE */}
+                      const stockItem =
+                        getStockItem(item);
 
-                          <Link
-                            href={`/produit/${item.product_slug}`}
-                            className="relative aspect-[4/5] overflow-hidden bg-[#151514]"
-                          >
-                            <img
-                              src={image}
-                              alt={`${
-                                product?.name ?? item.product_name
-                              } ${item.color}`}
-                              className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.02]"
-                            />
+                      const unavailable =
+                        !stockLoading &&
+                        (!stockItem ||
+                          !stockItem.sales_enabled ||
+                          stockItem.stock_quantity <
+                            item.quantity);
 
-                            <div className="absolute bottom-2 left-2 text-[7px] uppercase tracking-[0.3em] text-white/45">
-                              AJVEK
-                            </div>
-                          </Link>
+                      return (
+                        <article
+                          key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
+                          className="group border-b border-surface py-6 md:py-8"
+                        >
+                          <div className="grid grid-cols-[105px_minmax(0,1fr)] gap-5 md:grid-cols-[150px_minmax(0,1fr)] md:gap-8">
+                            <Link
+                              href={`/produit/${item.product_slug}`}
+                              className="relative aspect-[4/5] overflow-hidden bg-[#151514]"
+                            >
+                              <img
+                                src={image}
+                                alt={`${
+                                  product?.name ??
+                                  item.product_name
+                                } ${
+                                  item.color
+                                }`}
+                                className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.02]"
+                              />
 
-                          {/* INFOS */}
-
-                          <div className="flex min-w-0 flex-col">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-[8px] uppercase tracking-[0.35em] text-stone/55">
-                                  AJVEK · Drop 001
-                                </p>
-
-                                <h3 className="mt-3 font-display text-2xl leading-none md:text-3xl">
-                                  {product?.name ??
-                                    item.product_name}
-                                </h3>
+                              <div className="absolute bottom-2 left-2 text-[7px] uppercase tracking-[0.3em] text-white/45">
+                                AJVEK
                               </div>
+                            </Link>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeItem(index)
-                                }
-                                className="shrink-0 text-[8px] uppercase tracking-[0.2em] text-stone/60 transition hover:text-foreground"
-                              >
-                                Retirer
-                              </button>
-                            </div>
+                            <div className="flex min-w-0 flex-col">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-[8px] uppercase tracking-[0.35em] text-stone/55">
+                                    AJVEK ·
+                                    Drop 001
+                                  </p>
 
-                            <div className="mt-4 flex flex-wrap gap-x-3 gap-y-2 text-[9px] uppercase tracking-[0.18em] text-stone md:gap-x-5 md:text-[10px]">
-                              <span>{item.color}</span>
-                              <span>·</span>
-                              <span>Taille {item.size}</span>
-                            </div>
+                                  <h3 className="mt-3 font-display text-2xl leading-none md:text-3xl">
+                                    {product?.name ??
+                                      item.product_name}
+                                  </h3>
+                                </div>
 
-                            <div className="mt-auto flex items-end justify-between gap-3 pt-7">
-                              {/* QUANTITÉ */}
-
-                              <div className="inline-flex overflow-hidden rounded-full border border-surface">
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    decreaseQuantity(index)
+                                    removeItem(
+                                      index
+                                    )
                                   }
-                                  aria-label="Diminuer la quantité"
-                                  className="flex h-10 w-10 items-center justify-center text-sm text-stone transition hover:text-foreground"
+                                  className="shrink-0 text-[8px] uppercase tracking-[0.2em] text-stone/60 transition hover:text-foreground"
                                 >
-                                  −
+                                  Retirer
                                 </button>
+                              </div>
 
-                                <span className="flex h-10 min-w-10 items-center justify-center border-x border-surface text-xs">
-                                  {item.quantity}
+                              <div className="mt-4 flex flex-wrap gap-x-3 gap-y-2 text-[9px] uppercase tracking-[0.18em] text-stone md:gap-x-5 md:text-[10px]">
+                                <span>
+                                  {item.color}
                                 </span>
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    increaseQuantity(index)
-                                  }
-                                  aria-label="Augmenter la quantité"
-                                  className="flex h-10 w-10 items-center justify-center text-sm text-stone transition hover:text-foreground"
-                                >
-                                  +
-                                </button>
+                                <span>·</span>
+
+                                <span>
+                                  Taille{" "}
+                                  {item.size}
+                                </span>
                               </div>
 
-                              <div className="text-right">
-                                {item.quantity > 1 && (
-                                  <p className="mb-1 text-[9px] text-stone">
-                                    {formatPrice(itemPrice)} / pièce
+                              {!stockLoading &&
+                                stockItem?.sales_enabled &&
+                                stockItem.stock_quantity >
+                                  0 && (
+                                  <p className="mt-3 text-[9px] uppercase tracking-[0.2em] text-stone">
+                                    {
+                                      stockItem.stock_quantity
+                                    }{" "}
+                                    en stock
                                   </p>
                                 )}
 
-                                <p className="font-display text-xl md:text-2xl">
-                                  {formatPrice(lineTotal)}
+                              {unavailable && (
+                                <p className="mt-3 text-[9px] uppercase tracking-[0.2em] text-foreground">
+                                  Stock insuffisant
+                                  ou indisponible
                                 </p>
+                              )}
+
+                              <div className="mt-auto flex items-end justify-between gap-3 pt-7">
+                                <div className="inline-flex overflow-hidden rounded-full border border-surface">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      decreaseQuantity(
+                                        index
+                                      )
+                                    }
+                                    aria-label="Diminuer la quantité"
+                                    className="flex h-10 w-10 items-center justify-center text-sm text-stone transition hover:text-foreground"
+                                  >
+                                    −
+                                  </button>
+
+                                  <span className="flex h-10 min-w-10 items-center justify-center border-x border-surface text-xs">
+                                    {
+                                      item.quantity
+                                    }
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      increaseQuantity(
+                                        index
+                                      )
+                                    }
+                                    aria-label="Augmenter la quantité"
+                                    className="flex h-10 w-10 items-center justify-center text-sm text-stone transition hover:text-foreground"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+
+                                <div className="text-right">
+                                  {item.quantity >
+                                    1 && (
+                                    <p className="mb-1 text-[9px] text-stone">
+                                      {formatPrice(
+                                        itemPrice
+                                      )}{" "}
+                                      / pièce
+                                    </p>
+                                  )}
+
+                                  <p className="font-display text-xl md:text-2xl">
+                                    {formatPrice(
+                                      lineTotal
+                                    )}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </article>
-                    );
-                  })}
+                        </article>
+                      );
+                    }
+                  )}
                 </div>
 
                 <Link
                   href="/catalogue"
                   className="mt-5 inline-flex items-center gap-4 text-[8px] uppercase tracking-[0.3em] text-stone transition hover:text-foreground"
                 >
-                  <span>+ Ajouter une pièce</span>
+                  <span>
+                    + Ajouter une pièce
+                  </span>
+
                   <span>→</span>
                 </Link>
               </section>
@@ -614,20 +867,22 @@ export default function PrecommandePage() {
                 </h2>
 
                 <p className="mt-4 max-w-lg text-sm leading-7 text-stone">
-                  Livraison disponible en France. Elle est offerte
-                  à partir de trois vêtements.
+                  Livraison disponible en
+                  France. Elle est offerte à
+                  partir de trois vêtements.
                 </p>
 
                 <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                  {/* POINT RELAIS */}
-
                   <button
                     type="button"
                     onClick={() =>
-                      changeDeliveryMethod("relay")
+                      changeDeliveryMethod(
+                        "relay"
+                      )
                     }
                     className={`group relative min-h-[165px] border p-5 text-left transition ${
-                      deliveryMethod === "relay"
+                      deliveryMethod ===
+                      "relay"
                         ? "border-foreground bg-white/[0.025]"
                         : "border-surface hover:border-stone/50"
                     }`}
@@ -645,12 +900,14 @@ export default function PrecommandePage() {
 
                       <div
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                          deliveryMethod === "relay"
+                          deliveryMethod ===
+                          "relay"
                             ? "border-foreground"
                             : "border-stone/40"
                         }`}
                       >
-                        {deliveryMethod === "relay" && (
+                        {deliveryMethod ===
+                          "relay" && (
                           <div className="h-2 w-2 rounded-full bg-foreground" />
                         )}
                       </div>
@@ -669,15 +926,16 @@ export default function PrecommandePage() {
                     </div>
                   </button>
 
-                  {/* DOMICILE */}
-
                   <button
                     type="button"
                     onClick={() =>
-                      changeDeliveryMethod("home")
+                      changeDeliveryMethod(
+                        "home"
+                      )
                     }
                     className={`group relative min-h-[165px] border p-5 text-left transition ${
-                      deliveryMethod === "home"
+                      deliveryMethod ===
+                      "home"
                         ? "border-foreground bg-white/[0.025]"
                         : "border-surface hover:border-stone/50"
                     }`}
@@ -695,12 +953,14 @@ export default function PrecommandePage() {
 
                       <div
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                          deliveryMethod === "home"
+                          deliveryMethod ===
+                          "home"
                             ? "border-foreground"
                             : "border-stone/40"
                         }`}
                       >
-                        {deliveryMethod === "home" && (
+                        {deliveryMethod ===
+                          "home" && (
                           <div className="h-2 w-2 rounded-full bg-foreground" />
                         )}
                       </div>
@@ -732,9 +992,8 @@ export default function PrecommandePage() {
                   </div>
                 )}
 
-                {/* POINT RELAIS */}
-
-                {deliveryMethod === "relay" && (
+                {deliveryMethod ===
+                  "relay" && (
                   <div className="mt-8 border-t border-surface pt-8">
                     <div className="grid gap-6 md:grid-cols-[0.45fr_1fr]">
                       <div>
@@ -743,8 +1002,11 @@ export default function PrecommandePage() {
                         </p>
 
                         <p className="mt-3 text-sm leading-6 text-stone">
-                          Entre ton code postal pour trouver les
-                          Points Relais disponibles autour de toi.
+                          Entre ton code
+                          postal pour trouver
+                          les Points Relais
+                          disponibles autour
+                          de toi.
                         </p>
                       </div>
 
@@ -756,19 +1018,30 @@ export default function PrecommandePage() {
                           value={postalCode}
                           onChange={(e) => {
                             setPostalCode(
-                              e.target.value.replace(/\D/g, "")
+                              e.target.value.replace(
+                                /\D/g,
+                                ""
+                              )
                             );
 
-                            setSelectedPoint(null);
+                            setSelectedPoint(
+                              null
+                            );
                           }}
                           placeholder="Code postal · 33000"
                           className="w-full border border-surface bg-transparent px-5 py-4 text-sm outline-none transition placeholder:text-stone/35 focus:border-foreground"
                         />
 
                         <ServicePointPicker
-                          postalCode={postalCode}
-                          selectedPoint={selectedPoint}
-                          onSelect={setSelectedPoint}
+                          postalCode={
+                            postalCode
+                          }
+                          selectedPoint={
+                            selectedPoint
+                          }
+                          onSelect={
+                            setSelectedPoint
+                          }
                         />
 
                         {selectedPoint && (
@@ -780,7 +1053,8 @@ export default function PrecommandePage() {
 
                               <div>
                                 <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
-                                  Point sélectionné
+                                  Point
+                                  sélectionné
                                 </p>
 
                                 <p className="mt-2 text-sm">
@@ -813,9 +1087,11 @@ export default function PrecommandePage() {
                 {!user ? (
                   <div className="mt-8 border border-surface p-6 md:p-8">
                     <p className="max-w-md text-sm leading-7 text-stone">
-                      Connecte-toi à ton compte AJVEK pour
-                      finaliser ta précommande et accéder au
-                      paiement sécurisé.
+                      Connecte-toi à ton
+                      compte AJVEK pour
+                      finaliser ta commande
+                      et accéder au paiement
+                      sécurisé.
                     </p>
 
                     <div className="mt-7 flex flex-wrap gap-3">
@@ -846,7 +1122,9 @@ export default function PrecommandePage() {
                           required
                           value={name}
                           onChange={(e) =>
-                            setName(e.target.value)
+                            setName(
+                              e.target.value
+                            )
                           }
                           placeholder="Ton nom"
                           className="mt-3 w-full border border-surface bg-transparent px-5 py-4 text-sm outline-none transition focus:border-foreground"
@@ -861,7 +1139,9 @@ export default function PrecommandePage() {
                         <input
                           value={phone}
                           onChange={(e) =>
-                            setPhone(e.target.value)
+                            setPhone(
+                              e.target.value
+                            )
                           }
                           placeholder="Optionnel"
                           className="mt-3 w-full border border-surface bg-transparent px-5 py-4 text-sm outline-none transition focus:border-foreground"
@@ -873,7 +1153,8 @@ export default function PrecommandePage() {
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground" />
 
                       <p className="min-w-0 truncate text-[9px] uppercase tracking-[0.2em] text-stone">
-                        Connecté · {user.email}
+                        Connecté ·{" "}
+                        {user.email}
                       </p>
                     </div>
                   </div>
@@ -881,7 +1162,7 @@ export default function PrecommandePage() {
               </section>
 
               {/* ===============================================
-                  FONCTIONNEMENT DE LA PRÉCOMMANDE
+                  COMMENT ÇA FONCTIONNE
               =============================================== */}
 
               <section className="mt-20 border-y border-surface py-8">
@@ -892,7 +1173,8 @@ export default function PrecommandePage() {
                     </p>
 
                     <h2 className="mt-4 font-display text-3xl">
-                      Comment ça fonctionne ?
+                      Comment ça
+                      fonctionne ?
                     </h2>
                   </div>
 
@@ -905,21 +1187,30 @@ export default function PrecommandePage() {
                   {[
                     [
                       "01",
+                      "Commande",
+                      "Choisis ta pièce parmi les tailles et coloris encore disponibles.",
+                    ],
+
+                    [
+                      "02",
                       "Paiement",
                       "Ta commande est payée et confirmée immédiatement.",
                     ],
-                    [
-                      "02",
-                      "Seuil",
-                      `La production démarre dès que ${PRODUCTION_GOAL} commandes payées sont confirmées.`,
-                    ],
+
                     [
                       "03",
-                      "Production",
-                      "Ta pièce est fabriquée puis préparée pour son expédition.",
+                      "Expédition",
+                      "Ta commande est préparée puis expédiée à l'adresse ou au Point Relais choisi.",
                     ],
                   ].map(
-                    ([number, title, description], index) => (
+                    (
+                      [
+                        number,
+                        title,
+                        description,
+                      ],
+                      index
+                    ) => (
                       <div
                         key={number}
                         className={`py-6 sm:px-6 ${
@@ -927,7 +1218,9 @@ export default function PrecommandePage() {
                             ? "border-t border-surface sm:border-l sm:border-t-0"
                             : ""
                         } ${
-                          index === 0 ? "sm:pl-0" : ""
+                          index === 0
+                            ? "sm:pl-0"
+                            : ""
                         }`}
                       >
                         <p className="text-[8px] tracking-[0.35em] text-stone/45">
@@ -954,8 +1247,6 @@ export default function PrecommandePage() {
 
             <aside className="lg:sticky lg:top-24 lg:self-start">
               <div className="border border-surface bg-[#111110]">
-                {/* HEADER */}
-
                 <div className="border-b border-surface p-6 md:p-7">
                   <p className="text-[8px] uppercase tracking-[0.4em] text-stone">
                     AJVEK · Drop 001
@@ -968,46 +1259,51 @@ export default function PrecommandePage() {
 
                     <p className="text-[8px] uppercase tracking-[0.25em] text-stone">
                       {totalQuantity}{" "}
-                      {totalQuantity > 1 ? "pièces" : "pièce"}
+                      {totalQuantity > 1
+                        ? "pièces"
+                        : "pièce"}
                     </p>
                   </div>
                 </div>
 
-                {/* PRODUITS */}
-
                 <div className="border-b border-surface px-6 py-2 md:px-7">
-                  {items.map((item, index) => {
-                    const product = getProduct(item.product_slug);
+                  {items.map(
+                    (item, index) => {
+                      const product =
+                        getProduct(
+                          item.product_slug
+                        );
 
-                    return (
-                      <div
-                        key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
-                        className="flex items-center justify-between gap-4 border-b border-surface py-4 last:border-0"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-xs">
-                            {product?.name ??
-                              item.product_name}
-                          </p>
+                      return (
+                        <div
+                          key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
+                          className="flex items-center justify-between gap-4 border-b border-surface py-4 last:border-0"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-xs">
+                              {product?.name ??
+                                item.product_name}
+                            </p>
 
-                          <p className="mt-1 text-[8px] uppercase tracking-[0.18em] text-stone">
-                            {item.color} · {item.size} · ×
-                            {item.quantity}
+                            <p className="mt-1 text-[8px] uppercase tracking-[0.18em] text-stone">
+                              {item.color} ·{" "}
+                              {item.size} · ×
+                              {item.quantity}
+                            </p>
+                          </div>
+
+                          <p className="shrink-0 text-xs">
+                            {formatPrice(
+                              (product?.priceValue ??
+                                0) *
+                                item.quantity
+                            )}
                           </p>
                         </div>
-
-                        <p className="shrink-0 text-xs">
-                          {formatPrice(
-                            (product?.priceValue ?? 0) *
-                              item.quantity
-                          )}
-                        </p>
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                  )}
                 </div>
-
-                {/* TOTAUX */}
 
                 <div className="p-6 md:p-7">
                   <div className="space-y-4">
@@ -1017,7 +1313,9 @@ export default function PrecommandePage() {
                       </span>
 
                       <span>
-                        {formatPrice(subtotal)}
+                        {formatPrice(
+                          subtotal
+                        )}
                       </span>
                     </div>
 
@@ -1029,7 +1327,9 @@ export default function PrecommandePage() {
                       <span>
                         {shipping === 0
                           ? "Offerte"
-                          : formatPrice(shipping)}
+                          : formatPrice(
+                              shipping
+                            )}
                       </span>
                     </div>
                   </div>
@@ -1052,8 +1352,6 @@ export default function PrecommandePage() {
                     </div>
                   </div>
 
-                  {/* LIVRAISON */}
-
                   <div className="mt-7 border-y border-surface py-5">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-[10px] text-stone">
@@ -1061,16 +1359,19 @@ export default function PrecommandePage() {
                       </span>
 
                       <span className="text-[10px]">
-                        {deliveryMethod === "relay"
+                        {deliveryMethod ===
+                        "relay"
                           ? "Point Relais"
                           : "Domicile"}
                       </span>
                     </div>
 
-                    {deliveryMethod === "relay" && (
+                    {deliveryMethod ===
+                      "relay" && (
                       <div className="mt-4 flex items-start justify-between gap-5">
                         <span className="text-[10px] text-stone">
-                          Point sélectionné
+                          Point
+                          sélectionné
                         </span>
 
                         <span className="max-w-[180px] text-right text-[10px] leading-5">
@@ -1083,24 +1384,30 @@ export default function PrecommandePage() {
                     )}
                   </div>
 
-                  {/* PRÉCOMMANDE */}
+                  {/* OFFRE LANCEMENT */}
 
-                  <div className="mt-6">
+                  <div className="mt-6 border border-surface p-4">
                     <p className="text-[8px] uppercase tracking-[0.35em] text-stone">
-                      Précommande
+                      Offre de lancement
                     </p>
 
                     <p className="mt-3 text-xs leading-6 text-stone">
-                      Ton paiement est effectué immédiatement.
-                      La production débute lorsque les{" "}
+                      Les{" "}
                       <span className="text-foreground">
-                        {PRODUCTION_GOAL} commandes payées
+                        10 premières
+                        commandes
                       </span>{" "}
-                      nécessaires au lancement sont confirmées.
+                      participent au tirage
+                      au sort pour gagner un
+                      bon d&apos;achat de{" "}
+                      <span className="text-foreground">
+                        -30 %
+                      </span>{" "}
+                      valable sur une
+                      prochaine commande
+                      AJVEK.
                     </p>
                   </div>
-
-                  {/* ERREUR */}
 
                   {error && (
                     <div className="mt-6 border border-white/15 bg-white/[0.02] px-4 py-4">
@@ -1110,31 +1417,42 @@ export default function PrecommandePage() {
                     </div>
                   )}
 
-                  {/* CTA */}
-
                   {user ? (
                     <button
                       type="button"
-                      onClick={handleCheckout}
-                      disabled={submitting}
+                      onClick={
+                        handleCheckout
+                      }
+                      disabled={
+                        submitting ||
+                        stockLoading ||
+                        !cartStockValid
+                      }
                       className="group mt-7 flex w-full items-center justify-between rounded-full bg-foreground px-6 py-5 text-background transition hover:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <span className="text-[9px] uppercase tracking-[0.3em]">
                         {submitting
                           ? "Redirection..."
-                          : "Payer maintenant"}
+                          : stockLoading
+                            ? "Vérification..."
+                            : !cartStockValid
+                              ? "Stock indisponible"
+                              : "Payer maintenant"}
                       </span>
 
                       <span className="flex items-center gap-4">
                         <span className="font-display text-lg">
-                          {formatPrice(total)}
+                          {formatPrice(
+                            total
+                          )}
                         </span>
 
-                        {!submitting && (
-                          <span className="transition-transform group-hover:translate-x-1">
-                            →
-                          </span>
-                        )}
+                        {!submitting &&
+                          cartStockValid && (
+                            <span className="transition-transform group-hover:translate-x-1">
+                              →
+                            </span>
+                          )}
                       </span>
                     </button>
                   ) : (
@@ -1152,19 +1470,17 @@ export default function PrecommandePage() {
                     </Link>
                   )}
 
-                  {/* RÉASSURANCE */}
-
                   <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[7px] uppercase tracking-[0.22em] text-stone/55">
                     <span>CB</span>
                     <span>·</span>
                     <span>Stripe</span>
                     <span>·</span>
-                    <span>Paiement sécurisé</span>
+                    <span>
+                      Paiement sécurisé
+                    </span>
                   </div>
                 </div>
               </div>
-
-              {/* INFORMATIONS */}
 
               <div className="mt-4 grid grid-cols-2 gap-px bg-surface">
                 <div className="bg-background p-5">
@@ -1173,7 +1489,8 @@ export default function PrecommandePage() {
                   </p>
 
                   <p className="mt-3 text-xs leading-5">
-                    14 jours après réception
+                    14 jours après
+                    réception
                   </p>
                 </div>
 
@@ -1183,7 +1500,8 @@ export default function PrecommandePage() {
                   </p>
 
                   <p className="mt-3 text-xs leading-5">
-                    Offerte dès 3 pièces
+                    Offerte dès 3
+                    pièces
                   </p>
                 </div>
 
@@ -1199,11 +1517,11 @@ export default function PrecommandePage() {
 
                 <div className="bg-background p-5">
                   <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
-                    Production
+                    Drop 001
                   </p>
 
                   <p className="mt-3 text-xs leading-5">
-                    Dès 10 commandes
+                    Stock limité
                   </p>
                 </div>
               </div>
@@ -1211,10 +1529,6 @@ export default function PrecommandePage() {
           </div>
         )}
       </section>
-
-      {/* =====================================================
-          FIN
-      ====================================================== */}
 
       {items.length > 0 && (
         <section className="border-t border-surface px-5 py-20 text-center md:px-8 md:py-28">

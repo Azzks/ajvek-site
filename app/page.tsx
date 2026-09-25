@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 
 import DesignProcessStory from "@/components/DesignProcessStory";
 import HomeIntro from "@/components/HomeIntro";
 
-const PREORDER_GOAL = 10;
 const PRICE = "39,90 €";
 
 const PRODUCTS = [
@@ -18,8 +16,6 @@ const PRODUCTS = [
     name: "ROSES",
     description:
       "Une composition verticale construite autour de la rose et du lettrage AJVEK.",
-    image: "/images/drop-001/roses-black.jpg",
-    alternateImage: "/images/drop-001/roses-white.jpg",
     href: "/catalogue",
   },
   {
@@ -28,8 +24,6 @@ const PRODUCTS = [
     name: "CERISIER",
     description:
       "Une seconde lecture du végétal, plus organique, pensée comme le contrepoint de Roses.",
-    image: "/images/drop-001/cerisier-white.jpg",
-    alternateImage: "/images/drop-001/cerisier-black.jpg",
     href: "/catalogue",
   },
 ];
@@ -43,21 +37,6 @@ export default function Home() {
   const textRef = useRef<HTMLParagraphElement>(null);
   const buttonRef = useRef<HTMLAnchorElement>(null);
   const metaRef = useRef<HTMLDivElement>(null);
-
-  const [count, setCount] = useState<number | null>(null);
-
-  /* =========================================================
-     PRÉCOMMANDES
-  ========================================================= */
-
-  useEffect(() => {
-    fetch("/api/preorder-count", {
-      cache: "no-store",
-    })
-      .then((response) => response.json())
-      .then((data) => setCount(data.count ?? 0))
-      .catch(() => setCount(null));
-  }, []);
 
   /* =========================================================
      HERO
@@ -155,8 +134,7 @@ export default function Home() {
   }, []);
 
   /* =========================================================
-     ANIMATIONS AU SCROLL
-     IntersectionObserver = aucun plugin GSAP supplémentaire
+     REVEAL AU SCROLL
   ========================================================= */
 
   useEffect(() => {
@@ -172,8 +150,8 @@ export default function Home() {
       root.querySelectorAll<HTMLElement>("[data-reveal]")
     );
 
-    const imageElements = Array.from(
-      root.querySelectorAll<HTMLElement>("[data-image-reveal]")
+    const circleElements = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-circle-reveal]")
     );
 
     if (reducedMotion) {
@@ -182,7 +160,7 @@ export default function Home() {
         y: 0,
       });
 
-      gsap.set(imageElements, {
+      gsap.set(circleElements, {
         opacity: 1,
         scale: 1,
       });
@@ -195,9 +173,9 @@ export default function Home() {
       y: 32,
     });
 
-    gsap.set(imageElements, {
+    gsap.set(circleElements, {
       opacity: 0,
-      scale: 1.035,
+      scale: 0.88,
     });
 
     const revealObserver = new IntersectionObserver(
@@ -223,7 +201,7 @@ export default function Home() {
       }
     );
 
-    const imageObserver = new IntersectionObserver(
+    const circleObserver = new IntersectionObserver(
       (entries, observer) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
@@ -233,7 +211,7 @@ export default function Home() {
           gsap.to(element, {
             opacity: 1,
             scale: 1,
-            duration: 1.15,
+            duration: 1.1,
             ease: "power3.out",
           });
 
@@ -242,7 +220,6 @@ export default function Home() {
       },
       {
         threshold: 0.15,
-        rootMargin: "0px 0px -5% 0px",
       }
     );
 
@@ -250,30 +227,15 @@ export default function Home() {
       revealObserver.observe(element);
     });
 
-    imageElements.forEach((element) => {
-      imageObserver.observe(element);
+    circleElements.forEach((element) => {
+      circleObserver.observe(element);
     });
 
     return () => {
       revealObserver.disconnect();
-      imageObserver.disconnect();
+      circleObserver.disconnect();
     };
   }, []);
-
-  const safeCount = count ?? 0;
-
-  const remaining =
-    count !== null
-      ? Math.max(PREORDER_GOAL - safeCount, 0)
-      : PREORDER_GOAL;
-
-  const percent =
-    count !== null
-      ? Math.min((safeCount / PREORDER_GOAL) * 100, 100)
-      : 0;
-
-  const thresholdReached =
-    count !== null && safeCount >= PREORDER_GOAL;
 
   return (
     <main
@@ -292,7 +254,7 @@ export default function Home() {
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.045]"
+          className="pointer-events-none absolute inset-0 opacity-[0.035]"
           style={{
             backgroundImage: `
               linear-gradient(to right, currentColor 1px, transparent 1px),
@@ -300,6 +262,21 @@ export default function Home() {
             `,
             backgroundSize: "25% 25%",
           }}
+        />
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-[20vw] top-[8%] h-[78vw] w-[78vw] rounded-full border border-foreground/[0.055] md:-right-[12vw] md:h-[48vw] md:w-[48vw]"
+        />
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-[4vw] top-[24%] h-[45vw] w-[45vw] rounded-full border border-foreground/[0.07] md:right-[2vw] md:h-[27vw] md:w-[27vw]"
+        />
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-[20vw] bottom-[-25vw] h-[60vw] w-[60vw] rounded-full border border-foreground/[0.04] md:-left-[15vw] md:-bottom-[20vw] md:h-[45vw] md:w-[45vw]"
         />
 
         <div
@@ -352,7 +329,7 @@ export default function Home() {
               <span className="h-px w-8 bg-stone/30" />
 
               <span className="text-[8px] uppercase tracking-[0.35em] text-stone">
-                Précommande ouverte
+                Bientôt disponible
               </span>
             </div>
 
@@ -361,7 +338,7 @@ export default function Home() {
               href="/catalogue"
               className="group mt-8 flex w-full max-w-md items-center justify-between rounded-full bg-foreground px-7 py-5 text-[10px] uppercase tracking-[0.3em] text-background opacity-0 transition duration-500 hover:scale-[0.985] md:w-fit md:min-w-[390px]"
             >
-              <span>Voir le Drop 001</span>
+              <span>Découvrir le Drop 001</span>
 
               <span className="text-lg transition-transform duration-500 group-hover:translate-x-2">
                 →
@@ -369,7 +346,7 @@ export default function Home() {
             </Link>
 
             <p className="mt-5 text-[8px] uppercase tracking-[0.3em] text-stone/45">
-              Paiement sécurisé · Série limitée
+              Stock limité · Bientôt disponible
             </p>
           </div>
 
@@ -398,38 +375,43 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-5 md:px-8">
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 py-5 text-center text-[8px] uppercase tracking-[0.27em] text-stone md:gap-x-8">
             <span>{PRICE}</span>
+
             <span className="text-stone/25">·</span>
-            <span>Paiement sécurisé</span>
+
+            <span>Bientôt disponible</span>
+
             <span className="text-stone/25">·</span>
+
             <span>Série limitée</span>
+
             <span className="text-stone/25">·</span>
+
             <span>Drop 001</span>
           </div>
         </div>
       </section>
 
       {/* =====================================================
-          INTRO PRODUITS
+          DROP
       ====================================================== */}
 
-      <section className="px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
-        <div
-          data-reveal
-          className="mx-auto max-w-7xl"
-        >
+      <section className="px-5 pb-12 pt-20 md:px-8 md:pb-16 md:pt-28">
+        <div data-reveal className="mx-auto max-w-7xl">
           <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
             01 — Drop 001
           </p>
 
           <div className="mt-8 grid gap-7 md:grid-cols-2 md:items-end">
             <h2 className="font-display text-[3.5rem] leading-[0.88] tracking-[-0.04em] sm:text-6xl md:text-8xl">
-              Les
+              Deux
               <br />
               pièces.
             </h2>
 
             <p className="max-w-md text-[15px] leading-7 text-stone md:justify-self-end">
-              Deux dessins. Deux interprétations du végétal.
+              Deux dessins.
+              <br />
+              Deux interprétations du végétal.
               <br />
               Le premier chapitre AJVEK.
             </p>
@@ -441,209 +423,164 @@ export default function Home() {
           PRODUITS
       ====================================================== */}
 
-      <section className="border-b border-surface">
+      <section className="border-b border-surface px-5 pb-24 pt-8 md:px-8 md:pb-32">
         <div className="mx-auto max-w-7xl">
-          {PRODUCTS.map((product, index) => (
-            <article
-              key={product.name}
-              className={`grid md:grid-cols-2 ${
-                index !== PRODUCTS.length - 1
-                  ? "border-b border-surface"
-                  : ""
-              }`}
-            >
-              {/* IMAGE */}
-
-              <Link
-                href={product.href}
-                data-image-reveal
-                className={`group relative aspect-[4/5] overflow-hidden bg-[#d5d4d1] md:aspect-square ${
-                  index % 2 === 1 ? "md:order-2" : ""
-                }`}
-              >
-                <Image
-                  src={product.image}
-                  alt={`T-shirt AJVEK ${product.name}`}
-                  fill
-                  priority={index === 0}
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.035]"
-                />
-
-                <div className="absolute inset-0 bg-black/0 transition-colors duration-700 group-hover:bg-black/[0.025]" />
-
-                <div className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-background/90 text-[9px] tracking-[0.2em] backdrop-blur-md transition-transform duration-500 group-hover:scale-105">
-                  {product.number}
-                </div>
-
-                <div className="absolute bottom-5 left-5 text-[8px] uppercase tracking-[0.4em] text-black/60">
-                  AJVEK · DROP 001
-                </div>
-
-                <div className="absolute bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-white text-xl text-black transition duration-500 group-hover:scale-110 group-hover:rotate-[-4deg]">
-                  →
-                </div>
-              </Link>
-
-              {/* TEXTE */}
-
-              <div
+          <div className="grid gap-16 md:grid-cols-2 md:gap-8">
+            {PRODUCTS.map((product, index) => (
+              <article
+                key={product.name}
                 data-reveal
-                className={`flex flex-col justify-center px-5 py-14 md:px-12 md:py-20 lg:px-16 ${
-                  index % 2 === 1 ? "md:order-1" : ""
+                className={`flex flex-col ${
+                  index === 1 ? "md:translate-y-24" : ""
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-[8px] uppercase tracking-[0.4em] text-stone/60">
-                    {product.code}
-                  </p>
+                <Link
+                  href={product.href}
+                  data-circle-reveal
+                  className="group relative mx-auto flex aspect-square w-full max-w-[520px] items-center justify-center rounded-full border border-surface transition-all duration-700 hover:border-stone/50"
+                >
+                  <div className="absolute inset-[8%] rounded-full border border-surface/70 transition-transform duration-1000 group-hover:scale-[0.96]" />
 
-                  <p className="text-[8px] uppercase tracking-[0.4em] text-stone/60">
-                    {product.number} / 02
-                  </p>
-                </div>
+                  <div className="absolute inset-[18%] rounded-full border border-surface/40 transition-transform duration-1000 group-hover:scale-[1.04]" />
 
-                <p className="mt-16 text-[9px] uppercase tracking-[0.4em] text-stone">
-                  AJVEK · Drop 001
-                </p>
+                  <div className="absolute left-[10%] top-[14%] flex h-12 w-12 items-center justify-center rounded-full border border-surface bg-background text-[9px] tracking-[0.2em]">
+                    {product.number}
+                  </div>
 
-                <h3 className="mt-6 font-display text-[3.8rem] leading-[0.85] tracking-[-0.04em] sm:text-7xl lg:text-8xl">
-                  {product.name}
-                </h3>
-
-                <p className="mt-8 max-w-md text-[15px] leading-7 text-stone">
-                  {product.description}
-                </p>
-
-                <div className="mt-9 flex flex-wrap gap-2">
-                  {["Oversize", "Broderie", "DTF"].map(
-                    (feature) => (
-                      <span
-                        key={feature}
-                        className="border border-surface px-5 py-3 text-[8px] uppercase tracking-[0.32em] text-stone transition duration-300 hover:border-stone/50 hover:text-foreground"
-                      >
-                        {feature}
-                      </span>
-                    )
-                  )}
-                </div>
-
-                <div className="mt-12 flex items-end justify-between border-t border-surface pt-7">
-                  <div>
-                    <p className="text-[8px] uppercase tracking-[0.35em] text-stone/50">
-                      Prix
+                  <div className="relative z-10 text-center">
+                    <p className="text-[8px] uppercase tracking-[0.45em] text-stone">
+                      {product.code}
                     </p>
 
-                    <p className="mt-2 font-display text-4xl">
+                    <h3 className="mt-5 font-display text-[13vw] leading-none tracking-[-0.05em] sm:text-7xl md:text-[5.5vw] lg:text-8xl">
+                      {product.name}
+                    </h3>
+
+                    <p className="mx-auto mt-6 max-w-[240px] text-xs leading-6 text-stone">
+                      {product.description}
+                    </p>
+                  </div>
+
+                  <div className="absolute bottom-[8%] right-[13%] flex h-14 w-14 items-center justify-center rounded-full bg-foreground text-xl text-background transition-all duration-500 group-hover:translate-x-1 group-hover:scale-110">
+                    →
+                  </div>
+                </Link>
+
+                <div className="mx-auto mt-8 w-full max-w-[520px]">
+                  <div className="flex items-center justify-between border-b border-surface pb-5">
+                    <p className="text-[8px] uppercase tracking-[0.35em] text-stone">
+                      AJVEK · Drop 001
+                    </p>
+
+                    <p className="font-display text-2xl">
                       {PRICE}
                     </p>
                   </div>
 
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-stone/50">
-                    Précommande
-                  </p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {["Oversize", "Broderie", "DTF"].map(
+                      (feature) => (
+                        <span
+                          key={feature}
+                          className="rounded-full border border-surface px-4 py-2 text-[7px] uppercase tracking-[0.3em] text-stone"
+                        >
+                          {feature}
+                        </span>
+                      )
+                    )}
+                  </div>
+
+                  <Link
+                    href={product.href}
+                    className="group mt-7 flex items-center justify-between rounded-full border border-foreground px-6 py-5 text-[9px] uppercase tracking-[0.3em] transition-all duration-500 hover:bg-foreground hover:text-background"
+                  >
+                    <span>
+                      Découvrir {product.name}
+                    </span>
+
+                    <span className="transition-transform duration-500 group-hover:translate-x-2">
+                      →
+                    </span>
+                  </Link>
                 </div>
-
-                <Link
-                  href={product.href}
-                  className="group mt-7 flex items-center justify-between rounded-full border border-foreground px-6 py-5 text-[9px] uppercase tracking-[0.3em] transition-all duration-500 hover:bg-foreground hover:text-background"
-                >
-                  <span>
-                    Précommander {product.name}
-                  </span>
-
-                  <span className="text-base transition-transform duration-500 group-hover:translate-x-2">
-                    →
-                  </span>
-                </Link>
-              </div>
-            </article>
-          ))}
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* =====================================================
-          PRÉCOMMANDES
+          DISPONIBILITÉ
       ====================================================== */}
 
-      <section className="border-b border-surface px-5 py-20 md:px-8 md:py-28">
+      <section className="relative overflow-hidden border-b border-surface px-5 py-24 md:px-8 md:py-32">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[115vw] -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/[0.035] md:w-[70vw]"
+        />
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[85vw] -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/[0.04] md:w-[45vw]"
+        />
+
         <div
           data-reveal
-          className="mx-auto max-w-7xl"
+          className="relative z-10 mx-auto max-w-7xl"
         >
-          <div className="grid gap-14 md:grid-cols-[0.85fr_1.15fr] md:items-end md:gap-24">
+          <div className="grid gap-14 md:grid-cols-[0.9fr_1.1fr] md:items-center md:gap-24">
             <div>
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
-                Première série
+                Drop 001 · Disponibilité
               </p>
 
               <h2 className="mt-7 max-w-lg font-display text-[3.5rem] leading-[0.9] tracking-[-0.04em] md:text-7xl">
-                10 pièces.
+                Bientôt
                 <br />
-                Pas plus.
+                disponible.
               </h2>
+
+              <p className="mt-7 max-w-md text-[14px] leading-7 text-stone">
+                Les premières pièces AJVEK arrivent bientôt.
+                Le Drop 001 ouvrira à la commande dès la mise
+                en ligne du stock.
+              </p>
             </div>
 
-            <div>
-              <p className="max-w-lg text-[15px] leading-7 text-stone">
-                Drop 001 commence par une première série de dix
-                précommandes. Une production courte pour lancer
-                AJVEK sans surproduire.
-              </p>
+            <div className="relative mx-auto flex aspect-square w-full max-w-[380px] items-center justify-center rounded-full border border-surface">
+              <div className="absolute inset-[8%] rounded-full border border-surface/60" />
 
-              <div className="mt-10">
-                <div className="flex items-end justify-between">
-                  <p className="text-[8px] uppercase tracking-[0.35em] text-stone">
-                    Première série
-                  </p>
+              <div className="relative z-10 px-8 text-center">
+                <p className="text-[8px] uppercase tracking-[0.4em] text-stone">
+                  Drop 001
+                </p>
 
-                  {count !== null && count > 0 && (
-                    <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
-                      {safeCount} / {PREORDER_GOAL}
-                    </p>
-                  )}
-                </div>
+                <p className="mt-5 font-display text-4xl leading-none md:text-5xl">
+                  ARRIVE
+                  <br />
+                  BIENTÔT
+                </p>
 
-                <div className="mt-5 h-px overflow-hidden bg-surface">
-                  <div
-                    className="h-full bg-foreground transition-all duration-1000"
-                    style={{
-                      width: `${percent}%`,
-                    }}
-                  />
-                </div>
-
-                <div className="mt-4 flex justify-between text-[8px] uppercase tracking-[0.32em] text-stone/40">
-                  <span>Lancement</span>
-                  <span>10 pièces</span>
-                </div>
+                <p className="mt-5 text-[9px] uppercase tracking-[0.3em] text-stone">
+                  Stock limité
+                </p>
               </div>
-
-              <p className="mt-8 text-sm leading-6 text-stone/70">
-                {thresholdReached
-                  ? "La première série est complète."
-                  : count !== null && count > 0
-                  ? `${remaining} ${
-                      remaining > 1
-                        ? "pièces restantes"
-                        : "pièce restante"
-                    } avant le lancement de la production.`
-                  : "Les premières précommandes sont ouvertes."}
-              </p>
-
-              <Link
-                href="/catalogue"
-                className="group mt-9 flex w-full items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition-transform duration-500 hover:scale-[0.99]"
-              >
-                <span>
-                  Précommander · {PRICE}
-                </span>
-
-                <span className="text-base transition-transform duration-500 group-hover:translate-x-2">
-                  →
-                </span>
-              </Link>
             </div>
+          </div>
+
+          <div className="mx-auto mt-14 max-w-md md:ml-auto md:mr-0">
+            <Link
+              href="/catalogue"
+              className="group flex w-full items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition-transform duration-500 hover:scale-[0.99]"
+            >
+              <span>
+                Découvrir le Drop · {PRICE}
+              </span>
+
+              <span className="text-base transition-transform duration-500 group-hover:translate-x-2">
+                →
+              </span>
+            </Link>
           </div>
         </div>
       </section>
@@ -652,11 +589,8 @@ export default function Home() {
           PROCESS
       ====================================================== */}
 
-      <section className="border-b border-surface px-5 py-12 md:px-8 md:py-16">
-        <div
-          data-reveal
-          className="mx-auto max-w-7xl"
-        >
+      <section className="border-b border-surface px-5 py-14 md:px-8 md:py-20">
+        <div data-reveal className="mx-auto max-w-7xl">
           <div className="grid gap-8 md:grid-cols-2 md:items-end">
             <div>
               <p className="text-[9px] uppercase tracking-[0.4em] text-stone">
@@ -687,10 +621,13 @@ export default function Home() {
       <section className="relative overflow-hidden border-y border-surface px-5 py-24 md:px-8 md:py-36">
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-10 top-1/2 -translate-y-1/2 font-display text-[65vw] leading-none text-foreground/[0.018] md:text-[30vw]"
-        >
-          A
-        </div>
+          className="pointer-events-none absolute -right-[30vw] top-1/2 aspect-square w-[85vw] -translate-y-1/2 rounded-full border border-foreground/[0.04] md:-right-[15vw] md:w-[55vw]"
+        />
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-[15vw] top-1/2 aspect-square w-[55vw] -translate-y-1/2 rounded-full border border-foreground/[0.045] md:-right-[4vw] md:w-[32vw]"
+        />
 
         <div
           data-reveal
@@ -712,8 +649,8 @@ export default function Home() {
           </h2>
 
           <p className="mt-10 max-w-lg text-[15px] leading-7 text-stone">
-            AJVEK construit chaque pièce autour du dessin, de sa
-            composition et de sa place sur le vêtement.
+            AJVEK construit chaque pièce autour du dessin,
+            de sa composition et de sa place sur le vêtement.
           </p>
         </div>
       </section>
@@ -722,13 +659,21 @@ export default function Home() {
           CTA FINAL
       ====================================================== */}
 
-      <section className="relative flex min-h-[70svh] items-center overflow-hidden px-5 py-24 text-center md:px-8 md:py-32">
+      <section className="relative flex min-h-[75svh] items-center overflow-hidden px-5 py-24 text-center md:px-8 md:py-32">
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-[25vw] leading-none text-foreground/[0.02]"
-        >
-          DROP 001
-        </div>
+          className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[110vw] -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/[0.04] md:w-[65vw]"
+        />
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[80vw] -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/[0.055] md:w-[42vw]"
+        />
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[52vw] -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/[0.05] md:w-[25vw]"
+        />
 
         <div
           data-reveal
@@ -741,38 +686,43 @@ export default function Home() {
           <h2 className="mt-8 font-display text-[3.6rem] leading-[0.88] tracking-[-0.04em] sm:text-7xl md:text-8xl">
             ROSES
             <span className="text-stone">
-              {" "}
-              /{" "}
+              {" / "}
             </span>
-
-            <br className="sm:hidden" />
-
+            <br />
             CERISIER
           </h2>
 
-          <p className="mx-auto mt-8 max-w-md text-[15px] leading-7 text-stone">
-            Le premier chapitre AJVEK.
-            <br />
-            Disponible maintenant en précommande.
+          <p className="mx-auto mt-8 max-w-md text-[14px] leading-7 text-stone">
+            Le premier chapitre AJVEK arrive bientôt.
+            Découvre les pièces du Drop 001 avant l&apos;ouverture
+            des commandes.
           </p>
 
-          <p className="mt-7 font-display text-4xl">
-            {PRICE}
-          </p>
+          <div className="mx-auto mt-8 flex w-fit items-center gap-4">
+            <span className="font-display text-3xl">
+              {PRICE}
+            </span>
+
+            <span className="h-px w-8 bg-stone/30" />
+
+            <span className="text-[8px] uppercase tracking-[0.35em] text-stone">
+              Bientôt disponible
+            </span>
+          </div>
 
           <Link
             href="/catalogue"
-            className="group mx-auto mt-9 flex w-full max-w-xl items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition-transform duration-500 hover:scale-[0.99]"
+            className="group mx-auto mt-10 flex w-full max-w-md items-center justify-between rounded-full bg-foreground px-7 py-5 text-[9px] uppercase tracking-[0.3em] text-background transition-transform duration-500 hover:scale-[0.99]"
           >
-            <span>Choisir ma pièce</span>
+            <span>Voir la collection</span>
 
-            <span className="text-lg transition-transform duration-500 group-hover:translate-x-2">
+            <span className="text-base transition-transform duration-500 group-hover:translate-x-2">
               →
             </span>
           </Link>
 
-          <p className="mt-12 text-[8px] uppercase tracking-[0.45em] text-stone/40">
-            AJVEK · DROP 001 · 2026
+          <p className="mt-6 text-[8px] uppercase tracking-[0.3em] text-stone/45">
+            Drop 001 · Stock limité · 2026
           </p>
         </div>
       </section>

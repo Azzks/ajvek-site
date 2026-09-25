@@ -3,19 +3,33 @@ import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { Resend } from "resend";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
 const SITE_URL = "https://ajvek.fr";
 const OWNER_EMAIL = "ajvek.contact@gmail.com";
 const FROM_EMAIL = "AJVEK <commandes@ajvek.fr>";
 
-const PRODUCTION_GOAL = 10;
+/*
+ * ============================================================
+ * OUTILS
+ * ============================================================
+ */
 
 function escapeHtml(value: unknown) {
   return String(value ?? "")
@@ -27,12 +41,23 @@ function escapeHtml(value: unknown) {
 }
 
 function formatEurosFromCents(amount: number) {
-  return `${(amount / 100).toFixed(2).replace(".", ",")} €`;
+  return `${(amount / 100)
+    .toFixed(2)
+    .replace(".", ",")} €`;
 }
 
 function shortOrderId(id: string) {
-  return id.replaceAll("-", "").slice(0, 8).toUpperCase();
+  return id
+    .replaceAll("-", "")
+    .slice(0, 8)
+    .toUpperCase();
 }
+
+/*
+ * ============================================================
+ * TEMPLATE EMAIL
+ * ============================================================
+ */
 
 function buildEmailLayout({
   eyebrow,
@@ -117,7 +142,10 @@ function buildEmailLayout({
     style="background:#0c0c0b;"
   >
     <tr>
-      <td align="center" style="padding:32px 16px;">
+      <td
+        align="center"
+        style="padding:32px 16px;"
+      >
         <table
           role="presentation"
           width="100%"
@@ -174,7 +202,11 @@ function buildEmailLayout({
           </tr>
 
           <tr>
-            <td style="padding:40px 32px 36px;">
+            <td
+              style="
+                padding:40px 32px 36px;
+              "
+            >
               <p
                 style="
                   margin:0;
@@ -215,7 +247,6 @@ function buildEmailLayout({
               </p>
 
               ${content}
-
               ${button}
 
               <p
@@ -261,25 +292,31 @@ function buildEmailLayout({
   </table>
 </body>
 </html>
-  `;
+`;
 }
 
-function buildItemsHtml(preorders: any[]) {
-  const grouped = new Map<
-    string,
-    {
-      name: string;
-      color: string;
-      size: string;
-      quantity: number;
-    }
-  >();
+/*
+ * ============================================================
+ * REGROUPEMENT DES ARTICLES
+ * ============================================================
+ */
 
-  for (const preorder of preorders) {
+type GroupedItem = {
+  product_slug: string;
+  name: string;
+  color: string;
+  size: string;
+  quantity: number;
+};
+
+function groupItems(rows: any[]): GroupedItem[] {
+  const grouped = new Map<string, GroupedItem>();
+
+  for (const row of rows) {
     const key = [
-      preorder.product_slug,
-      preorder.color,
-      preorder.size,
+      row.product_slug,
+      row.color,
+      row.size,
     ].join("::");
 
     const existing = grouped.get(key);
@@ -288,15 +325,20 @@ function buildItemsHtml(preorders: any[]) {
       existing.quantity += 1;
     } else {
       grouped.set(key, {
-        name: preorder.product_name || "AJVEK",
-        color: preorder.color || "-",
-        size: preorder.size || "-",
+        product_slug: row.product_slug,
+        name: row.product_name || "AJVEK",
+        color: row.color || "-",
+        size: row.size || "-",
         quantity: 1,
       });
     }
   }
 
-  return Array.from(grouped.values())
+  return Array.from(grouped.values());
+}
+
+function buildItemsHtml(rows: any[]) {
+  return groupItems(rows)
     .map(
       (item) => `
         <tr>
@@ -338,45 +380,20 @@ function buildItemsHtml(preorders: any[]) {
     .join("");
 }
 
-function buildTextSummary(preorders: any[]) {
-  const grouped = new Map<
-    string,
-    {
-      name: string;
-      color: string;
-      size: string;
-      quantity: number;
-    }
-  >();
-
-  for (const preorder of preorders) {
-    const key = [
-      preorder.product_slug,
-      preorder.color,
-      preorder.size,
-    ].join("::");
-
-    const existing = grouped.get(key);
-
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      grouped.set(key, {
-        name: preorder.product_name || "AJVEK",
-        color: preorder.color || "-",
-        size: preorder.size || "-",
-        quantity: 1,
-      });
-    }
-  }
-
-  return Array.from(grouped.values())
+function buildTextSummary(rows: any[]) {
+  return groupItems(rows)
     .map(
       (item) =>
         `- ${item.name} — ${item.color} — Taille ${item.size} — x${item.quantity}`
     )
     .join("\n");
 }
+
+/*
+ * ============================================================
+ * RETROUVER LE CHECKOUT GROUP
+ * ============================================================
+ */
 
 async function findCheckoutGroupFromPaymentIntent(
   paymentIntent: Stripe.PaymentIntent
@@ -389,13 +406,15 @@ async function findCheckoutGroupFromPaymentIntent(
   }
 
   try {
-    const sessions = await stripe.checkout.sessions.list({
-      payment_intent: paymentIntent.id,
-      limit: 1,
-    });
+    const sessions =
+      await stripe.checkout.sessions.list({
+        payment_intent: paymentIntent.id,
+        limit: 1,
+      });
 
     return (
-      sessions.data[0]?.metadata?.checkout_group_id || null
+      sessions.data[0]?.metadata
+        ?.checkout_group_id || null
     );
   } catch (error) {
     console.error(
@@ -407,8 +426,15 @@ async function findCheckoutGroupFromPaymentIntent(
   }
 }
 
+/*
+ * ============================================================
+ * WEBHOOK
+ * ============================================================
+ */
+
 export async function POST(request: Request) {
-  const signature = request.headers.get("stripe-signature");
+  const signature =
+    request.headers.get("stripe-signature");
 
   if (!signature) {
     return NextResponse.json(
@@ -467,12 +493,15 @@ export async function POST(request: Request) {
 
   try {
     /*
-     * ============================================================
+     * ========================================================
      * PAIEMENT RÉUSSI
-     * ============================================================
+     * ========================================================
      */
 
-    if (event.type === "checkout.session.completed") {
+    if (
+      event.type ===
+      "checkout.session.completed"
+    ) {
       const session =
         event.data.object as Stripe.Checkout.Session;
 
@@ -495,9 +524,19 @@ export async function POST(request: Request) {
         });
       }
 
+      /*
+       * ======================================================
+       * RÉCUPÉRATION DE LA COMMANDE
+       * ======================================================
+       *
+       * On récupère les informations AVANT la finalisation
+       * pour construire ensuite les emails.
+       * ======================================================
+       */
+
       const {
-        data: preorders,
-        error: preorderReadError,
+        data: orders,
+        error: orderReadError,
       } = await supabaseAdmin
         .from("preorders")
         .select("*")
@@ -507,78 +546,18 @@ export async function POST(request: Request) {
         );
 
       if (
-        preorderReadError ||
-        !preorders ||
-        preorders.length === 0
+        orderReadError ||
+        !orders ||
+        orders.length === 0
       ) {
         console.error(
-          "[stripe-webhook] Précommandes introuvables :",
-          preorderReadError
-        );
-
-        return NextResponse.json({
-          received: true,
-        });
-      }
-
-      /*
-       * ==========================================================
-       * ANTI-DOUBLON
-       * ==========================================================
-       */
-
-      const alreadyPaid = preorders.every(
-        (preorder) => preorder.paid === true
-      );
-
-      if (alreadyPaid) {
-        console.log(
-          "[stripe-webhook] Paiement déjà traité :",
-          checkoutGroupId
-        );
-
-        return NextResponse.json({
-          received: true,
-        });
-      }
-
-      const unpaidPreorders = preorders.filter(
-        (preorder) => preorder.paid !== true
-      );
-
-      const paidAt = new Date().toISOString();
-
-      /*
-       * ==========================================================
-       * VALIDATION DE LA PRÉCOMMANDE
-       * ==========================================================
-       */
-
-      const { error: updateError } =
-        await supabaseAdmin
-          .from("preorders")
-          .update({
-            paid: true,
-            paid_at: paidAt,
-            stripe_session_id: session.id,
-            payment_failure_notified_at: null,
-            order_status: "preorder_received",
-          })
-          .eq(
-            "checkout_group_id",
-            checkoutGroupId
-          )
-          .eq("paid", false);
-
-      if (updateError) {
-        console.error(
-          "[stripe-webhook] Erreur mise à jour précommandes :",
-          updateError
+          "[stripe-webhook] Commande introuvable :",
+          orderReadError
         );
 
         return NextResponse.json(
           {
-            error: "Erreur Supabase.",
+            error: "Commande introuvable.",
           },
           {
             status: 500,
@@ -587,93 +566,115 @@ export async function POST(request: Request) {
       }
 
       /*
-       * ==========================================================
-       * SEUIL DE PRODUCTION — 10 PRÉCOMMANDES PAYÉES
-       * ==========================================================
+       * ======================================================
+       * FINALISATION ATOMIQUE
+       * ======================================================
        *
-       * IMPORTANT :
+       * PostgreSQL effectue maintenant EN UNE TRANSACTION :
        *
-       * Une précommande correspond à un checkout_group_id.
+       * - verrouillage de la commande
+       * - vérification de l'idempotence
+       * - vérification du stock
+       * - verrouillage du stock
+       * - décrémentation du stock
+       * - passage de la commande à paid
        *
-       * Une précommande contenant 1 vêtement = +1.
-       * Une précommande contenant 5 vêtements = +1.
-       *
-       * On ne compte donc PAS les lignes de la table.
-       * On compte les checkout_group_id uniques et payés.
+       * Aucun decrement_product_stock ici.
+       * Aucun restore_product_stock ici.
+       * ======================================================
        */
 
+      const paidAt =
+        new Date().toISOString();
+
       const {
-        data: paidOrderRows,
-        error: paidOrdersError,
-      } = await supabaseAdmin
-        .from("preorders")
-        .select("checkout_group_id")
-        .eq("paid", true);
+        data: finalizeResult,
+        error: finalizeError,
+      } = await supabaseAdmin.rpc(
+        "finalize_paid_order",
+        {
+          p_checkout_group_id:
+            checkoutGroupId,
 
-      if (paidOrdersError) {
-        console.error(
-          "[stripe-webhook] Impossible de compter les précommandes payées :",
-          paidOrdersError
-        );
-      } else {
-        const uniquePaidOrders = new Set(
-          (paidOrderRows ?? [])
-            .map(
-              (row) =>
-                row.checkout_group_id
-            )
-            .filter(
-              (
-                id
-              ): id is string =>
-                typeof id === "string" &&
-                id.length > 0
-            )
-        );
+          p_stripe_session_id:
+            session.id,
 
-        const paidOrderCount =
-          uniquePaidOrders.size;
-
-        console.log(
-          `[stripe-webhook] Seuil production : ${paidOrderCount}/${PRODUCTION_GOAL} précommandes payées`
-        );
-
-        if (
-          paidOrderCount >=
-          PRODUCTION_GOAL
-        ) {
-          const {
-            error:
-              productionUpdateError,
-          } = await supabaseAdmin
-            .from("preorders")
-            .update({
-              order_status:
-                "production",
-            })
-            .eq("paid", true)
-            .eq(
-              "order_status",
-              "preorder_received"
-            );
-
-          if (
-            productionUpdateError
-          ) {
-            console.error(
-              "[stripe-webhook] Impossible de lancer automatiquement la production :",
-              productionUpdateError
-            );
-          } else {
-            console.log(
-              `[stripe-webhook] Seuil de ${PRODUCTION_GOAL} précommandes payées atteint — production lancée.`
-            );
-          }
+          p_paid_at:
+            paidAt,
         }
+      );
+
+      if (finalizeError) {
+        console.error(
+          "[stripe-webhook] Impossible de finaliser la commande :",
+          {
+            checkoutGroupId,
+            error: finalizeError,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de finaliser la commande.",
+          },
+          {
+            status: 500,
+          }
+        );
       }
 
-      const first =
-        unpaidPreorders[0];
+      /*
+       * Stripe peut envoyer plusieurs fois
+       * checkout.session.completed.
+       *
+       * La fonction SQL nous indique que la
+       * commande avait déjà été finalisée.
+       *
+       * On s'arrête également ici pour éviter
+       * de renvoyer les emails.
+       */
+
+      if (
+        finalizeResult?.already_processed ===
+        true
+      ) {
+        console.log(
+          "[stripe-webhook] Commande déjà traitée :",
+          checkoutGroupId
+        );
+
+        return NextResponse.json({
+          received: true,
+        });
+      }
+
+      if (
+        finalizeResult?.success !== true
+      ) {
+        console.error(
+          "[stripe-webhook] Résultat inattendu de finalize_paid_order :",
+          finalizeResult
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Résultat de finalisation invalide.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      /*
+       * ======================================================
+       * INFORMATIONS COMMANDE
+       * ======================================================
+       */
+
+      const first = orders[0];
 
       const customerName =
         first?.name || "client";
@@ -685,26 +686,30 @@ export async function POST(request: Request) {
         first?.phone || "-";
 
       const itemCount =
-        unpaidPreorders.length;
+        orders.length;
 
       const orderNumber =
         shortOrderId(checkoutGroupId);
 
       const summary =
-        buildTextSummary(unpaidPreorders);
+        buildTextSummary(orders);
 
       const itemsHtml =
-        buildItemsHtml(unpaidPreorders);
+        buildItemsHtml(orders);
 
       const isRelay =
-        first?.delivery_method === "relay";
+        first?.delivery_method ===
+        "relay";
 
-      const deliveryMethod = isRelay
-        ? "Point Relais Mondial Relay"
-        : "Livraison à domicile";
+      const deliveryMethod =
+        isRelay
+          ? "Point Relais Mondial Relay"
+          : "Livraison à domicile";
 
       const shippingAmountNumber =
-        Number(first?.shipping_amount ?? 0);
+        Number(
+          first?.shipping_amount ?? 0
+        );
 
       const shippingAmount =
         shippingAmountNumber === 0
@@ -717,9 +722,9 @@ export async function POST(request: Request) {
         `${SITE_URL}/mes-commandes`;
 
       /*
-       * ==========================================================
-       * INFORMATIONS LIVRAISON HTML
-       * ==========================================================
+       * ======================================================
+       * INFORMATIONS LIVRAISON
+       * ======================================================
        */
 
       let deliveryHtml = `
@@ -736,7 +741,9 @@ export async function POST(request: Request) {
             <strong style="color:#f3f0ea;">
               Mode
             </strong>
+
             <br />
+
             ${escapeHtml(deliveryMethod)}
           </td>
         </tr>
@@ -757,6 +764,7 @@ export async function POST(request: Request) {
               <strong style="color:#f3f0ea;">
                 Point Relais
               </strong>
+
               <br />
 
               ${escapeHtml(
@@ -778,6 +786,7 @@ export async function POST(request: Request) {
                 first?.service_point_postal_code ||
                   ""
               )}
+
               ${escapeHtml(
                 first?.service_point_city || ""
               )}
@@ -800,34 +809,265 @@ export async function POST(request: Request) {
             <strong style="color:#f3f0ea;">
               Livraison
             </strong>
+
             <br />
+
             ${escapeHtml(shippingAmount)}
           </td>
         </tr>
       `;
 
       /*
-       * ==========================================================
+       * ======================================================
        * EMAIL CLIENT
-       * ==========================================================
+       * ======================================================
        */
 
       if (customerEmail) {
-        const customerHtml = buildEmailLayout({
-          eyebrow: `Commande #${orderNumber}`,
+        const customerHtml =
+          buildEmailLayout({
+            eyebrow:
+              `Commande #${orderNumber}`,
 
-          title: "Précommande confirmée",
+            title:
+              "Commande confirmée",
+
+            intro:
+              `Bonjour ${escapeHtml(
+                customerName
+              )}, ton paiement a bien été reçu. ` +
+              `Ta commande AJVEK est maintenant confirmée.`,
+
+            content: `
+              <div
+                style="
+                  margin-top:32px;
+                  border-top:1px solid #2a2926;
+                "
+              >
+                <p
+                  style="
+                    margin:24px 0 8px;
+                    font-family:Arial,Helvetica,sans-serif;
+                    font-size:9px;
+                    letter-spacing:3px;
+                    text-transform:uppercase;
+                    color:#8f8b83;
+                  "
+                >
+                  Ta commande
+                </p>
+
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+                  ${itemsHtml}
+                </table>
+              </div>
+
+              <div
+                style="
+                  margin-top:30px;
+                  padding:22px;
+                  border:1px solid #2a2926;
+                  background:#0c0c0b;
+                "
+              >
+                <p
+                  style="
+                    margin:0 0 10px;
+                    font-family:Arial,Helvetica,sans-serif;
+                    font-size:9px;
+                    letter-spacing:3px;
+                    text-transform:uppercase;
+                    color:#8f8b83;
+                  "
+                >
+                  Drop 001
+                </p>
+
+                <p
+                  style="
+                    margin:0;
+                    font-family:Georgia,'Times New Roman',serif;
+                    font-size:21px;
+                    line-height:29px;
+                    color:#f3f0ea;
+                  "
+                >
+                  Ta pièce est réservée.
+                  Nous préparerons ta commande
+                  pour son expédition.
+                </p>
+              </div>
+
+              <div
+                style="
+                  margin-top:30px;
+                  border-top:1px solid #2a2926;
+                "
+              >
+                <p
+                  style="
+                    margin:24px 0 8px;
+                    font-family:Arial,Helvetica,sans-serif;
+                    font-size:9px;
+                    letter-spacing:3px;
+                    text-transform:uppercase;
+                    color:#8f8b83;
+                  "
+                >
+                  Livraison
+                </p>
+
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
+                  ${deliveryHtml}
+                </table>
+              </div>
+            `,
+
+            buttonLabel:
+              "Suivre ma commande",
+
+            buttonUrl:
+              trackingPageUrl,
+
+            footerText:
+              "Tu peux retrouver l’avancement de ta commande à tout moment depuis ton espace AJVEK.",
+          });
+
+        const {
+          error: customerEmailError,
+        } = await resend.emails.send({
+          from: FROM_EMAIL,
+
+          to: customerEmail,
+
+          subject:
+            `Commande AJVEK #${orderNumber} confirmée`,
+
+          html: customerHtml,
+
+          text:
+            `Bonjour ${customerName},\n\n` +
+            `Ton paiement a bien été reçu et ta commande AJVEK est confirmée.\n\n` +
+            `Commande #${orderNumber}\n\n` +
+            `Articles :\n${summary}\n\n` +
+            `Nombre de vêtements : ${itemCount}\n` +
+            `Mode de livraison : ${deliveryMethod}\n` +
+            `Frais de livraison : ${shippingAmount}\n\n` +
+            `Ta pièce est maintenant réservée et ta commande sera préparée pour son expédition.\n\n` +
+            `Suivre ma commande : ${trackingPageUrl}\n\n` +
+            `Merci pour ta confiance,\n` +
+            `L'équipe AJVEK`,
+        });
+
+        if (customerEmailError) {
+          console.error(
+            "[stripe-webhook] Erreur email client :",
+            customerEmailError
+          );
+        }
+      }
+
+      /*
+       * ======================================================
+       * EMAIL ÉQUIPE AJVEK
+       * ======================================================
+       */
+
+      let ownerDeliveryDetails =
+        deliveryMethod;
+
+      if (isRelay) {
+        ownerDeliveryDetails +=
+          `\nPoint Relais : ${
+            first?.service_point_name ||
+            "-"
+          }\n` +
+          `Adresse : ${
+            first?.service_point_address ||
+            "-"
+          }\n` +
+          `Code postal : ${
+            first?.service_point_postal_code ||
+            "-"
+          }\n` +
+          `Ville : ${
+            first?.service_point_city ||
+            "-"
+          }\n` +
+          `ID Point Relais : ${
+            first?.service_point_id ||
+            "-"
+          }`;
+      }
+
+      const ownerHtml =
+        buildEmailLayout({
+          eyebrow:
+            `Nouvelle commande #${orderNumber}`,
+
+          title:
+            "Nouvelle commande payée",
 
           intro:
-            `Bonjour ${escapeHtml(
+            `Une nouvelle commande AJVEK vient d’être payée par ` +
+            `<strong style="color:#f3f0ea;">${escapeHtml(
               customerName
-            )}, ton paiement a bien été reçu. ` +
-            `Ta précommande AJVEK est maintenant confirmée.`,
+            )}</strong>.`,
 
           content: `
             <div
               style="
-                margin-top:32px;
+                margin-top:30px;
+                padding:20px;
+                border:1px solid #2a2926;
+                background:#0c0c0b;
+              "
+            >
+              <p
+                style="
+                  margin:0;
+                  font-family:Arial,Helvetica,sans-serif;
+                  font-size:12px;
+                  line-height:22px;
+                  color:#aaa69e;
+                "
+              >
+                <strong style="color:#f3f0ea;">
+                  Client
+                </strong>
+
+                <br />
+
+                ${escapeHtml(customerName)}
+
+                <br />
+
+                ${escapeHtml(
+                  customerEmail || "-"
+                )}
+
+                <br />
+
+                ${escapeHtml(customerPhone)}
+              </p>
+            </div>
+
+            <div
+              style="
+                margin-top:28px;
                 border-top:1px solid #2a2926;
               "
             >
@@ -841,7 +1081,7 @@ export async function POST(request: Request) {
                   color:#8f8b83;
                 "
               >
-                Ta commande
+                Articles
               </p>
 
               <table
@@ -857,249 +1097,51 @@ export async function POST(request: Request) {
 
             <div
               style="
-                margin-top:30px;
-                padding:22px;
-                border:1px solid #2a2926;
-                background:#0c0c0b;
-              "
-            >
-              <p
-                style="
-                  margin:0 0 10px;
-                  font-family:Arial,Helvetica,sans-serif;
-                  font-size:9px;
-                  letter-spacing:3px;
-                  text-transform:uppercase;
-                  color:#8f8b83;
-                "
-              >
-                Production
-              </p>
-
-              <p
-                style="
-                  margin:0;
-                  font-family:Georgia,'Times New Roman',serif;
-                  font-size:21px;
-                  line-height:29px;
-                  color:#f3f0ea;
-                "
-              >
-                La production sera lancée dès que
-                10 précommandes payées auront été atteintes.
-              </p>
-            </div>
-
-            <div
-              style="
-                margin-top:30px;
+                margin-top:28px;
+                padding-top:24px;
                 border-top:1px solid #2a2926;
               "
             >
               <p
                 style="
-                  margin:24px 0 8px;
+                  margin:0;
                   font-family:Arial,Helvetica,sans-serif;
-                  font-size:9px;
-                  letter-spacing:3px;
-                  text-transform:uppercase;
-                  color:#8f8b83;
+                  font-size:12px;
+                  line-height:22px;
+                  color:#aaa69e;
                 "
               >
-                Livraison
-              </p>
+                <strong style="color:#f3f0ea;">
+                  Livraison
+                </strong>
 
-              <table
-                role="presentation"
-                width="100%"
-                cellspacing="0"
-                cellpadding="0"
-                border="0"
-              >
-                ${deliveryHtml}
-              </table>
+                <br />
+
+                ${escapeHtml(deliveryMethod)}
+
+                <br />
+
+                Frais :
+                ${escapeHtml(shippingAmount)}
+              </p>
             </div>
           `,
 
-          buttonLabel: "Suivre ma commande",
-          buttonUrl: trackingPageUrl,
+          buttonLabel:
+            "Voir les commandes",
+
+          buttonUrl:
+            `${SITE_URL}/admin/commandes`,
 
           footerText:
-            "Tu peux retrouver l’avancement de ta commande à tout moment depuis ton espace AJVEK.",
+            `Session Stripe : ${session.id}`,
         });
-
-        const {
-          error: customerEmailError,
-        } = await resend.emails.send({
-          from: FROM_EMAIL,
-          to: customerEmail,
-
-          subject:
-            `Précommande AJVEK #${orderNumber} confirmée`,
-
-          html: customerHtml,
-
-          text:
-            `Bonjour ${customerName},\n\n` +
-            `Ton paiement a bien été reçu et ta précommande AJVEK est confirmée.\n\n` +
-            `Commande #${orderNumber}\n\n` +
-            `Articles :\n${summary}\n\n` +
-            `Nombre de vêtements : ${itemCount}\n` +
-            `Mode de livraison : ${deliveryMethod}\n` +
-            `Frais de livraison : ${shippingAmount}\n\n` +
-            `La production sera lancée dès que le seuil de 10 précommandes payées sera atteint.\n\n` +
-            `Suivre ma commande : ${trackingPageUrl}\n\n` +
-            `Merci pour ta confiance,\n` +
-            `L'équipe AJVEK`,
-        });
-
-        if (customerEmailError) {
-          console.error(
-            "[stripe-webhook] Erreur email client :",
-            customerEmailError
-          );
-        }
-      }
-
-      /*
-       * ==========================================================
-       * EMAIL ÉQUIPE AJVEK
-       * ==========================================================
-       */
-
-      let ownerDeliveryDetails =
-        deliveryMethod;
-
-      if (isRelay) {
-        ownerDeliveryDetails +=
-          `\nPoint Relais : ${
-            first?.service_point_name || "-"
-          }\n` +
-          `Adresse : ${
-            first?.service_point_address || "-"
-          }\n` +
-          `Code postal : ${
-            first?.service_point_postal_code ||
-            "-"
-          }\n` +
-          `Ville : ${
-            first?.service_point_city || "-"
-          }\n` +
-          `ID Point Relais : ${
-            first?.service_point_id || "-"
-          }`;
-      }
-
-      const ownerHtml = buildEmailLayout({
-        eyebrow: `Nouvelle commande #${orderNumber}`,
-
-        title: "Nouvelle précommande payée",
-
-        intro:
-          `Une nouvelle précommande AJVEK vient d’être payée par ` +
-          `<strong style="color:#f3f0ea;">${escapeHtml(
-            customerName
-          )}</strong>.`,
-
-        content: `
-          <div
-            style="
-              margin-top:30px;
-              padding:20px;
-              border:1px solid #2a2926;
-              background:#0c0c0b;
-            "
-          >
-            <p
-              style="
-                margin:0;
-                font-family:Arial,Helvetica,sans-serif;
-                font-size:12px;
-                line-height:22px;
-                color:#aaa69e;
-              "
-            >
-              <strong style="color:#f3f0ea;">
-                Client
-              </strong>
-              <br />
-              ${escapeHtml(customerName)}
-              <br />
-              ${escapeHtml(customerEmail || "-")}
-              <br />
-              ${escapeHtml(customerPhone)}
-            </p>
-          </div>
-
-          <div
-            style="
-              margin-top:28px;
-              border-top:1px solid #2a2926;
-            "
-          >
-            <p
-              style="
-                margin:24px 0 8px;
-                font-family:Arial,Helvetica,sans-serif;
-                font-size:9px;
-                letter-spacing:3px;
-                text-transform:uppercase;
-                color:#8f8b83;
-              "
-            >
-              Articles
-            </p>
-
-            <table
-              role="presentation"
-              width="100%"
-              cellspacing="0"
-              cellpadding="0"
-              border="0"
-            >
-              ${itemsHtml}
-            </table>
-          </div>
-
-          <div
-            style="
-              margin-top:28px;
-              padding-top:24px;
-              border-top:1px solid #2a2926;
-            "
-          >
-            <p
-              style="
-                margin:0;
-                font-family:Arial,Helvetica,sans-serif;
-                font-size:12px;
-                line-height:22px;
-                color:#aaa69e;
-              "
-            >
-              <strong style="color:#f3f0ea;">
-                Livraison
-              </strong>
-              <br />
-              ${escapeHtml(deliveryMethod)}
-              <br />
-              Frais : ${escapeHtml(shippingAmount)}
-            </p>
-          </div>
-        `,
-
-        buttonLabel: "Voir les commandes",
-        buttonUrl:
-          `${SITE_URL}/admin/commandes`,
-
-        footerText:
-          `Session Stripe : ${session.id}`,
-      });
 
       const {
         error: ownerEmailError,
       } = await resend.emails.send({
         from: FROM_EMAIL,
+
         to: OWNER_EMAIL,
 
         subject:
@@ -1108,7 +1150,7 @@ export async function POST(request: Request) {
         html: ownerHtml,
 
         text:
-          `Nouvelle précommande payée !\n\n` +
+          `Nouvelle commande payée !\n\n` +
           `Commande : #${orderNumber}\n` +
           `Client : ${customerName}\n` +
           `Email : ${customerEmail || "-"}\n` +
@@ -1133,9 +1175,9 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ============================================================
+     * ========================================================
      * PAIEMENT ÉCHOUÉ
-     * ============================================================
+     * ========================================================
      */
 
     if (
@@ -1162,8 +1204,8 @@ export async function POST(request: Request) {
       }
 
       const {
-        data: preorders,
-        error: preorderError,
+        data: orders,
+        error: orderError,
       } = await supabaseAdmin
         .from("preorders")
         .select("*")
@@ -1173,13 +1215,13 @@ export async function POST(request: Request) {
         );
 
       if (
-        preorderError ||
-        !preorders ||
-        preorders.length === 0
+        orderError ||
+        !orders ||
+        orders.length === 0
       ) {
         console.error(
-          "[stripe-webhook] Précommande échouée introuvable :",
-          preorderError
+          "[stripe-webhook] Commande échouée introuvable :",
+          orderError
         );
 
         return NextResponse.json({
@@ -1188,13 +1230,14 @@ export async function POST(request: Request) {
       }
 
       /*
-       * Si finalement payé, on ignore l'échec.
+       * Si elle a finalement été payée,
+       * on ignore l'ancien événement d'échec.
        */
 
       if (
-        preorders.some(
-          (preorder) =>
-            preorder.paid === true
+        orders.some(
+          (order) =>
+            order.paid === true
         )
       ) {
         return NextResponse.json({
@@ -1203,13 +1246,13 @@ export async function POST(request: Request) {
       }
 
       /*
-       * Évite plusieurs emails d'échec.
+       * Anti-spam email paiement échoué.
        */
 
       if (
-        preorders.some(
-          (preorder) =>
-            preorder
+        orders.some(
+          (order) =>
+            order
               .payment_failure_notified_at
         )
       ) {
@@ -1218,7 +1261,7 @@ export async function POST(request: Request) {
         });
       }
 
-      const first = preorders[0];
+      const first = orders[0];
 
       const customerName =
         first?.name || "client";
@@ -1230,22 +1273,31 @@ export async function POST(request: Request) {
         shortOrderId(checkoutGroupId);
 
       const summary =
-        buildTextSummary(preorders);
+        buildTextSummary(orders);
 
       const itemsHtml =
-        buildItemsHtml(preorders);
+        buildItemsHtml(orders);
 
       const declineCode =
-        paymentIntent.last_payment_error
+        paymentIntent
+          .last_payment_error
           ?.decline_code ||
-        paymentIntent.last_payment_error
+        paymentIntent
+          .last_payment_error
           ?.code ||
         "non précisé";
 
       const failureMessage =
-        paymentIntent.last_payment_error
+        paymentIntent
+          .last_payment_error
           ?.message ||
         "Le paiement n'a pas pu être validé.";
+
+      /*
+       * ======================================================
+       * ENREGISTREMENT DE L'ÉCHEC
+       * ======================================================
+       */
 
       const notifiedAt =
         new Date().toISOString();
@@ -1257,6 +1309,9 @@ export async function POST(request: Request) {
         .update({
           payment_failure_notified_at:
             notifiedAt,
+
+          order_status:
+            "payment_failed",
         })
         .eq(
           "checkout_group_id",
@@ -1281,15 +1336,16 @@ export async function POST(request: Request) {
       }
 
       /*
-       * ==========================================================
-       * EMAIL CLIENT ÉCHEC
-       * ==========================================================
+       * ======================================================
+       * EMAIL CLIENT — ÉCHEC
+       * ======================================================
        */
 
       if (customerEmail) {
         const failureHtml =
           buildEmailLayout({
-            eyebrow: `Commande #${orderNumber}`,
+            eyebrow:
+              `Commande #${orderNumber}`,
 
             title:
               "Le paiement n’a pas abouti",
@@ -1318,10 +1374,9 @@ export async function POST(request: Request) {
                     color:#aaa69e;
                   "
                 >
-                  Ta précommande n’est pas confirmée et
-                  ne sera pas comptabilisée dans le seuil
-                  de production tant que le paiement
-                  n’aura pas été validé.
+                  Ta commande n’est pas confirmée
+                  et aucun article n’a été retiré
+                  du stock.
                 </p>
               </div>
 
@@ -1364,9 +1419,9 @@ export async function POST(request: Request) {
                   color:#aaa69e;
                 "
               >
-                Tu peux recommencer ta commande depuis
-                notre collection et utiliser une autre
-                carte si nécessaire.
+                Tu peux recommencer ta commande
+                depuis notre collection et utiliser
+                une autre carte si nécessaire.
               </p>
             `,
 
@@ -1385,6 +1440,7 @@ export async function POST(request: Request) {
             customerFailureEmailError,
         } = await resend.emails.send({
           from: FROM_EMAIL,
+
           to: customerEmail,
 
           subject:
@@ -1395,8 +1451,9 @@ export async function POST(request: Request) {
           text:
             `Bonjour ${customerName},\n\n` +
             `Nous avons bien reçu ta tentative de commande AJVEK, mais ton paiement n'a pas pu être validé.\n\n` +
-            `Ta précommande n'est donc pas encore confirmée et ne compte pas dans le seuil de production.\n\n` +
+            `Ta commande n'est donc pas confirmée.\n\n` +
             `Articles :\n${summary}\n\n` +
+            `Aucun article n'a été retiré du stock.\n\n` +
             `Tu peux recommencer ta commande avec une autre carte si nécessaire.\n\n` +
             `À bientôt,\n` +
             `L'équipe AJVEK`,
@@ -1413,9 +1470,9 @@ export async function POST(request: Request) {
       }
 
       /*
-       * ==========================================================
-       * EMAIL ÉQUIPE ÉCHEC
-       * ==========================================================
+       * ======================================================
+       * EMAIL ÉQUIPE — ÉCHEC
+       * ======================================================
        */
 
       const ownerFailureHtml =
@@ -1423,7 +1480,8 @@ export async function POST(request: Request) {
           eyebrow:
             `Paiement échoué #${orderNumber}`,
 
-          title: "Paiement non validé",
+          title:
+            "Paiement non validé",
 
           intro:
             `Une tentative de paiement AJVEK de ` +
@@ -1452,9 +1510,13 @@ export async function POST(request: Request) {
                 <strong style="color:#f3f0ea;">
                   Client
                 </strong>
+
                 <br />
+
                 ${escapeHtml(customerName)}
+
                 <br />
+
                 ${escapeHtml(
                   customerEmail || "-"
                 )}
@@ -1464,7 +1526,9 @@ export async function POST(request: Request) {
                 <strong style="color:#f3f0ea;">
                   Code Stripe
                 </strong>
+
                 <br />
+
                 ${escapeHtml(declineCode)}
 
                 <br /><br />
@@ -1472,8 +1536,12 @@ export async function POST(request: Request) {
                 <strong style="color:#f3f0ea;">
                   Message
                 </strong>
+
                 <br />
-                ${escapeHtml(failureMessage)}
+
+                ${escapeHtml(
+                  failureMessage
+                )}
               </p>
             </div>
           `,
@@ -1489,9 +1557,11 @@ export async function POST(request: Request) {
         });
 
       const {
-        error: ownerFailureEmailError,
+        error:
+          ownerFailureEmailError,
       } = await resend.emails.send({
         from: FROM_EMAIL,
+
         to: OWNER_EMAIL,
 
         subject:
@@ -1508,7 +1578,7 @@ export async function POST(request: Request) {
           `PaymentIntent Stripe : ${paymentIntent.id}\n` +
           `Code de refus : ${declineCode}\n` +
           `Message Stripe : ${failureMessage}\n\n` +
-          `La précommande reste non payée dans Supabase.\n`,
+          `Aucun article n'a été retiré du stock.\n`,
       });
 
       if (ownerFailureEmailError) {
@@ -1524,9 +1594,9 @@ export async function POST(request: Request) {
     }
 
     /*
-     * ============================================================
-     * AUTRES ÉVÉNEMENTS
-     * ============================================================
+     * ========================================================
+     * AUTRES ÉVÉNEMENTS STRIPE
+     * ========================================================
      */
 
     return NextResponse.json({
