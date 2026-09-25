@@ -106,7 +106,7 @@ export default function CataloguePage() {
             ["01", "Drop", "001"],
             ["02", "Pièces", "02"],
             ["03", "Prix", "39,90 €"],
-            ["04", "Statut", "Précommande"],
+            ["04", "Statut", "Bientôt disponible"],
           ].map(([number, label, value], index) => (
             <div
               key={number}
@@ -199,11 +199,11 @@ export default function CataloguePage() {
                     {String(index + 1).padStart(2, "0")}
                   </div>
 
-                  {/* PREORDER */}
+                  {/* STATUS */}
 
                   <div className="absolute right-4 top-4">
                     <span className="rounded-full border border-white/15 bg-black/20 px-3 py-2 text-[7px] uppercase tracking-[0.28em] text-white/70 backdrop-blur-md">
-                      Précommande
+                      Bientôt disponible
                     </span>
                   </div>
 
@@ -331,7 +331,7 @@ export default function CataloguePage() {
               {
                 number: "03",
                 title: "La série",
-                text: "Une première production courte lancée grâce aux précommandes.",
+                text: "Une première production courte pensée pour le lancement du Drop 001.",
               },
             ].map((item, index) => (
               <div
@@ -386,7 +386,7 @@ export default function CataloguePage() {
           <p className="mx-auto mt-8 max-w-md text-[15px] leading-7 text-stone">
             Le premier chapitre AJVEK.
             <br />
-            Disponible maintenant en précommande.
+            Bientôt disponible.
           </p>
 
           <p className="mt-8 font-display text-4xl">
