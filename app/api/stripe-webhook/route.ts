@@ -7,8 +7,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY!);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,16 +40,11 @@ function escapeHtml(value: unknown) {
 }
 
 function formatEurosFromCents(amount: number) {
-  return `${(amount / 100)
-    .toFixed(2)
-    .replace(".", ",")} €`;
+  return `${(amount / 100).toFixed(2).replace(".", ",")} €`;
 }
 
 function shortOrderId(id: string) {
-  return id
-    .replaceAll("-", "")
-    .slice(0, 8)
-    .toUpperCase();
+  return id.replaceAll("-", "").slice(0, 8).toUpperCase();
 }
 
 /*
@@ -528,10 +522,6 @@ export async function POST(request: Request) {
        * ======================================================
        * RÉCUPÉRATION DE LA COMMANDE
        * ======================================================
-       *
-       * On récupère les informations AVANT la finalisation
-       * pour construire ensuite les emails.
-       * ======================================================
        */
 
       const {
@@ -570,17 +560,16 @@ export async function POST(request: Request) {
        * FINALISATION ATOMIQUE
        * ======================================================
        *
-       * PostgreSQL effectue maintenant EN UNE TRANSACTION :
+       * Le stock a déjà été retiré lors de sa réservation.
        *
-       * - verrouillage de la commande
-       * - vérification de l'idempotence
-       * - vérification du stock
-       * - verrouillage du stock
-       * - décrémentation du stock
-       * - passage de la commande à paid
+       * finalize_paid_order :
+       * - verrouille la commande
+       * - vérifie l'idempotence
+       * - vérifie la réservation active
+       * - confirme la réservation
+       * - marque la commande comme payée
        *
-       * Aucun decrement_product_stock ici.
-       * Aucun restore_product_stock ici.
+       * Aucun second décrément du stock ici.
        * ======================================================
        */
 
@@ -623,17 +612,6 @@ export async function POST(request: Request) {
           }
         );
       }
-
-      /*
-       * Stripe peut envoyer plusieurs fois
-       * checkout.session.completed.
-       *
-       * La fonction SQL nous indique que la
-       * commande avait déjà été finalisée.
-       *
-       * On s'arrête également ici pour éviter
-       * de renvoyer les emails.
-       */
 
       if (
         finalizeResult?.already_processed ===
@@ -1176,7 +1154,171 @@ export async function POST(request: Request) {
 
     /*
      * ========================================================
+     * SESSION CHECKOUT EXPIRÉE
+     * ========================================================
+     *
+     * La session Stripe n'est plus utilisable.
+     * On remet donc en stock uniquement les réservations
+     * encore actives.
+     *
+     * release_stock_reservation est idempotente :
+     * une réservation déjà confirmée ou déjà libérée
+     * n'est pas ajoutée une deuxième fois au stock.
+     * ========================================================
+     */
+
+    if (
+      event.type ===
+      "checkout.session.expired"
+    ) {
+      const session =
+        event.data.object as Stripe.Checkout.Session;
+
+      const checkoutGroupId =
+        session.metadata?.checkout_group_id;
+
+      if (!checkoutGroupId) {
+        console.error(
+          "[stripe-webhook] Session expirée sans checkout_group_id :",
+          session.id
+        );
+
+        return NextResponse.json({
+          received: true,
+        });
+      }
+
+      const {
+        data: releaseResult,
+        error: releaseError,
+      } = await supabaseAdmin.rpc(
+        "release_stock_reservation",
+        {
+          p_checkout_group_id:
+            checkoutGroupId,
+        }
+      );
+
+      if (releaseError) {
+        console.error(
+          "[stripe-webhook] Impossible de libérer la réservation expirée :",
+          {
+            checkoutGroupId,
+            stripeSessionId:
+              session.id,
+            error: releaseError,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de libérer la réservation expirée.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      if (
+        releaseResult?.success !== true
+      ) {
+        console.error(
+          "[stripe-webhook] Résultat inattendu de release_stock_reservation :",
+          {
+            checkoutGroupId,
+            stripeSessionId:
+              session.id,
+            result:
+              releaseResult,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Résultat de libération de réservation invalide.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      /*
+       * On conserve les lignes de commande pour l'historique,
+       * mais on indique qu'elles ont expiré.
+       */
+
+      const {
+        error: expiredOrderError,
+      } = await supabaseAdmin
+        .from("preorders")
+        .update({
+          order_status: "expired",
+        })
+        .eq(
+          "checkout_group_id",
+          checkoutGroupId
+        )
+        .eq("paid", false);
+
+      if (expiredOrderError) {
+        console.error(
+          "[stripe-webhook] Stock libéré mais statut expiré non enregistré :",
+          {
+            checkoutGroupId,
+            stripeSessionId:
+              session.id,
+            error:
+              expiredOrderError,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Stock libéré mais statut de commande non enregistré.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      console.log(
+        "[stripe-webhook] Réservation expirée libérée :",
+        {
+          checkoutGroupId,
+          stripeSessionId:
+            session.id,
+          releasedCount:
+            releaseResult?.released_count ??
+            0,
+        }
+      );
+
+      return NextResponse.json({
+        received: true,
+      });
+    }
+
+    /*
+     * ========================================================
      * PAIEMENT ÉCHOUÉ
+     * ========================================================
+     *
+     * IMPORTANT :
+     *
+     * Un échec de PaymentIntent ne libère PAS immédiatement
+     * le stock.
+     *
+     * Le client peut encore avoir une session Checkout active
+     * et retenter son paiement.
+     *
+     * Le stock sera libéré lorsque Stripe enverra
+     * checkout.session.expired.
      * ========================================================
      */
 
@@ -1374,9 +1516,11 @@ export async function POST(request: Request) {
                     color:#aaa69e;
                   "
                 >
-                  Ta commande n’est pas confirmée
-                  et aucun article n’a été retiré
-                  du stock.
+                  Ta commande n’est pas confirmée.
+
+                  Les articles restent réservés temporairement
+
+                  pendant la session de paiement.
                 </p>
               </div>
 
@@ -1420,7 +1564,9 @@ export async function POST(request: Request) {
                 "
               >
                 Tu peux recommencer ta commande
+
                 depuis notre collection et utiliser
+
                 une autre carte si nécessaire.
               </p>
             `,
@@ -1453,7 +1599,7 @@ export async function POST(request: Request) {
             `Nous avons bien reçu ta tentative de commande AJVEK, mais ton paiement n'a pas pu être validé.\n\n` +
             `Ta commande n'est donc pas confirmée.\n\n` +
             `Articles :\n${summary}\n\n` +
-            `Aucun article n'a été retiré du stock.\n\n` +
+            `Les articles restent réservés temporairement pendant la session de paiement.\n\n` +
             `Tu peux recommencer ta commande avec une autre carte si nécessaire.\n\n` +
             `À bientôt,\n` +
             `L'équipe AJVEK`,
@@ -1578,7 +1724,7 @@ export async function POST(request: Request) {
           `PaymentIntent Stripe : ${paymentIntent.id}\n` +
           `Code de refus : ${declineCode}\n` +
           `Message Stripe : ${failureMessage}\n\n` +
-          `Aucun article n'a été retiré du stock.\n`,
+          `Les articles restent réservés temporairement pendant la session de paiement.\n`,
       });
 
       if (ownerFailureEmailError) {

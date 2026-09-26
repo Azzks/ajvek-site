@@ -7,9 +7,7 @@ import { getProduct } from "@/lib/products";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const stripe = new Stripe(
-  process.env.STRIPE_SECRET_KEY!
-);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,9 +40,7 @@ type CheckoutItem = {
   quantity: number;
 };
 
-type DeliveryMethod =
-  | "relay"
-  | "home";
+type DeliveryMethod = "relay" | "home";
 
 type ServicePoint = {
   id: number | string;
@@ -73,23 +69,9 @@ type StockRow = {
   sales_enabled: boolean;
 };
 
-/*
- * ============================================================
- * NORMALISATION
- * ============================================================
- */
-
 function normalize(value: string) {
-  return value
-    .trim()
-    .toLocaleLowerCase("fr-FR");
+  return value.trim().toLocaleLowerCase("fr-FR");
 }
-
-/*
- * ============================================================
- * SUPPRESSION COMMANDE TEMPORAIRE
- * ============================================================
- */
 
 async function deleteTemporaryOrder(
   checkoutGroupId: string
@@ -97,10 +79,7 @@ async function deleteTemporaryOrder(
   const { error } = await supabaseAdmin
     .from("preorders")
     .delete()
-    .eq(
-      "checkout_group_id",
-      checkoutGroupId
-    )
+    .eq("checkout_group_id", checkoutGroupId)
     .eq("paid", false);
 
   if (error) {
@@ -111,31 +90,74 @@ async function deleteTemporaryOrder(
   }
 }
 
-/*
- * ============================================================
- * ROUTE
- * ============================================================
- */
+async function releaseReservation(
+  checkoutGroupId: string
+) {
+  const { data, error } = await supabaseAdmin.rpc(
+    "release_stock_reservation",
+    {
+      p_checkout_group_id: checkoutGroupId,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "[create-checkout] Impossible de libérer la réservation :",
+      {
+        checkoutGroupId,
+        error,
+      }
+    );
+
+    return false;
+  }
+
+  if (data?.success !== true) {
+    console.error(
+      "[create-checkout] Résultat inattendu lors de la libération de la réservation :",
+      {
+        checkoutGroupId,
+        data,
+      }
+    );
+
+    return false;
+  }
+
+  return true;
+}
+
+async function expireStripeSession(
+  sessionId: string
+) {
+  try {
+    await stripe.checkout.sessions.expire(
+      sessionId
+    );
+  } catch (error) {
+    console.error(
+      "[create-checkout] Impossible d’expirer la session Stripe :",
+      {
+        sessionId,
+        error,
+      }
+    );
+  }
+}
 
 export async function POST(
   request: Request
 ) {
   try {
-    /*
-     * ========================================================
-     * 1. AUTHENTIFICATION
-     * ========================================================
-     */
+    // ========================================================
+    // 1. AUTHENTIFICATION
+    // ========================================================
 
     const authorization =
-      request.headers.get(
-        "authorization"
-      );
+      request.headers.get("authorization");
 
     if (
-      !authorization?.startsWith(
-        "Bearer "
-      )
+      !authorization?.startsWith("Bearer ")
     ) {
       return NextResponse.json(
         {
@@ -149,18 +171,14 @@ export async function POST(
     }
 
     const accessToken =
-      authorization.replace(
-        "Bearer ",
-        ""
-      );
+      authorization.replace("Bearer ", "");
 
     const {
       data: { user },
       error: userError,
-    } =
-      await supabaseAuth.auth.getUser(
-        accessToken
-      );
+    } = await supabaseAuth.auth.getUser(
+      accessToken
+    );
 
     if (
       userError ||
@@ -178,20 +196,16 @@ export async function POST(
       );
     }
 
-    /*
-     * ========================================================
-     * 2. DONNÉES
-     * ========================================================
-     */
+    // ========================================================
+    // 2. DONNÉES
+    // ========================================================
 
     let body: {
       name?: string;
       phone?: string;
       items?: CheckoutItem[];
       delivery_method?: DeliveryMethod;
-      service_point?:
-        | ServicePoint
-        | null;
+      service_point?: ServicePoint | null;
     };
 
     try {
@@ -233,8 +247,7 @@ export async function POST(
     ) {
       return NextResponse.json(
         {
-          error:
-            "Ton panier est vide.",
+          error: "Ton panier est vide.",
         },
         {
           status: 400,
@@ -260,8 +273,7 @@ export async function POST(
     if (
       delivery_method === "relay" &&
       (
-        service_point?.id ===
-          undefined ||
+        service_point?.id === undefined ||
         service_point?.id === null ||
         !service_point?.postalCode ||
         !service_point?.city
@@ -278,29 +290,23 @@ export async function POST(
       );
     }
 
-    /*
-     * ========================================================
-     * 3. VALIDATION DES ARTICLES
-     * ========================================================
-     */
+    // ========================================================
+    // 3. VALIDATION DES ARTICLES
+    // ========================================================
 
     const mergedItems =
-      new Map<
-        string,
-        ValidatedItem
-      >();
+      new Map<string, ValidatedItem>();
 
     for (const item of items) {
-      const quantity =
-        Number(item.quantity);
+      const quantity = Number(
+        item.quantity
+      );
 
       if (
         !item.product_slug ||
         !item.color ||
         !item.size ||
-        !Number.isInteger(
-          quantity
-        ) ||
+        !Number.isInteger(quantity) ||
         quantity < 1 ||
         quantity > 10
       ) {
@@ -315,10 +321,9 @@ export async function POST(
         );
       }
 
-      const product =
-        getProduct(
-          item.product_slug
-        );
+      const product = getProduct(
+        item.product_slug
+      );
 
       if (!product) {
         return NextResponse.json(
@@ -332,16 +337,10 @@ export async function POST(
         );
       }
 
-      /*
-       * Vérification de la couleur
-       */
-
       const colorway =
         product.colorways.find(
           (colorway) =>
-            normalize(
-              colorway.label
-            ) ===
+            normalize(colorway.label) ===
             normalize(item.color)
         );
 
@@ -357,16 +356,10 @@ export async function POST(
         );
       }
 
-      /*
-       * Vérification de la taille
-       */
-
       const validSize =
         product.sizes.find(
           (productSize) =>
-            normalize(
-              productSize
-            ) ===
+            normalize(productSize) ===
             normalize(item.size)
         );
 
@@ -395,9 +388,7 @@ export async function POST(
       ].join("::");
 
       const existingItem =
-        mergedItems.get(
-          itemKey
-        );
+        mergedItems.get(itemKey);
 
       if (existingItem) {
         const newQuantity =
@@ -424,18 +415,13 @@ export async function POST(
           {
             product_slug:
               product.slug,
-
             product_name:
               product.name,
-
             color:
               cleanColor,
-
             size:
               cleanSize,
-
             quantity,
-
             priceValue:
               product.priceValue,
           }
@@ -467,26 +453,22 @@ export async function POST(
       );
     }
 
-    /*
-     * ========================================================
-     * 4. RÉCUPÉRATION DU STOCK
-     * ========================================================
-     */
+    // ========================================================
+    // 4. RÉCUPÉRATION DU STOCK
+    // ========================================================
 
     const {
       data: stockData,
       error: stockError,
     } = await supabaseAdmin
       .from("product_stock")
-      .select(
-        `
+      .select(`
         product_slug,
         color,
         size,
         stock_quantity,
         sales_enabled
-        `
-      );
+      `);
 
     if (stockError) {
       console.error(
@@ -506,14 +488,11 @@ export async function POST(
     }
 
     const stockRows =
-      (stockData ??
-        []) as StockRow[];
+      (stockData ?? []) as StockRow[];
 
-    /*
-     * ========================================================
-     * 5. VÉRIFICATION STOCK + OUVERTURE DES VENTES
-     * ========================================================
-     */
+    // ========================================================
+    // 5. VÉRIFICATION STOCK + OUVERTURE DES VENTES
+    // ========================================================
 
     for (
       const item of validatedItems
@@ -524,18 +503,10 @@ export async function POST(
             row.product_slug ===
               item.product_slug &&
             normalize(row.color) ===
-              normalize(
-                item.color
-              ) &&
+              normalize(item.color) &&
             normalize(row.size) ===
-              normalize(
-                item.size
-              )
+              normalize(item.size)
         );
-
-      /*
-       * Combinaison inexistante
-       */
 
       if (!stockRow) {
         return NextResponse.json(
@@ -548,10 +519,6 @@ export async function POST(
           }
         );
       }
-
-      /*
-       * Drop pas encore ouvert
-       */
 
       if (
         stockRow.sales_enabled !==
@@ -577,10 +544,6 @@ export async function POST(
           0
         );
 
-      /*
-       * Rupture
-       */
-
       if (availableStock <= 0) {
         return NextResponse.json(
           {
@@ -592,11 +555,6 @@ export async function POST(
           }
         );
       }
-
-      /*
-       * Quantité demandée supérieure
-       * au stock réel
-       */
 
       if (
         item.quantity >
@@ -618,34 +576,28 @@ export async function POST(
       }
     }
 
-    /*
-     * ========================================================
-     * 6. LIVRAISON
-     * ========================================================
-     */
+    // ========================================================
+    // 6. LIVRAISON
+    // ========================================================
 
     let shippingAmount = 0;
 
     if (totalQuantity < 3) {
       shippingAmount =
-        delivery_method ===
-        "relay"
+        delivery_method === "relay"
           ? 490
           : 790;
     }
 
-    /*
-     * ========================================================
-     * 7. IDENTIFIANT UNIQUE DE COMMANDE
-     * ========================================================
-     */
+    // ========================================================
+    // 7. IDENTIFIANT UNIQUE DE COMMANDE
+    // ========================================================
 
     const checkoutGroupId =
       randomUUID();
 
     const servicePointAddress =
-      delivery_method ===
-        "relay" &&
+      delivery_method === "relay" &&
       service_point
         ? [
             service_point.houseNumber,
@@ -655,25 +607,9 @@ export async function POST(
             .join(" ")
         : null;
 
-    /*
-     * ========================================================
-     * 8. CRÉATION DES LIGNES DE COMMANDE
-     * ========================================================
-     *
-     * On conserve pour l'instant la table "preorders"
-     * afin de ne pas casser :
-     *
-     * - le suivi client
-     * - l'administration
-     * - le webhook Stripe
-     * - les emails
-     *
-     * Mais ces lignes représentent maintenant
-     * de vraies COMMANDES SUR STOCK.
-     *
-     * 1 vêtement physique = 1 ligne.
-     * ========================================================
-     */
+    // ========================================================
+    // 8. CRÉATION DES LIGNES DE COMMANDE
+    // ========================================================
 
     const orderRows =
       validatedItems.flatMap(
@@ -772,8 +708,7 @@ export async function POST(
     if (
       orderError ||
       !createdOrders ||
-      createdOrders.length ===
-        0
+      createdOrders.length === 0
     ) {
       console.error(
         "[create-checkout] Erreur création commande :",
@@ -791,11 +726,9 @@ export async function POST(
       );
     }
 
-    /*
-     * ========================================================
-     * 9. ARTICLES STRIPE
-     * ========================================================
-     */
+    // ========================================================
+    // 9. ARTICLES STRIPE
+    // ========================================================
 
     const lineItems:
       Stripe.Checkout.SessionCreateParams.LineItem[] =
@@ -825,16 +758,13 @@ export async function POST(
       );
 
     const shippingLabel =
-      delivery_method ===
-      "relay"
+      delivery_method === "relay"
         ? "Mondial Relay — Point Relais"
         : "Livraison à domicile";
 
-    /*
-     * ========================================================
-     * 10. SESSION STRIPE
-     * ========================================================
-     */
+    // ========================================================
+    // 10. SESSION STRIPE
+    // ========================================================
 
     const sessionParams:
       Stripe.Checkout.SessionCreateParams =
@@ -850,14 +780,6 @@ export async function POST(
 
         allow_promotion_codes:
           true,
-
-        /*
-         * Métadonnées du PaymentIntent.
-         *
-         * Elles permettent notamment
-         * d'identifier la commande si
-         * le paiement échoue.
-         */
 
         payment_intent_data: {
           metadata: {
@@ -877,31 +799,25 @@ export async function POST(
 
         shipping_options: [
           {
-            shipping_rate_data:
-              {
-                type:
-                  "fixed_amount",
+            shipping_rate_data: {
+              type:
+                "fixed_amount",
 
-                fixed_amount: {
-                  amount:
-                    shippingAmount,
+              fixed_amount: {
+                amount:
+                  shippingAmount,
 
-                  currency:
-                    "eur",
-                },
-
-                display_name:
-                  shippingAmount ===
-                  0
-                    ? `${shippingLabel} — offerte`
-                    : shippingLabel,
+                currency:
+                  "eur",
               },
+
+              display_name:
+                shippingAmount === 0
+                  ? `${shippingLabel} — offerte`
+                  : shippingLabel,
+            },
           },
         ],
-
-        /*
-         * Métadonnées Checkout.
-         */
 
         metadata: {
           checkout_group_id:
@@ -937,15 +853,8 @@ export async function POST(
           `${SITE_URL}/paiement/annule`,
       };
 
-    /*
-     * Adresse demandée par Stripe
-     * uniquement pour livraison
-     * à domicile.
-     */
-
     if (
-      delivery_method ===
-      "home"
+      delivery_method === "home"
     ) {
       sessionParams.shipping_address_collection =
         {
@@ -955,11 +864,9 @@ export async function POST(
         };
     }
 
-    /*
-     * ========================================================
-     * 11. CRÉATION SESSION STRIPE
-     * ========================================================
-     */
+    // ========================================================
+    // 11. CRÉATION SESSION STRIPE
+    // ========================================================
 
     let session:
       Stripe.Checkout.Session;
@@ -970,14 +877,6 @@ export async function POST(
           sessionParams
         );
     } catch (error) {
-      /*
-       * Stripe n'a pas pu créer
-       * la session.
-       *
-       * On supprime donc la
-       * commande temporaire.
-       */
-
       await deleteTemporaryOrder(
         checkoutGroupId
       );
@@ -985,13 +884,114 @@ export async function POST(
       throw error;
     }
 
-    /*
-     * ========================================================
-     * 12. VÉRIFICATION URL STRIPE
-     * ========================================================
-     */
+    // ========================================================
+    // 12. RÉSERVATION ATOMIQUE DU STOCK
+    // ========================================================
+    //
+    // La session Stripe existe mais son URL n'a encore jamais
+    // été transmise au navigateur.
+    //
+    // On utilise la date d'expiration de Stripe pour la
+    // réservation Supabase.
+    // ========================================================
+
+    const reservationExpiresAt =
+      new Date(
+        session.expires_at * 1000
+      ).toISOString();
+
+    const reservationItems =
+      validatedItems.map(
+        (item) => ({
+          product_slug:
+            item.product_slug,
+          color:
+            item.color,
+          size:
+            item.size,
+          quantity:
+            item.quantity,
+        })
+      );
+
+    const {
+      data: reservationResult,
+      error: reservationError,
+    } = await supabaseAdmin.rpc(
+      "reserve_order_stock",
+      {
+        p_checkout_group_id:
+          checkoutGroupId,
+
+        p_items:
+          reservationItems,
+
+        p_expires_at:
+          reservationExpiresAt,
+      }
+    );
+
+    if (
+      reservationError ||
+      reservationResult?.success !==
+        true
+    ) {
+      console.error(
+        "[create-checkout] Réservation du stock impossible :",
+        {
+          checkoutGroupId,
+          error:
+            reservationError,
+          result:
+            reservationResult,
+        }
+      );
+
+      await expireStripeSession(
+        session.id
+      );
+
+      await deleteTemporaryOrder(
+        checkoutGroupId
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Le stock vient de changer. Vérifie ton panier puis réessaie.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // ========================================================
+    // 13. VÉRIFICATION URL STRIPE
+    // ========================================================
 
     if (!session.url) {
+      await expireStripeSession(
+        session.id
+      );
+
+      const released =
+        await releaseReservation(
+          checkoutGroupId
+        );
+
+      if (!released) {
+        return NextResponse.json(
+          {
+            error:
+              "Erreur lors de l’annulation de la réservation. Réessaie dans quelques instants.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
       await deleteTemporaryOrder(
         checkoutGroupId
       );
@@ -1007,11 +1007,9 @@ export async function POST(
       );
     }
 
-    /*
-     * ========================================================
-     * 13. SAUVEGARDE SESSION STRIPE
-     * ========================================================
-     */
+    // ========================================================
+    // 14. SAUVEGARDE SESSION STRIPE
+    // ========================================================
 
     const {
       error: updateError,
@@ -1034,13 +1032,46 @@ export async function POST(
         "[create-checkout] Erreur sauvegarde session Stripe :",
         updateError
       );
+
+      await expireStripeSession(
+        session.id
+      );
+
+      const released =
+        await releaseReservation(
+          checkoutGroupId
+        );
+
+      if (!released) {
+        return NextResponse.json(
+          {
+            error:
+              "La session de paiement n’a pas pu être enregistrée et la réservation nécessite une vérification.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      await deleteTemporaryOrder(
+        checkoutGroupId
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de préparer le paiement. Réessaie dans quelques instants.",
+        },
+        {
+          status: 500,
+        }
+      );
     }
 
-    /*
-     * ========================================================
-     * 14. RÉPONSE
-     * ========================================================
-     */
+    // ========================================================
+    // 15. RÉPONSE
+    // ========================================================
 
     return NextResponse.json(
       {
