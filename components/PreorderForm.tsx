@@ -6,6 +6,7 @@ import type {
 } from "@/lib/products";
 
 import MadeInFrance from "@/components/MadeInFrance";
+import { useCart } from "@/components/CartContext";
 
 type StockItem = {
   product_slug: string;
@@ -31,13 +32,15 @@ export default function PreorderForm({
   stockLoading: boolean;
   stockError: boolean;
 }) {
+  const { items, addItem } = useCart();
+
   /*
    * =========================================================
    * ÉTAT DE LA VENTE
    * =========================================================
    *
    * Tant que sales_enabled = false dans Supabase,
-   * aucune commande ne peut être passée.
+   * aucune pièce ne peut être ajoutée au panier.
    */
 
   const salesEnabled =
@@ -55,6 +58,30 @@ export default function PreorderForm({
   const soldOut =
     salesEnabled &&
     quantity <= 0;
+
+  /*
+   * =========================================================
+   * ARTICLE DANS LE PANIER
+   * =========================================================
+   *
+   * L'identifiant dépend du produit, de la couleur
+   * et de la taille afin que chaque combinaison
+   * corresponde à une ligne distincte du panier.
+   */
+
+  const cartItemId = size
+    ? `${product.slug}-${colorway.label}-${size}`
+    : null;
+
+  const currentCartQuantity = cartItemId
+    ? items.find(
+        (item) => item.id === cartItemId
+      )?.quantity ?? 0
+    : 0;
+
+  const stockLimitReached =
+    available &&
+    currentCartQuantity >= quantity;
 
   /*
    * =========================================================
@@ -104,6 +131,35 @@ export default function PreorderForm({
 
   /*
    * =========================================================
+   * AJOUT AU PANIER
+   * =========================================================
+   */
+
+  function handleAddToCart() {
+    if (
+      !size ||
+      !available ||
+      !cartItemId ||
+      stockLimitReached
+    ) {
+      return;
+    }
+
+    addItem(
+      {
+        id: cartItemId,
+        slug: product.slug,
+        name: product.name,
+        colorLabel: colorway.label,
+        size,
+        price: product.priceValue,
+      },
+      1
+    );
+  }
+
+  /*
+   * =========================================================
    * BOUTON
    * =========================================================
    */
@@ -122,9 +178,19 @@ export default function PreorderForm({
       : "Bientôt disponible";
   } else if (soldOut) {
     buttonLabel = "Épuisé";
+  } else if (stockLimitReached) {
+    buttonLabel =
+      "Stock maximum dans le panier";
   } else if (available) {
-    buttonLabel = "Disponible";
+    buttonLabel = "Ajouter au panier";
   }
+
+  const buttonDisabled =
+    stockLoading ||
+    stockError ||
+    !size ||
+    !available ||
+    stockLimitReached;
 
   return (
     <div className="w-full">
@@ -220,8 +286,13 @@ export default function PreorderForm({
       <div className="mt-5">
         <button
           type="button"
-          disabled
-          className="w-full cursor-not-allowed rounded-full border border-surface bg-surface px-6 py-4 text-[10px] uppercase tracking-[0.25em] text-stone opacity-70"
+          onClick={handleAddToCart}
+          disabled={buttonDisabled}
+          className={`w-full rounded-full border px-6 py-4 text-[10px] uppercase tracking-[0.25em] transition ${
+            buttonDisabled
+              ? "cursor-not-allowed border-surface bg-surface text-stone opacity-70"
+              : "cursor-pointer border-foreground bg-foreground text-background hover:opacity-90"
+          }`}
         >
           {buttonLabel}
         </button>
@@ -233,7 +304,9 @@ export default function PreorderForm({
               ? "Cette taille n'est plus disponible."
               : !size
                 ? "Sélectionne une taille pour continuer."
-                : "Les commandes seront bientôt accessibles."}
+                : stockLimitReached
+                  ? "Tout le stock disponible pour cette taille est déjà dans ton panier."
+                  : "Ajoute cette pièce à ton panier pour continuer."}
         </p>
       </div>
 
