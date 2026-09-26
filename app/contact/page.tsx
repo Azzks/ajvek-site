@@ -43,8 +43,8 @@ export default function ContactPage() {
           </h1>
 
           <p className="mt-8 max-w-lg text-[15px] leading-7 text-stone">
-            Une question sur une commande, une précommande,
-            une pièce ou simplement envie de nous écrire ?
+            Une question sur une commande, une pièce
+            ou simplement envie de nous écrire ?
           </p>
         </div>
       </section>
