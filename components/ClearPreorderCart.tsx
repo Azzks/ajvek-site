@@ -1,34 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
+import { useCart } from "@/components/CartContext";
 
-const STORAGE_KEY = "ajvek-preorder-cart";
-const CART_UPDATED_EVENT = "ajvek-cart-updated";
+type ClearPreorderCartProps = {
+  enabled: boolean;
+};
 
-export default function ClearPreorderCart() {
+export default function ClearPreorderCart({
+  enabled,
+}: ClearPreorderCartProps) {
+  const { clearCart } = useCart();
+
   useEffect(() => {
-    try {
-      /*
-       * Le panier est supprimé uniquement lorsque
-       * ce composant est monté sur la page de
-       * confirmation de paiement.
-       */
-      localStorage.removeItem(STORAGE_KEY);
-
-      /*
-       * Informe immédiatement les autres composants
-       * du site que le panier a été modifié.
-       */
-      window.dispatchEvent(
-        new Event(CART_UPDATED_EVENT)
-      );
-    } catch (error) {
-      console.error(
-        "[ClearPreorderCart] Impossible de vider le panier :",
-        error
-      );
+    if (!enabled) {
+      return;
     }
-  }, []);
+
+    clearCart();
+  }, [enabled, clearCart]);
 
   return null;
 }
