@@ -69,7 +69,7 @@ export default function ConfidentialitePage() {
 
             <p>
               Dans le cadre de l&apos;utilisation du site, de la création
-              d&apos;un compte et de la réalisation d&apos;une précommande,
+              d&apos;un compte et de la réalisation d&apos;une commande,
               AJVEK peut notamment collecter les informations suivantes :
             </p>
 
@@ -82,7 +82,7 @@ export default function ConfidentialitePage() {
 
               <li>
                 informations relatives aux produits, tailles, couleurs,
-                quantités et précommandes ;
+                quantités et commandes ;
               </li>
 
               <li>
@@ -126,12 +126,12 @@ export default function ConfidentialitePage() {
             <ul className="mt-3 list-disc space-y-1 pl-5">
               <li>créer et administrer les comptes utilisateurs ;</li>
 
-              <li>enregistrer et gérer les précommandes ;</li>
+              <li>enregistrer et gérer les commandes ;</li>
 
               <li>traiter et confirmer les paiements ;</li>
 
               <li>
-                informer les clients de l&apos;avancement de leur précommande ;
+                informer les clients du suivi de leur commande ;
               </li>
 
               <li>
@@ -179,7 +179,7 @@ export default function ConfidentialitePage() {
             <ul className="mt-3 list-disc space-y-1 pl-5">
               <li>
                 l&apos;exécution de mesures précontractuelles pour les démarches
-                précédant la validation d&apos;une précommande ;
+                précédant la validation d&apos;une commande ;
               </li>
 
               <li>
@@ -222,7 +222,7 @@ export default function ConfidentialitePage() {
             <p>
               Les informations signalées comme obligatoires dans les
               formulaires sont nécessaires au traitement de la demande, de la
-              précommande, de la livraison ou à la création du compte.
+              commande, de la livraison ou à la création du compte.
             </p>
 
             <p className="mt-2">
@@ -446,14 +446,13 @@ export default function ConfidentialitePage() {
               Le site utilise des mécanismes techniques nécessaires à son
               fonctionnement, notamment pour l&apos;authentification, la
               sécurité et la conservation temporaire de certaines informations
-              liées à la précommande.
+              liées au panier.
             </p>
 
             <p className="mt-2">
-              Certaines informations du panier de précommande peuvent notamment
-              être conservées localement dans le navigateur de
-              l&apos;utilisateur afin de maintenir son panier entre plusieurs
-              pages ou visites.
+              Certaines informations du panier peuvent notamment être conservées
+              localement dans le navigateur de l&apos;utilisateur afin de
+              maintenir son panier entre plusieurs pages ou visites.
             </p>
 
             <p className="mt-2">
