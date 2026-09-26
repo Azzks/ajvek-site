@@ -169,8 +169,9 @@ export default function AProposPage() {
                 </h3>
 
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-stone md:text-base">
-                  Nous travaillons en précommande afin de produire
-                  en fonction de l&apos;intérêt réel porté aux pièces.
+                  Chaque drop est produit en série limitée, avec des quantités
+                  maîtrisées pour rester fidèles à notre manière de construire
+                  AJVEK.
                 </p>
               </article>
             </div>
@@ -207,9 +208,9 @@ export default function AProposPage() {
               </p>
 
               <p>
-                La précommande nous permet de lancer une production
-                lorsque le seuil prévu est atteint, plutôt que de fabriquer
-                de grandes quantités sans savoir si elles seront portées.
+                Nous privilégions des séries limitées et des quantités
+                maîtrisées, afin de développer chaque collection à notre
+                échelle plutôt que de produire de grandes quantités.
               </p>
             </div>
           </ScrollReveal>
