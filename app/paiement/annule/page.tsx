@@ -22,7 +22,7 @@ export default function PaiementAnnulePage() {
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link
-          href="/precommande"
+          href="/panier"
           className="rounded-full bg-foreground px-6 py-3 text-xs uppercase tracking-widest text-background transition hover:opacity-85"
         >
           Retour à mon panier
