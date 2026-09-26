@@ -194,7 +194,7 @@ function buildEmailLayout({
                       color:#8f8b83;
                     "
                   >
-                    Produit en France
+                    Créé en France
                   </td>
                 </tr>
               </table>

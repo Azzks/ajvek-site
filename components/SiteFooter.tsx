@@ -52,7 +52,7 @@ export default function SiteFooter() {
             </p>
 
             <p className="mt-5 text-[10px] uppercase tracking-[0.35em] text-stone-500">
-              Produit en France
+              Créé en France
             </p>
           </div>
 

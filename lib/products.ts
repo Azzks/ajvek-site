@@ -33,46 +33,36 @@ export const PRODUCTS: Product[] = [
         label: "Noir",
         color: "#1c1a18",
 
-        frontTexture:
-          "/decals/ajk-blanc.png",
+        frontTexture: "/decals/ajk-blanc.png",
 
-        backTexture:
-          "/decals/roses-blanc.png",
+        backTexture: "/decals/roses-blanc.png",
 
-        backScale: [
-          0.106,
-          0.4,
-          0.09,
-        ],
+        backScale: [0.106, 0.4, 0.09],
       },
 
       {
         label: "Blanc",
         color: "#f4f1ea",
 
-        frontTexture:
-          "/decals/ajk.png",
+        frontTexture: "/decals/ajk.png",
 
-        backTexture:
-          "/decals/roses.png",
+        backTexture: "/decals/roses.png",
 
-        backScale: [
-          0.106,
-          0.4,
-          0.09,
-        ],
+        backScale: [0.106, 0.4, 0.09],
       },
     ],
   },
 
   {
+    // On conserve le slug technique "sakura"
+    // pour ne pas casser les URLs et les dépendances existantes.
     slug: "sakura",
-    name: "AJVEK · Sakura",
+    name: "AJVEK · Cerisier",
     price: "39,90 €",
     priceValue: 39.9,
 
     description:
-      "Le cerisier : une grâce qui ne dure qu'un instant. Un tee-shirt en coton épais 180g/m², logo AJVEK brodé sur le devant, motif Sakura imprimé en DTF dans le dos. Pièce en édition limitée, fabriquée en petite série.",
+      "Le cerisier : une grâce qui ne dure qu'un instant. Un tee-shirt en coton épais 180g/m², logo AJVEK brodé sur le devant, motif Cerisier imprimé en DTF dans le dos. Pièce en édition limitée, fabriquée en petite série.",
 
     sizes: ["XS", "S", "M", "L"],
 
@@ -81,44 +71,31 @@ export const PRODUCTS: Product[] = [
         label: "Noir",
         color: "#1c1a18",
 
-        frontTexture:
-          "/decals/ajk-blanc.png",
+        frontTexture: "/decals/ajk-blanc.png",
 
-        backTexture:
-          "/decals/sakura-blanc.png",
+        // Nom technique conservé volontairement.
+        backTexture: "/decals/sakura-blanc.png",
 
-        backScale: [
-          0.24,
-          0.36,
-          0.09,
-        ],
+        backScale: [0.24, 0.36, 0.09],
       },
 
       {
         label: "Blanc",
         color: "#f4f1ea",
 
-        frontTexture:
-          "/decals/ajk.png",
+        frontTexture: "/decals/ajk.png",
 
-        backTexture:
-          "/decals/sakura.png",
+        // Nom technique conservé volontairement.
+        backTexture: "/decals/sakura.png",
 
-        backScale: [
-          0.24,
-          0.36,
-          0.09,
-        ],
+        backScale: [0.24, 0.36, 0.09],
       },
     ],
   },
 ];
 
-export function getProduct(
-  slug: string
-) {
+export function getProduct(slug: string) {
   return PRODUCTS.find(
-    (product) =>
-      product.slug === slug
+    (product) => product.slug === slug
   );
 }

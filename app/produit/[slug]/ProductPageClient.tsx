@@ -461,7 +461,7 @@ export default function ProductPageClient({
               </p>
 
               <p className="mt-2 text-[11px] leading-5 text-stone">
-                Produit en France.
+                Créé en France.
               </p>
             </div>
 
