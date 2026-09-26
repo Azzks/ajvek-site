@@ -3,16 +3,24 @@ import { PRODUCTS } from "@/lib/products";
 
 export default function CataloguePage() {
   const tiles = PRODUCTS.flatMap((product) =>
-    product.colorways.map((colorway, index) => ({
-      key: `${product.slug}-${colorway.label}`,
-      href: `/produit/${product.slug}?c=${index}`,
-      slug: product.slug,
-      name: product.name,
-      color: colorway.label,
-      price: product.price,
-      image: `/catalogue/${product.slug}-${colorway.label.toLowerCase()}.png`,
-      colorIndex: index,
-    }))
+    product.colorways.map((colorway, index) => {
+      const productName =
+        product.slug === "sakura" ? "cerisier" : product.slug;
+
+      const colorName =
+        colorway.label.toLowerCase() === "noir" ? "black" : "white";
+
+      return {
+        key: `${product.slug}-${colorway.label}`,
+        href: `/produit/${product.slug}?c=${index}`,
+        slug: product.slug,
+        name: product.name,
+        color: colorway.label,
+        price: product.price,
+        image: `/images/drop-001/${productName}-${colorName}.jpg`,
+        colorIndex: index,
+      };
+    })
   );
 
   return (
@@ -182,7 +190,7 @@ export default function CataloguePage() {
               <article>
                 {/* IMAGE */}
 
-                <div className="relative aspect-[4/5] overflow-hidden bg-[#151514]">
+                <div className="relative aspect-[4/5] overflow-hidden bg-[#d0cfcb]">
                   <img
                     src={tile.image}
                     alt={`${tile.name} ${tile.color}`}
