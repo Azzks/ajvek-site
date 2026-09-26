@@ -56,6 +56,16 @@ function Tshirt({
 
   useEffect(() => {
     material.color.set(color);
+
+    if ("roughness" in material) {
+      material.roughness = 0.86;
+    }
+
+    if ("metalness" in material) {
+      material.metalness = 0;
+    }
+
+    material.needsUpdate = true;
   }, [material, color]);
 
   return (
@@ -88,7 +98,7 @@ function Loader() {
 
   return (
     <Html center>
-      <p className="text-[10px] uppercase tracking-[0.3em] text-stone">
+      <p className="text-[10px] uppercase tracking-[0.3em] text-black/40">
         {Math.round(progress)}%
       </p>
     </Html>
@@ -243,7 +253,29 @@ export default function ProductViewer3D({
 
   return (
     <div className="relative">
-      <div className="relative h-[66svh] min-h-[430px] max-h-[620px] w-full overflow-hidden rounded-lg border border-surface bg-background md:aspect-square md:h-auto md:min-h-0 md:max-h-none">
+      <div
+        className="relative h-[66svh] min-h-[430px] max-h-[620px] w-full overflow-hidden rounded-lg border border-black/10 md:aspect-[4/3] md:h-auto md:min-h-0 md:max-h-none"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 42%, #d8d7d3 0%, #cac9c5 45%, #b9b8b4 100%)",
+        }}
+      >
+        {/* Halo studio très léger */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[43%] h-[72%] w-[68%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl"
+        />
+
+        {/* Assombrissement discret en bas */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[35%]"
+          style={{
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.055), transparent)",
+          }}
+        />
+
         <Canvas
           camera={{
             position: [
@@ -261,28 +293,39 @@ export default function ProductViewer3D({
             },
           }}
           dpr={[1, 2]}
+          style={{
+            position: "relative",
+            zIndex: 1,
+          }}
         >
-          <ambientLight intensity={0.2} />
+          {/* Éclairage studio doux */}
+          <ambientLight intensity={0.38} />
 
+          {/* Lumière principale */}
           <directionalLight
-            position={[2, 3, 2]}
-            intensity={1.6}
-            color="#fff2dd"
+            position={[3, 4, 4]}
+            intensity={1.55}
+            color="#fff8ef"
           />
 
+          {/* Remplissage */}
           <directionalLight
-            position={[
-              -2.5,
-              1.5,
-              -1.5,
-            ]}
-            intensity={0.5}
-            color="#7d9bd6"
+            position={[-3, 2, 2]}
+            intensity={0.65}
+            color="#eef1f5"
           />
 
+          {/* Contours */}
           <directionalLight
-            position={[0, 0.5, -3]}
-            intensity={0.8}
+            position={[0, 2, -4]}
+            intensity={0.85}
+            color="#ffffff"
+          />
+
+          {/* Épaules / col */}
+          <directionalLight
+            position={[0, 5, 0]}
+            intensity={0.45}
             color="#ffffff"
           />
 
@@ -307,11 +350,11 @@ export default function ProductViewer3D({
           />
         </Canvas>
 
-        <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 px-3">
+        <div className="absolute bottom-3 left-0 right-0 z-10 flex items-center justify-center gap-3 px-3">
           <button
             type="button"
             onClick={toggleView}
-            className="rounded-full border border-stone/40 bg-surface/80 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-foreground backdrop-blur-sm"
+            className="rounded-full border border-black/20 bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-black backdrop-blur-md transition hover:bg-white"
           >
             {facingBack
               ? "Avant"
@@ -322,7 +365,7 @@ export default function ProductViewer3D({
             type="button"
             onClick={handleZoomToggle}
             aria-label="Zoomer sur le détail"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-foreground bg-background text-base text-foreground shadow-md transition hover:bg-foreground hover:text-background"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-black/30 bg-white/70 text-base text-black shadow-sm backdrop-blur-md transition hover:bg-white"
           >
             +
           </button>
