@@ -175,21 +175,26 @@ export default function PanierPage() {
         </div>
 
         {/* ===============================================
-            VENTES FERMÉES POUR LE MOMENT
+            FINALISER LA COMMANDE
         ================================================ */}
 
-        <div className="mt-4 flex flex-col items-center gap-2">
-          <span
-            aria-disabled="true"
-            className="w-full cursor-not-allowed rounded-full border border-stone/40 px-6 py-3 text-center text-xs uppercase tracking-widest text-stone"
+        <div className="mt-4 flex flex-col items-center gap-3">
+          <Link
+            href="/precommande"
+            className="group flex w-full items-center justify-between rounded-full bg-foreground px-6 py-4 text-background transition hover:scale-[0.99]"
           >
-            Bientôt disponible
-          </span>
+            <span className="text-xs uppercase tracking-widest">
+              Finaliser ma commande
+            </span>
+
+            <span className="transition-transform group-hover:translate-x-1">
+              →
+            </span>
+          </Link>
 
           <p className="text-center text-xs leading-5 text-stone">
-            Le premier stock AJVEK arrive
-            bientôt. Les commandes ouvriront
-            dès sa mise en ligne.
+            Livraison et paiement à
+            l&apos;étape suivante.
           </p>
         </div>
       </div>

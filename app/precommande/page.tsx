@@ -1,24 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
+import { useCart } from "@/components/CartContext";
 import { getProduct } from "@/lib/products";
+
 import ServicePointPicker, {
   type SelectedServicePoint,
 } from "@/components/ServicePointPicker";
-
-const STORAGE_KEY = "ajvek-preorder-cart";
-
-type CartItem = {
-  product_slug: string;
-  product_name: string;
-  color: string;
-  size: string;
-  quantity: number;
-};
 
 type DeliveryMethod = "relay" | "home";
 
@@ -46,7 +38,12 @@ function stockKey(
 export default function PrecommandePage() {
   const { user, loading: authLoading } = useAuth();
 
-  const [items, setItems] = useState<CartItem[]>([]);
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+  } = useCart();
+
   const [stock, setStock] = useState<StockItem[]>([]);
   const [stockLoading, setStockLoading] = useState(true);
 
@@ -63,31 +60,6 @@ export default function PrecommandePage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  /*
-   * ============================================================
-   * PANIER
-   * ============================================================
-   */
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-
-      if (!stored) {
-        setItems([]);
-        return;
-      }
-
-      const parsed = JSON.parse(stored);
-
-      if (Array.isArray(parsed)) {
-        setItems(parsed);
-      }
-    } catch {
-      setItems([]);
-    }
-  }, []);
 
   /*
    * ============================================================
@@ -141,23 +113,16 @@ export default function PrecommandePage() {
 
   /*
    * ============================================================
-   * FONCTIONS PANIER
+   * STOCK D'UNE VARIANTE
    * ============================================================
    */
 
-  function saveItems(nextItems: CartItem[]) {
-    setItems(nextItems);
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(nextItems)
-    );
-  }
-
-  function getStockItem(item: CartItem) {
+  function getStockItem(
+    item: (typeof items)[number]
+  ) {
     const key = stockKey(
-      item.product_slug,
-      item.color,
+      item.slug,
+      item.colorLabel,
       item.size
     );
 
@@ -171,10 +136,21 @@ export default function PrecommandePage() {
     );
   }
 
+  /*
+   * ============================================================
+   * PANIER
+   * ============================================================
+   */
+
   function increaseQuantity(index: number) {
     setError(null);
 
     const current = items[index];
+
+    if (!current) {
+      return;
+    }
+
     const stockItem = getStockItem(current);
 
     if (!stockItem) {
@@ -206,16 +182,10 @@ export default function PrecommandePage() {
       return;
     }
 
-    const nextItems = items.map((item, i) =>
-      i === index
-        ? {
-            ...item,
-            quantity: item.quantity + 1,
-          }
-        : item
+    updateQuantity(
+      current.id,
+      current.quantity + 1
     );
-
-    saveItems(nextItems);
   }
 
   function decreaseQuantity(index: number) {
@@ -223,31 +193,31 @@ export default function PrecommandePage() {
 
     const current = items[index];
 
-    if (current.quantity <= 1) {
-      removeItem(index);
+    if (!current) {
       return;
     }
 
-    const nextItems = items.map((item, i) =>
-      i === index
-        ? {
-            ...item,
-            quantity: item.quantity - 1,
-          }
-        : item
-    );
+    if (current.quantity <= 1) {
+      removeItem(current.id);
+      return;
+    }
 
-    saveItems(nextItems);
+    updateQuantity(
+      current.id,
+      current.quantity - 1
+    );
   }
 
-  function removeItem(index: number) {
+  function removeCartItem(index: number) {
     setError(null);
 
-    const nextItems = items.filter(
-      (_, i) => i !== index
-    );
+    const current = items[index];
 
-    saveItems(nextItems);
+    if (!current) {
+      return;
+    }
+
+    removeItem(current.id);
   }
 
   function changeDeliveryMethod(
@@ -276,21 +246,11 @@ export default function PrecommandePage() {
   }, [items]);
 
   const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => {
-      const product = getProduct(
-        item.product_slug
-      );
-
-      if (!product) {
-        return sum;
-      }
-
-      return (
-        sum +
-        product.priceValue *
-          item.quantity
-      );
-    }, 0);
+    return items.reduce(
+      (sum, item) =>
+        sum + item.price * item.quantity,
+      0
+    );
   }, [items]);
 
   const shipping = useMemo(() => {
@@ -314,6 +274,10 @@ export default function PrecommandePage() {
       return false;
     }
 
+    if (items.length === 0) {
+      return false;
+    }
+
     return items.every((item) => {
       const stockItem = stock.find(
         (candidate) =>
@@ -323,8 +287,8 @@ export default function PrecommandePage() {
             candidate.size
           ) ===
           stockKey(
-            item.product_slug,
-            item.color,
+            item.slug,
+            item.colorLabel,
             item.size
           )
       );
@@ -345,6 +309,10 @@ export default function PrecommandePage() {
    */
 
   async function handleCheckout() {
+    if (submitting) {
+      return;
+    }
+
     if (!user) {
       setError(
         "Connecte-toi pour finaliser ta commande."
@@ -432,11 +400,13 @@ export default function PrecommandePage() {
             items: items.map(
               (item) => ({
                 product_slug:
-                  item.product_slug,
+                  item.slug,
 
-                color: item.color,
+                color:
+                  item.colorLabel,
 
-                size: item.size,
+                size:
+                  item.size,
 
                 quantity:
                   item.quantity,
@@ -502,6 +472,12 @@ export default function PrecommandePage() {
       </main>
     );
   }
+
+  /*
+   * ============================================================
+   * PAGE
+   * ============================================================
+   */
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -580,10 +556,7 @@ export default function PrecommandePage() {
               ["02", "Livraison"],
               ["03", "Paiement"],
             ].map(
-              (
-                [number, label],
-                index
-              ) => (
+              ([number, label], index) => (
                 <div
                   key={number}
                   className={`py-5 ${
@@ -671,19 +644,18 @@ export default function PrecommandePage() {
                     (item, index) => {
                       const product =
                         getProduct(
-                          item.product_slug
+                          item.slug
                         );
 
                       const itemPrice =
-                        product?.priceValue ??
-                        0;
+                        item.price;
 
                       const lineTotal =
                         itemPrice *
                         item.quantity;
 
                       const image =
-                        `/catalogue/${item.product_slug}-${item.color.toLowerCase()}.png`;
+                        `/catalogue/${item.slug}-${item.colorLabel.toLowerCase()}.png`;
 
                       const stockItem =
                         getStockItem(item);
@@ -697,22 +669,17 @@ export default function PrecommandePage() {
 
                       return (
                         <article
-                          key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
+                          key={item.id}
                           className="group border-b border-surface py-6 md:py-8"
                         >
                           <div className="grid grid-cols-[105px_minmax(0,1fr)] gap-5 md:grid-cols-[150px_minmax(0,1fr)] md:gap-8">
                             <Link
-                              href={`/produit/${item.product_slug}`}
+                              href={`/produit/${item.slug}`}
                               className="relative aspect-[4/5] overflow-hidden bg-[#151514]"
                             >
                               <img
                                 src={image}
-                                alt={`${
-                                  product?.name ??
-                                  item.product_name
-                                } ${
-                                  item.color
-                                }`}
+                                alt={`${product?.name ?? item.name} ${item.colorLabel}`}
                                 className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.02]"
                               />
 
@@ -731,14 +698,14 @@ export default function PrecommandePage() {
 
                                   <h3 className="mt-3 font-display text-2xl leading-none md:text-3xl">
                                     {product?.name ??
-                                      item.product_name}
+                                      item.name}
                                   </h3>
                                 </div>
 
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    removeItem(
+                                    removeCartItem(
                                       index
                                     )
                                   }
@@ -750,7 +717,9 @@ export default function PrecommandePage() {
 
                               <div className="mt-4 flex flex-wrap gap-x-3 gap-y-2 text-[9px] uppercase tracking-[0.18em] text-stone md:gap-x-5 md:text-[10px]">
                                 <span>
-                                  {item.color}
+                                  {
+                                    item.colorLabel
+                                  }
                                 </span>
 
                                 <span>·</span>
@@ -1190,13 +1159,11 @@ export default function PrecommandePage() {
                       "Commande",
                       "Choisis ta pièce parmi les tailles et coloris encore disponibles.",
                     ],
-
                     [
                       "02",
                       "Paiement",
                       "Ta commande est payée et confirmée immédiatement.",
                     ],
-
                     [
                       "03",
                       "Expédition",
@@ -1268,40 +1235,31 @@ export default function PrecommandePage() {
 
                 <div className="border-b border-surface px-6 py-2 md:px-7">
                   {items.map(
-                    (item, index) => {
-                      const product =
-                        getProduct(
-                          item.product_slug
-                        );
+                    (item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-4 border-b border-surface py-4 last:border-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-xs">
+                            {item.name}
+                          </p>
 
-                      return (
-                        <div
-                          key={`${item.product_slug}-${item.color}-${item.size}-${index}`}
-                          className="flex items-center justify-between gap-4 border-b border-surface py-4 last:border-0"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-xs">
-                              {product?.name ??
-                                item.product_name}
-                            </p>
-
-                            <p className="mt-1 text-[8px] uppercase tracking-[0.18em] text-stone">
-                              {item.color} ·{" "}
-                              {item.size} · ×
-                              {item.quantity}
-                            </p>
-                          </div>
-
-                          <p className="shrink-0 text-xs">
-                            {formatPrice(
-                              (product?.priceValue ??
-                                0) *
-                                item.quantity
-                            )}
+                          <p className="mt-1 text-[8px] uppercase tracking-[0.18em] text-stone">
+                            {item.colorLabel} ·{" "}
+                            {item.size} · ×
+                            {item.quantity}
                           </p>
                         </div>
-                      );
-                    }
+
+                        <p className="shrink-0 text-xs">
+                          {formatPrice(
+                            item.price *
+                              item.quantity
+                          )}
+                        </p>
+                      </div>
+                    )
                   )}
                 </div>
 
