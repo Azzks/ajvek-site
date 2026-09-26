@@ -6,8 +6,13 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
+
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/components/CartContext";
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
 
 const PRIMARY_LINKS = [
   {
@@ -20,7 +25,7 @@ const PRIMARY_LINKS = [
   },
   {
     href: "/a-propos",
-    label: "À propos",
+    label: "Notre histoire",
   },
 ];
 
@@ -30,20 +35,20 @@ const MENU_LINKS = [
     label: "Collection",
   },
   {
-    href: "/panier",
-    label: "Mon panier",
-  },
-  {
-    href: "/mes-commandes",
-    label: "Mes commandes",
-  },
-  {
     href: "/lookbook",
     label: "Lookbook",
   },
   {
     href: "/a-propos",
-    label: "À propos",
+    label: "Notre histoire",
+  },
+  {
+    href: "/mes-commandes",
+    label: "Compte",
+  },
+  {
+    href: "/panier",
+    label: "Panier",
   },
   {
     href: "/contact",
@@ -56,9 +61,12 @@ const ADMIN_LINK = {
   label: "Administration",
 };
 
+/* =========================================================
+   HEADER
+========================================================= */
+
 export default function SiteHeader() {
   const pathname = usePathname();
-
   const { totalItems } = useCart();
 
   const [open, setOpen] =
@@ -70,15 +78,13 @@ export default function SiteHeader() {
   const [scrolled, setScrolled] =
     useState(false);
 
-  /* =========================================================
-     SCROLL HEADER
-  ========================================================= */
+  /* =======================================================
+     HEADER AU SCROLL
+  ======================================================= */
 
   useEffect(() => {
     function handleScroll() {
-      setScrolled(
-        window.scrollY > 20
-      );
+      setScrolled(window.scrollY > 20);
     }
 
     handleScroll();
@@ -99,36 +105,30 @@ export default function SiteHeader() {
     };
   }, []);
 
-  /* =========================================================
-     BLOQUER LE SCROLL QUAND LE MENU EST OUVERT
-  ========================================================= */
+  /* =======================================================
+     BLOQUER LE SCROLL AVEC LE MENU MOBILE
+  ======================================================= */
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow =
-        "hidden";
-    } else {
-      document.body.style.overflow =
-        "";
-    }
+    document.body.style.overflow =
+      open ? "hidden" : "";
 
     return () => {
-      document.body.style.overflow =
-        "";
+      document.body.style.overflow = "";
     };
   }, [open]);
 
-  /* =========================================================
+  /* =======================================================
      FERMER LE MENU AU CHANGEMENT DE PAGE
-  ========================================================= */
+  ======================================================= */
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  /* =========================================================
+  /* =======================================================
      ADMIN
-  ========================================================= */
+  ======================================================= */
 
   useEffect(() => {
     let active = true;
@@ -161,9 +161,7 @@ export default function SiteHeader() {
         );
 
         if (active) {
-          setIsAdmin(
-            response.ok
-          );
+          setIsAdmin(response.ok);
         }
       } catch (error) {
         console.error(
@@ -198,36 +196,32 @@ export default function SiteHeader() {
     ? [...MENU_LINKS, ADMIN_LINK]
     : MENU_LINKS;
 
-  function isActive(
-    href: string
-  ) {
+  function isActive(href: string) {
     if (href === "/") {
       return pathname === "/";
     }
 
-    return pathname.startsWith(
-      href
-    );
+    return pathname.startsWith(href);
   }
 
   return (
     <>
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
+      {/* ===================================================
+          HEADER DESKTOP + MOBILE
+      ==================================================== */}
 
       <header
-        className={`sticky top-0 z-50 w-full transition-all duration-500 ${
+        className={`sticky top-0 z-50 w-full border-b transition-all duration-300 ${
           scrolled
-            ? "border-b border-white/[0.07] bg-background/85 backdrop-blur-xl"
-            : "border-b border-surface bg-background"
+            ? "border-white/[0.08] bg-[#0d0d0c]/95 backdrop-blur-xl"
+            : "border-white/[0.07] bg-[#0d0d0c]"
         }`}
       >
         <div
-          className={`mx-auto flex max-w-7xl items-center justify-between px-5 transition-all duration-500 md:px-8 ${
+          className={`mx-auto flex max-w-[1440px] items-center justify-between px-5 transition-[height] duration-300 md:px-8 lg:px-12 ${
             scrolled
-              ? "h-[58px]"
-              : "h-[68px] md:h-[74px]"
+              ? "h-[60px]"
+              : "h-[68px] md:h-[76px]"
           }`}
         >
           {/* LOGO */}
@@ -235,44 +229,41 @@ export default function SiteHeader() {
           <Link
             href="/"
             aria-label="AJVEK — Accueil"
-            className="group relative z-10"
+            className="relative z-10 shrink-0"
           >
-            <span className="block font-display text-xl tracking-[0.18em] text-foreground transition-all duration-300 group-hover:tracking-[0.22em] md:text-[22px]">
+            <span className="font-display text-[22px] tracking-[0.17em] text-[#f4f1ea] md:text-[24px]">
               AJVEK
             </span>
           </Link>
 
-          {/* NAV DESKTOP */}
+          {/* NAVIGATION DESKTOP */}
 
-          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-9 md:flex">
+          <nav
+            aria-label="Navigation principale"
+            className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex xl:gap-11"
+          >
             {PRIMARY_LINKS.map(
               (link) => {
                 const active =
-                  isActive(
-                    link.href
-                  );
+                  isActive(link.href);
 
                 return (
                   <Link
-                    key={
-                      link.href
-                    }
-                    href={
-                      link.href
-                    }
-                    className={`group relative py-2 text-[9px] uppercase tracking-[0.3em] transition-colors duration-300 ${
+                    key={link.href}
+                    href={link.href}
+                    className={`relative py-2 text-[10px] uppercase tracking-[0.24em] transition-colors duration-200 ${
                       active
-                        ? "text-foreground"
-                        : "text-stone hover:text-foreground"
+                        ? "text-[#f4f1ea]"
+                        : "text-[#8a8178] hover:text-[#f4f1ea]"
                     }`}
                   >
                     {link.label}
 
                     <span
-                      className={`absolute bottom-0 left-0 h-px bg-foreground transition-all duration-300 ${
+                      className={`absolute bottom-0 left-0 h-px bg-[#f4f1ea] transition-[width] duration-200 ${
                         active
                           ? "w-full"
-                          : "w-0 group-hover:w-full"
+                          : "w-0"
                       }`}
                     />
                   </Link>
@@ -283,10 +274,16 @@ export default function SiteHeader() {
 
           {/* ACTIONS DESKTOP */}
 
-          <div className="hidden items-center md:flex">
+          <div className="hidden items-center gap-7 lg:flex">
             <Link
               href="/mes-commandes"
-              className="group mr-7 text-[9px] uppercase tracking-[0.28em] text-stone transition-colors hover:text-foreground"
+              className={`text-[10px] uppercase tracking-[0.24em] transition-colors ${
+                isActive(
+                  "/mes-commandes"
+                )
+                  ? "text-[#f4f1ea]"
+                  : "text-[#8a8178] hover:text-[#f4f1ea]"
+              }`}
             >
               Compte
             </Link>
@@ -298,19 +295,11 @@ export default function SiteHeader() {
                   ? "s"
                   : ""
               }`}
-              className="group flex items-center gap-3 rounded-full border border-surface px-4 py-2.5 transition-all duration-300 hover:border-foreground hover:bg-foreground hover:text-background"
+              className="flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-[#f4f1ea]"
             >
-              <span className="text-[9px] uppercase tracking-[0.27em]">
-                Panier
-              </span>
+              <span>Panier</span>
 
-              <span
-                className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[8px] transition-colors ${
-                  totalItems > 0
-                    ? "bg-foreground text-background group-hover:bg-background group-hover:text-foreground"
-                    : "bg-surface text-stone group-hover:bg-background group-hover:text-foreground"
-                }`}
-              >
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full border border-white/15 px-1 text-[9px] tracking-normal">
                 {totalItems}
               </span>
             </Link>
@@ -318,17 +307,17 @@ export default function SiteHeader() {
             {isAdmin && (
               <Link
                 href="/admin/commandes"
-                className="ml-4 flex h-8 w-8 items-center justify-center rounded-full border border-surface text-[8px] uppercase tracking-[0.15em] text-stone transition hover:border-foreground hover:text-foreground"
                 aria-label="Administration"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 text-[8px] uppercase text-[#8a8178] transition hover:border-white/40 hover:text-[#f4f1ea]"
               >
                 A
               </Link>
             )}
           </div>
 
-          {/* MOBILE ACTIONS */}
+          {/* ACTIONS TABLETTE / MOBILE */}
 
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-4 lg:hidden">
             <Link
               href="/panier"
               aria-label={`Panier — ${totalItems} article${
@@ -336,18 +325,15 @@ export default function SiteHeader() {
                   ? "s"
                   : ""
               }`}
-              className="relative flex h-9 min-w-9 items-center justify-center"
+              className="flex items-center gap-2"
             >
-              <span className="text-[9px] uppercase tracking-[0.2em]">
-                Bag
+              <span className="hidden text-[9px] uppercase tracking-[0.22em] text-[#f4f1ea] sm:inline">
+                Panier
               </span>
 
-              {totalItems >
-                0 && (
-                <span className="absolute -right-1 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[7px] text-background">
-                  {totalItems}
-                </span>
-              )}
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full border border-white/15 px-1 text-[8px] text-[#f4f1ea]">
+                {totalItems}
+              </span>
             </Link>
 
             <button
@@ -357,36 +343,31 @@ export default function SiteHeader() {
               }
               aria-label="Ouvrir le menu"
               aria-expanded={open}
-              className="group flex h-10 w-10 flex-col items-end justify-center gap-[6px]"
+              aria-controls="mobile-navigation"
+              className="flex h-10 w-10 flex-col items-end justify-center gap-[6px]"
             >
-              <span className="h-px w-6 bg-foreground transition-all duration-300 group-hover:w-5" />
-
-              <span className="h-px w-4 bg-foreground transition-all duration-300 group-hover:w-6" />
+              <span className="block h-px w-6 bg-[#f4f1ea]" />
+              <span className="block h-px w-4 bg-[#f4f1ea]" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* =====================================================
+      {/* ===================================================
           MENU MOBILE
-      ====================================================== */}
+      ==================================================== */}
 
       <div
-        className={`fixed inset-0 z-[100] bg-[#0c0c0b] text-[#f3f0ea] transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] md:hidden ${
+        id="mobile-navigation"
+        aria-hidden={!open}
+        className={`fixed inset-0 z-[100] bg-[#0d0d0c] text-[#f4f1ea] transition-[opacity,transform] duration-300 lg:hidden ${
           open
             ? "pointer-events-auto translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-full opacity-0"
+            : "pointer-events-none -translate-y-3 opacity-0"
         }`}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-8 top-1/2 -translate-y-1/2 font-display text-[55vw] leading-none text-white/[0.018]"
-        >
-          A
-        </div>
-
-        <div className="relative z-10 flex h-[100svh] flex-col px-5">
-          {/* MENU TOP */}
+        <div className="mx-auto flex h-[100svh] max-w-[1440px] flex-col px-5 sm:px-8">
+          {/* TOP */}
 
           <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-white/10">
             <Link
@@ -394,62 +375,35 @@ export default function SiteHeader() {
               onClick={() =>
                 setOpen(false)
               }
-              className="font-display text-xl tracking-[0.18em]"
+              className="font-display text-[22px] tracking-[0.17em]"
             >
               AJVEK
             </Link>
 
-            <div className="flex items-center gap-4">
-              <Link
-                href="/panier"
-                onClick={() =>
-                  setOpen(false)
-                }
-                className="flex items-center gap-2"
-              >
-                <span className="text-[8px] uppercase tracking-[0.3em] text-stone-400">
-                  Panier
-                </span>
+            <button
+              type="button"
+              onClick={() =>
+                setOpen(false)
+              }
+              aria-label="Fermer le menu"
+              className="relative h-10 w-10"
+            >
+              <span className="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-[#f4f1ea]" />
 
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-white/15 px-1 text-[8px]">
-                  {totalItems}
-                </span>
-              </Link>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setOpen(false)
-                }
-                aria-label="Fermer le menu"
-                className="relative h-10 w-10"
-              >
-                <span className="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-white" />
-
-                <span className="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-white" />
-              </button>
-            </div>
+              <span className="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-[#f4f1ea]" />
+            </button>
           </div>
 
-          {/* MENU LINKS */}
+          {/* LIENS */}
 
-          <div className="flex min-h-0 flex-1 flex-col justify-center py-5">
-            <div className="mb-5 flex items-center justify-between">
-              <p className="text-[8px] uppercase tracking-[0.42em] text-stone-500">
-                Navigation
-              </p>
+          <div className="flex min-h-0 flex-1 flex-col justify-center py-8">
+            <p className="mb-6 text-[9px] uppercase tracking-[0.35em] text-[#8a8178]">
+              Navigation
+            </p>
 
-              <p className="text-[8px] uppercase tracking-[0.35em] text-stone-600">
-                Drop 001
-              </p>
-            </div>
-
-            <nav>
+            <nav aria-label="Navigation mobile">
               {menuLinks.map(
-                (
-                  link,
-                  index
-                ) => {
+                (link, index) => {
                   const active =
                     isActive(
                       link.href
@@ -457,30 +411,22 @@ export default function SiteHeader() {
 
                   return (
                     <Link
-                      key={
-                        link.href
-                      }
-                      href={
-                        link.href
-                      }
+                      key={link.href}
+                      href={link.href}
                       onClick={() =>
-                        setOpen(
-                          false
-                        )
+                        setOpen(false)
                       }
-                      className="group flex items-center justify-between border-t border-white/10 py-[13px]"
+                      className="group flex items-center justify-between border-t border-white/10 py-4"
                     >
                       <div className="flex items-center gap-4">
                         <span
-                          className={`font-display text-[1.85rem] leading-none tracking-[-0.02em] transition-all duration-300 ${
+                          className={`font-display text-[2rem] leading-none ${
                             active
                               ? "text-white"
-                              : "text-white/75 group-hover:text-white"
+                              : "text-white/75"
                           }`}
                         >
-                          {
-                            link.label
-                          }
+                          {link.label}
                         </span>
 
                         {active && (
@@ -488,21 +434,14 @@ export default function SiteHeader() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <span className="text-[8px] tracking-[0.25em] text-stone-600">
-                          {String(
-                            index +
-                              1
-                          ).padStart(
-                            2,
-                            "0"
-                          )}
-                        </span>
-
-                        <span className="translate-x-1 text-sm text-stone-600 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-white group-hover:opacity-100">
-                          →
-                        </span>
-                      </div>
+                      <span className="text-[9px] tracking-[0.22em] text-[#6f6861]">
+                        {String(
+                          index + 1
+                        ).padStart(
+                          2,
+                          "0"
+                        )}
+                      </span>
                     </Link>
                   );
                 }
@@ -512,33 +451,35 @@ export default function SiteHeader() {
             </nav>
           </div>
 
-          {/* MENU BOTTOM */}
+          {/* BOTTOM */}
 
-          <div className="shrink-0 border-t border-white/10 pb-[max(22px,env(safe-area-inset-bottom))] pt-5">
-            <div className="flex items-end justify-between gap-5">
+          <div className="shrink-0 border-t border-white/10 pb-[max(24px,env(safe-area-inset-bottom))] pt-5">
+            <div className="flex items-end justify-between gap-6">
               <div>
-                <p className="text-[8px] uppercase tracking-[0.38em] text-stone-500">
+                <p className="text-[8px] uppercase tracking-[0.32em] text-[#8a8178]">
                   AJVEK · France
                 </p>
 
-                <p className="mt-3 max-w-[230px] text-[11px] leading-5 text-stone-400">
-                  Drop 001 — Roses /
-                  Cerisier
+                <p className="mt-3 text-[11px] leading-5 text-white/55">
+                  Drop 001
                   <br />
-                  Premier stock bientôt
-                  disponible · 39,90 €
+                  Roses / Cerisier
                 </p>
               </div>
 
-              <div className="text-right">
-                <p className="text-[8px] uppercase tracking-[0.3em] text-stone-600">
-                  2026
-                </p>
+              <Link
+                href="/panier"
+                onClick={() =>
+                  setOpen(false)
+                }
+                className="flex items-center gap-3 text-[9px] uppercase tracking-[0.24em]"
+              >
+                Panier
 
-                <p className="mt-3 text-base">
-                  🇫🇷
-                </p>
-              </div>
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full border border-white/15 px-1 text-[8px]">
+                  {totalItems}
+                </span>
+              </Link>
             </div>
           </div>
         </div>
