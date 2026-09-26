@@ -43,13 +43,10 @@ export default function PreorderForm({
   const salesEnabled =
     selectedStock?.sales_enabled === true;
 
-  const quantity =
-    Math.max(
-      Number(
-        selectedStock?.stock_quantity ?? 0
-      ),
-      0
-    );
+  const quantity = Math.max(
+    Number(selectedStock?.stock_quantity ?? 0),
+    0
+  );
 
   const available =
     salesEnabled &&
@@ -109,20 +106,6 @@ export default function PreorderForm({
    * =========================================================
    * BOUTON
    * =========================================================
-   *
-   * IMPORTANT :
-   *
-   * On prépare ici l'état visuel.
-   *
-   * Le bouton reste volontairement désactivé
-   * tant que le système d'ajout au panier
-   * n'est pas activé dans cette étape.
-   *
-   * Donc aujourd'hui :
-   *
-   * sales_enabled = false
-   * => "Bientôt disponible"
-   * => impossible de commander.
    */
 
   let buttonLabel =
@@ -140,33 +123,29 @@ export default function PreorderForm({
   } else if (soldOut) {
     buttonLabel = "Épuisé";
   } else if (available) {
-    /*
-     * Le stock est techniquement ouvert.
-     * L'ajout panier sera branché ensuite.
-     */
     buttonLabel = "Disponible";
   }
 
   return (
-    <div>
+    <div className="w-full">
       {/* =====================================================
           DISPONIBILITÉ
       ====================================================== */}
 
-      <div>
-        <div className="flex items-center justify-between gap-4">
-          <div>
+      <div className="pt-2 sm:pt-0">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.28em] text-stone">
               DROP 001
             </p>
 
-            <p className="mt-2 font-display text-xl text-foreground">
+            <p className="mt-3 font-display text-xl leading-tight text-foreground">
               {statusTitle}
             </p>
           </div>
 
           <span
-            className={`h-2 w-2 shrink-0 rounded-full ${
+            className={`mt-2 h-2 w-2 shrink-0 rounded-full ${
               available
                 ? "bg-foreground"
                 : "bg-stone/40"
@@ -174,7 +153,7 @@ export default function PreorderForm({
           />
         </div>
 
-        <p className="mt-4 max-w-md text-xs leading-6 text-stone">
+        <p className="mt-5 max-w-md text-xs leading-6 text-stone">
           {statusDescription}
         </p>
       </div>
@@ -183,17 +162,17 @@ export default function PreorderForm({
           OFFRE LANCEMENT
       ====================================================== */}
 
-      <div className="mt-6 border-y border-surface py-6">
+      <div className="mt-7 border-y border-surface py-7">
         <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
           Offre de lancement
         </p>
 
-        <p className="mt-3 font-display text-lg leading-7 text-foreground">
+        <p className="mt-4 font-display text-lg leading-7 text-foreground">
           Les 10 premières commandes participent
           au tirage au sort.
         </p>
 
-        <p className="mt-2 text-xs leading-5 text-stone">
+        <p className="mt-3 text-xs leading-5 text-stone">
           Une chance de gagner un bon
           d&apos;achat de -30 % valable sur une
           prochaine commande AJVEK.
@@ -204,13 +183,13 @@ export default function PreorderForm({
           PRODUIT SÉLECTIONNÉ
       ====================================================== */}
 
-      <div className="mt-6">
-        <div className="border border-surface px-4 py-4">
+      <div className="mt-7">
+        <div className="border border-surface px-4 py-5">
           <p className="text-[9px] uppercase tracking-[0.25em] text-stone">
             Sélection
           </p>
 
-          <p className="mt-2 text-xs text-foreground">
+          <p className="mt-3 text-xs leading-5 text-foreground">
             {product.name} ·{" "}
             {colorway.label}
             {size
@@ -220,7 +199,7 @@ export default function PreorderForm({
 
           {size &&
             available && (
-              <p className="mt-2 text-[10px] text-stone">
+              <p className="mt-2 text-[10px] leading-5 text-stone">
                 {quantity} pièce
                 {quantity > 1
                   ? "s"
@@ -247,7 +226,7 @@ export default function PreorderForm({
           {buttonLabel}
         </button>
 
-        <p className="mt-3 text-center text-[10px] leading-5 text-stone">
+        <p className="mt-4 px-3 text-center text-[10px] leading-5 text-stone">
           {!salesEnabled
             ? "Les achats seront ouverts dès l'arrivée du premier stock."
             : soldOut
@@ -262,7 +241,7 @@ export default function PreorderForm({
           MADE IN FRANCE
       ====================================================== */}
 
-      <div className="mt-6 border-t border-surface pt-5">
+      <div className="mt-7 border-t border-surface pt-6">
         <MadeInFrance />
       </div>
     </div>
