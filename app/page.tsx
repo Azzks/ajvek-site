@@ -248,8 +248,8 @@ export default function HomePage() {
       ====================================================== */}
 
       <section className="border-b border-white/[0.08]">
-        <div className="mx-auto max-w-[1600px] px-6 py-20 sm:px-10 lg:px-14 lg:py-28 xl:px-20">
-          <div className="mb-14 flex items-end justify-between gap-10">
+        <div className="mx-auto max-w-[1600px] py-20 sm:px-10 lg:px-14 lg:py-28 xl:px-20">
+          <div className="mb-10 flex items-end justify-between gap-10 px-6 sm:mb-14 sm:px-0">
             <div>
               <p className="text-[9px] uppercase tracking-[0.34em] text-[#8a8178]">
                 Du dessin au vêtement
@@ -266,7 +266,23 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-px bg-white/[0.08] sm:grid-cols-2 lg:grid-cols-5">
+          {/* Indication mobile */}
+          <div className="mb-5 flex items-center justify-between px-6 sm:hidden">
+            <p className="text-[8px] uppercase tracking-[0.28em] text-[#6f6962]">
+              5 étapes
+            </p>
+
+            <p className="flex items-center gap-3 text-[8px] uppercase tracking-[0.28em] text-[#8a8178]">
+              Glisser
+              <span aria-hidden className="text-sm">
+                →
+              </span>
+            </p>
+          </div>
+
+          {/* MOBILE : swipe horizontal
+              DESKTOP : grille actuelle */}
+          <div className="flex snap-x snap-mandatory gap-px overflow-x-auto bg-white/[0.08] pl-6 pr-[12vw] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-5">
             <ProcessImage
               src="/process/01-roses.jpg"
               number="01"
@@ -349,13 +365,13 @@ function ProcessImage({
   label: string;
 }) {
   return (
-    <div className="group bg-[#0d0d0c]">
+    <div className="group w-[82vw] max-w-[330px] shrink-0 snap-start bg-[#0d0d0c] sm:w-auto sm:max-w-none">
       <div className="relative aspect-[4/5] overflow-hidden bg-[#1a1918]">
         <Image
           src={src}
           alt={`Processus AJVEK — ${label}`}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 20vw"
+          sizes="(max-width: 640px) 82vw, (max-width: 1024px) 50vw, 20vw"
           className="object-cover opacity-90 transition duration-700 group-hover:scale-[1.02] group-hover:opacity-100"
         />
       </div>
