@@ -8,12 +8,33 @@ import {
 
 import { supabase } from "@/lib/supabase";
 
+/* ============================================================
+   TYPES
+   ============================================================ */
+
 type OrderItem = {
   product_slug: string;
   product_name: string;
   color: string;
   size: string;
   quantity: number;
+};
+
+type ServicePoint = {
+  id: string | null;
+  name: string | null;
+  address: string | null;
+  postal_code: string | null;
+  city: string | null;
+};
+
+type ShippingAddress = {
+  name: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  postal_code: string | null;
+  city: string | null;
+  country: string | null;
 };
 
 type AdminOrder = {
@@ -34,13 +55,8 @@ type AdminOrder = {
   delivery_method: string | null;
   shipping_amount: number;
 
-  service_point: {
-    id: string | null;
-    name: string | null;
-    address: string | null;
-    postal_code: string | null;
-    city: string | null;
-  } | null;
+  service_point: ServicePoint | null;
+  shipping_address: ShippingAddress | null;
 
   carrier: string | null;
   tracking_number: string | null;
@@ -59,11 +75,9 @@ type OrderDraft = {
   tracking_url: string;
 };
 
-/*
- * ============================================================
- * STATUTS
- * ============================================================
- */
+/* ============================================================
+   STATUTS
+   ============================================================ */
 
 const STATUS_OPTIONS = [
   {
@@ -84,11 +98,9 @@ const STATUS_OPTIONS = [
   },
 ];
 
-/*
- * ============================================================
- * COMPATIBILITÉ ANCIENS STATUTS
- * ============================================================
- */
+/* ============================================================
+   COMPATIBILITÉ ANCIENS STATUTS
+   ============================================================ */
 
 function normalizeStatus(
   status: string | null | undefined
@@ -96,10 +108,12 @@ function normalizeStatus(
   switch (status) {
     case "preorder_received":
     case "awaiting_payment":
+    case "paid":
       return "paid";
 
     case "production":
     case "manufacturing":
+    case "preparing":
       return "preparing";
 
     case "shipped":
@@ -113,11 +127,9 @@ function normalizeStatus(
   }
 }
 
-/*
- * ============================================================
- * FORMATAGE
- * ============================================================
- */
+/* ============================================================
+   FORMATAGE
+   ============================================================ */
 
 function formatDate(
   date: string | null
@@ -166,11 +178,25 @@ function shortOrderId(
     .toUpperCase();
 }
 
-/*
- * ============================================================
- * PAGE
- * ============================================================
- */
+function countryLabel(
+  country: string | null
+) {
+  if (!country) {
+    return null;
+  }
+
+  if (
+    country.toUpperCase() === "FR"
+  ) {
+    return "France";
+  }
+
+  return country.toUpperCase();
+}
+
+/* ============================================================
+   PAGE
+   ============================================================ */
 
 export default function AdminCommandesPage() {
   const [orders, setOrders] =
@@ -190,17 +216,12 @@ export default function AdminCommandesPage() {
 
   const [drafts, setDrafts] =
     useState<
-      Record<
-        string,
-        OrderDraft
-      >
+      Record<string, OrderDraft>
     >({});
 
-  /*
-   * ==========================================================
-   * TOKEN ADMIN
-   * ==========================================================
-   */
+  /* ==========================================================
+     TOKEN ADMIN
+     ========================================================== */
 
   async function getAccessToken() {
     const {
@@ -214,11 +235,9 @@ export default function AdminCommandesPage() {
     );
   }
 
-  /*
-   * ==========================================================
-   * CHARGER LES COMMANDES
-   * ==========================================================
-   */
+  /* ==========================================================
+     CHARGER LES COMMANDES
+     ========================================================== */
 
   async function loadOrders() {
     setLoading(true);
@@ -323,11 +342,9 @@ export default function AdminCommandesPage() {
     loadOrders();
   }, []);
 
-  /*
-   * ==========================================================
-   * MODIFIER UN BROUILLON
-   * ==========================================================
-   */
+  /* ==========================================================
+     MODIFIER UN BROUILLON
+     ========================================================== */
 
   function updateDraft(
     orderId: string,
@@ -348,11 +365,9 @@ export default function AdminCommandesPage() {
     );
   }
 
-  /*
-   * ==========================================================
-   * ENREGISTRER UNE COMMANDE
-   * ==========================================================
-   */
+  /* ==========================================================
+     ENREGISTRER UNE COMMANDE
+     ========================================================== */
 
   async function saveOrder(
     order: AdminOrder
@@ -447,11 +462,9 @@ export default function AdminCommandesPage() {
     }
   }
 
-  /*
-   * ==========================================================
-   * RECHERCHE
-   * ==========================================================
-   */
+  /* ==========================================================
+     RECHERCHE
+     ========================================================== */
 
   const filteredOrders =
     useMemo(() => {
@@ -474,6 +487,29 @@ export default function AdminCommandesPage() {
               )
               .join(" ");
 
+          const deliveryText = [
+            order.service_point
+              ?.name || "",
+            order.service_point
+              ?.address || "",
+            order.service_point
+              ?.postal_code || "",
+            order.service_point
+              ?.city || "",
+            order.shipping_address
+              ?.name || "",
+            order.shipping_address
+              ?.address_line1 || "",
+            order.shipping_address
+              ?.address_line2 || "",
+            order.shipping_address
+              ?.postal_code || "",
+            order.shipping_address
+              ?.city || "",
+            order.shipping_address
+              ?.country || "",
+          ].join(" ");
+
           return [
             order.customer.name,
             order.customer.email,
@@ -481,6 +517,7 @@ export default function AdminCommandesPage() {
               "",
             order.checkout_group_id,
             itemText,
+            deliveryText,
           ]
             .join(" ")
             .toLowerCase()
@@ -494,11 +531,9 @@ export default function AdminCommandesPage() {
       search,
     ]);
 
-  /*
-   * ==========================================================
-   * COMPTEURS
-   * ==========================================================
-   */
+  /* ==========================================================
+     COMPTEURS
+     ========================================================== */
 
   const totalPieces =
     orders.reduce(
@@ -546,11 +581,9 @@ export default function AdminCommandesPage() {
         "delivered"
     ).length;
 
-  /*
-   * ==========================================================
-   * RENDER
-   * ==========================================================
-   */
+  /* ==========================================================
+     RENDER
+     ========================================================== */
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -571,9 +604,8 @@ export default function AdminCommandesPage() {
               </h1>
 
               <p className="mt-5 max-w-xl text-sm leading-7 text-stone">
-                Gestion des
-                commandes payées,
-                de leur préparation
+                Gestion des commandes
+                payées, de leur préparation
                 jusqu&apos;à leur
                 livraison.
               </p>
@@ -603,7 +635,6 @@ export default function AdminCommandesPage() {
 
       <section className="px-6 py-10 md:px-8 md:py-14">
         <div className="mx-auto max-w-7xl">
-
           {/* =================================================
               RÉSUMÉ
           ================================================= */}
@@ -615,9 +646,7 @@ export default function AdminCommandesPage() {
               </p>
 
               <p className="mt-3 font-display text-3xl">
-                {
-                  orders.length
-                }
+                {orders.length}
               </p>
             </div>
 
@@ -627,9 +656,7 @@ export default function AdminCommandesPage() {
               </p>
 
               <p className="mt-3 font-display text-3xl">
-                {
-                  totalPieces
-                }
+                {totalPieces}
               </p>
             </div>
 
@@ -639,9 +666,7 @@ export default function AdminCommandesPage() {
               </p>
 
               <p className="mt-3 font-display text-3xl">
-                {
-                  preparingCount
-                }
+                {preparingCount}
               </p>
             </div>
 
@@ -651,9 +676,7 @@ export default function AdminCommandesPage() {
               </p>
 
               <p className="mt-3 font-display text-3xl">
-                {
-                  shippedCount
-                }
+                {shippedCount}
               </p>
             </div>
 
@@ -663,9 +686,7 @@ export default function AdminCommandesPage() {
               </p>
 
               <p className="mt-3 font-display text-3xl">
-                {
-                  deliveredCount
-                }
+                {deliveredCount}
               </p>
             </div>
           </div>
@@ -681,9 +702,7 @@ export default function AdminCommandesPage() {
               </p>
 
               <p className="mt-2 font-display text-2xl">
-                {
-                  orders.length
-                }
+                {orders.length}
               </p>
             </div>
 
@@ -700,7 +719,7 @@ export default function AdminCommandesPage() {
                     .value
                 )
               }
-              placeholder="Nom, email, produit..."
+              placeholder="Nom, email, produit, adresse..."
               className="w-full border border-surface bg-transparent px-4 py-3 text-sm outline-none placeholder:text-stone/50 md:max-w-sm"
             />
           </div>
@@ -742,8 +761,7 @@ export default function AdminCommandesPage() {
               0 && (
               <div className="border border-surface px-6 py-16 text-center">
                 <p className="text-[10px] uppercase tracking-[0.35em] text-stone">
-                  Administration
-                  AJVEK
+                  Administration AJVEK
                 </p>
 
                 <h2 className="mt-5 font-display text-3xl">
@@ -781,6 +799,24 @@ export default function AdminCommandesPage() {
                         total +
                         item.quantity,
                       0
+                    );
+
+                  const homeAddress =
+                    order.shipping_address;
+
+                  const hasHomeAddress =
+                    order.delivery_method ===
+                      "home" &&
+                    Boolean(
+                      homeAddress &&
+                        (
+                          homeAddress.name ||
+                          homeAddress.address_line1 ||
+                          homeAddress.address_line2 ||
+                          homeAddress.postal_code ||
+                          homeAddress.city ||
+                          homeAddress.country
+                        )
                     );
 
                   return (
@@ -863,9 +899,8 @@ export default function AdminCommandesPage() {
                       </div>
 
                       <div className="grid lg:grid-cols-[1fr_0.9fr]">
-
                         {/* ===================================
-                            ARTICLES
+                            ARTICLES + LIVRAISON
                         ==================================== */}
 
                         <div className="border-b border-surface p-5 md:p-7 lg:border-b-0 lg:border-r">
@@ -894,8 +929,7 @@ export default function AdminCommandesPage() {
                                       {
                                         item.color
                                       }{" "}
-                                      ·
-                                      Taille{" "}
+                                      · Taille{" "}
                                       {
                                         item.size
                                       }
@@ -926,7 +960,10 @@ export default function AdminCommandesPage() {
                               {order.delivery_method ===
                               "relay"
                                 ? "Point Relais Mondial Relay"
-                                : "Livraison à domicile"}
+                                : order.delivery_method ===
+                                    "home"
+                                  ? "Livraison à domicile"
+                                  : "Mode de livraison non renseigné"}
                             </p>
 
                             <p className="mt-2 text-xs text-stone">
@@ -938,48 +975,120 @@ export default function AdminCommandesPage() {
                                   )}
                             </p>
 
-                            {order.service_point && (
-                              <div className="mt-4 text-xs leading-5 text-stone">
-                                <p className="text-foreground">
+                            {/* POINT RELAIS */}
+
+                            {order.delivery_method ===
+                              "relay" &&
+                              order.service_point && (
+                                <div className="mt-4 border-l border-surface pl-4 text-xs leading-5 text-stone">
+                                  <p className="text-foreground">
+                                    {order
+                                      .service_point
+                                      .name ||
+                                      "Point Relais"}
+                                  </p>
+
                                   {order
                                     .service_point
-                                    .name ||
-                                    "Point Relais"}
-                                </p>
+                                    .address && (
+                                    <p className="mt-1">
+                                      {
+                                        order
+                                          .service_point
+                                          .address
+                                      }
+                                    </p>
+                                  )}
 
-                                {order
-                                  .service_point
-                                  .address && (
-                                  <p className="mt-1">
-                                    {
-                                      order
-                                        .service_point
-                                        .address
-                                    }
-                                  </p>
-                                )}
-
-                                {(order
-                                  .service_point
-                                  .postal_code ||
-                                  order
+                                  {(order
                                     .service_point
-                                    .city) && (
-                                  <p>
-                                    {
-                                      order
-                                        .service_point
-                                        .postal_code
-                                    }{" "}
-                                    {
-                                      order
-                                        .service_point
-                                        .city
-                                    }
+                                    .postal_code ||
+                                    order
+                                      .service_point
+                                      .city) && (
+                                    <p>
+                                      {
+                                        order
+                                          .service_point
+                                          .postal_code
+                                      }{" "}
+                                      {
+                                        order
+                                          .service_point
+                                          .city
+                                      }
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                            {/* DOMICILE */}
+
+                            {hasHomeAddress &&
+                              homeAddress && (
+                                <div className="mt-4 border-l border-surface pl-4 text-xs leading-5 text-stone">
+                                  <p className="mb-2 text-[8px] uppercase tracking-[0.25em] text-stone">
+                                    Adresse de livraison
                                   </p>
-                                )}
-                              </div>
-                            )}
+
+                                  {homeAddress.name && (
+                                    <p className="text-foreground">
+                                      {
+                                        homeAddress.name
+                                      }
+                                    </p>
+                                  )}
+
+                                  {homeAddress.address_line1 && (
+                                    <p className="mt-1">
+                                      {
+                                        homeAddress.address_line1
+                                      }
+                                    </p>
+                                  )}
+
+                                  {homeAddress.address_line2 && (
+                                    <p>
+                                      {
+                                        homeAddress.address_line2
+                                      }
+                                    </p>
+                                  )}
+
+                                  {(homeAddress.postal_code ||
+                                    homeAddress.city) && (
+                                    <p>
+                                      {
+                                        homeAddress.postal_code
+                                      }{" "}
+                                      {
+                                        homeAddress.city
+                                      }
+                                    </p>
+                                  )}
+
+                                  {homeAddress.country && (
+                                    <p>
+                                      {countryLabel(
+                                        homeAddress.country
+                                      )}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                            {order.delivery_method ===
+                              "home" &&
+                              !hasHomeAddress && (
+                                <div className="mt-4 border border-surface p-4">
+                                  <p className="text-xs leading-5 text-stone">
+                                    Adresse de
+                                    livraison non
+                                    enregistrée pour
+                                    cette commande.
+                                  </p>
+                                </div>
+                              )}
                           </div>
 
                           {/* ===============================
@@ -1024,10 +1133,7 @@ export default function AdminCommandesPage() {
                           </p>
 
                           <div className="mt-5 space-y-5">
-
-                            {/* =============================
-                                STATUT
-                            ============================== */}
+                            {/* STATUT */}
 
                             <div>
                               <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
@@ -1074,9 +1180,7 @@ export default function AdminCommandesPage() {
                               </select>
                             </div>
 
-                            {/* =============================
-                                TRANSPORTEUR
-                            ============================== */}
+                            {/* TRANSPORTEUR */}
 
                             <div>
                               <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
@@ -1105,9 +1209,7 @@ export default function AdminCommandesPage() {
                               />
                             </div>
 
-                            {/* =============================
-                                NUMÉRO DE SUIVI
-                            ============================== */}
+                            {/* NUMÉRO DE SUIVI */}
 
                             <div>
                               <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
@@ -1136,9 +1238,7 @@ export default function AdminCommandesPage() {
                               />
                             </div>
 
-                            {/* =============================
-                                LIEN DE SUIVI
-                            ============================== */}
+                            {/* LIEN DE SUIVI */}
 
                             <div>
                               <label className="text-[10px] uppercase tracking-[0.2em] text-stone">
@@ -1167,9 +1267,7 @@ export default function AdminCommandesPage() {
                               />
                             </div>
 
-                            {/* =============================
-                                ENREGISTRER
-                            ============================== */}
+                            {/* ENREGISTRER */}
 
                             <button
                               type="button"

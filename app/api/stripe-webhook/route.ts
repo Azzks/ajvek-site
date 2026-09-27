@@ -24,11 +24,9 @@ const SITE_URL = "https://ajvek.fr";
 const OWNER_EMAIL = "ajvek.contact@gmail.com";
 const FROM_EMAIL = "AJVEK <commandes@ajvek.fr>";
 
-/*
- * ============================================================
- * OUTILS
- * ============================================================
- */
+/* ============================================================
+   OUTILS
+   ============================================================ */
 
 function escapeHtml(value: unknown) {
   return String(value ?? "")
@@ -47,11 +45,92 @@ function shortOrderId(id: string) {
   return id.replaceAll("-", "").slice(0, 8).toUpperCase();
 }
 
-/*
- * ============================================================
- * TEMPLATE EMAIL
- * ============================================================
- */
+/* ============================================================
+   ARTICLES
+   ============================================================ */
+
+type GroupedItem = {
+  product_slug: string;
+  name: string;
+  color: string;
+  size: string;
+  quantity: number;
+};
+
+function groupItems(rows: any[]): GroupedItem[] {
+  const grouped = new Map<string, GroupedItem>();
+
+  for (const row of rows) {
+    const key = [
+      row.product_slug,
+      row.color,
+      row.size,
+    ].join("::");
+
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      grouped.set(key, {
+        product_slug: row.product_slug,
+        name: row.product_name || "AJVEK",
+        color: row.color || "-",
+        size: row.size || "-",
+        quantity: 1,
+      });
+    }
+  }
+
+  return Array.from(grouped.values());
+}
+
+function buildItemsHtml(rows: any[]) {
+  return groupItems(rows)
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding:16px 0;border-bottom:1px solid #2a2926;">
+            <p style="
+              margin:0;
+              font-family:Georgia,'Times New Roman',serif;
+              font-size:18px;
+              line-height:24px;
+              color:#f3f0ea;
+            ">
+              ${escapeHtml(item.name)}
+            </p>
+
+            <p style="
+              margin:7px 0 0;
+              font-family:Arial,Helvetica,sans-serif;
+              font-size:11px;
+              line-height:18px;
+              color:#8f8b83;
+            ">
+              ${escapeHtml(item.color)}
+              · Taille ${escapeHtml(item.size)}
+              · × ${item.quantity}
+            </p>
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function buildTextSummary(rows: any[]) {
+  return groupItems(rows)
+    .map(
+      (item) =>
+        `- ${item.name} — ${item.color} — Taille ${item.size} — x${item.quantity}`
+    )
+    .join("\n");
+}
+
+/* ============================================================
+   TEMPLATE EMAIL
+   ============================================================ */
 
 function buildEmailLayout({
   eyebrow,
@@ -196,11 +275,7 @@ function buildEmailLayout({
           </tr>
 
           <tr>
-            <td
-              style="
-                padding:40px 32px 36px;
-              "
-            >
+            <td style="padding:40px 32px 36px;">
               <p
                 style="
                   margin:0;
@@ -289,105 +364,9 @@ function buildEmailLayout({
 `;
 }
 
-/*
- * ============================================================
- * REGROUPEMENT DES ARTICLES
- * ============================================================
- */
-
-type GroupedItem = {
-  product_slug: string;
-  name: string;
-  color: string;
-  size: string;
-  quantity: number;
-};
-
-function groupItems(rows: any[]): GroupedItem[] {
-  const grouped = new Map<string, GroupedItem>();
-
-  for (const row of rows) {
-    const key = [
-      row.product_slug,
-      row.color,
-      row.size,
-    ].join("::");
-
-    const existing = grouped.get(key);
-
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      grouped.set(key, {
-        product_slug: row.product_slug,
-        name: row.product_name || "AJVEK",
-        color: row.color || "-",
-        size: row.size || "-",
-        quantity: 1,
-      });
-    }
-  }
-
-  return Array.from(grouped.values());
-}
-
-function buildItemsHtml(rows: any[]) {
-  return groupItems(rows)
-    .map(
-      (item) => `
-        <tr>
-          <td
-            style="
-              padding:16px 0;
-              border-bottom:1px solid #2a2926;
-            "
-          >
-            <p
-              style="
-                margin:0;
-                font-family:Georgia,'Times New Roman',serif;
-                font-size:18px;
-                line-height:24px;
-                color:#f3f0ea;
-              "
-            >
-              ${escapeHtml(item.name)}
-            </p>
-
-            <p
-              style="
-                margin:7px 0 0;
-                font-family:Arial,Helvetica,sans-serif;
-                font-size:11px;
-                line-height:18px;
-                color:#8f8b83;
-              "
-            >
-              ${escapeHtml(item.color)}
-              · Taille ${escapeHtml(item.size)}
-              · × ${item.quantity}
-            </p>
-          </td>
-        </tr>
-      `
-    )
-    .join("");
-}
-
-function buildTextSummary(rows: any[]) {
-  return groupItems(rows)
-    .map(
-      (item) =>
-        `- ${item.name} — ${item.color} — Taille ${item.size} — x${item.quantity}`
-    )
-    .join("\n");
-}
-
-/*
- * ============================================================
- * RETROUVER LE CHECKOUT GROUP
- * ============================================================
- */
+/* ============================================================
+   CHECKOUT GROUP DEPUIS PAYMENT INTENT
+   ============================================================ */
 
 async function findCheckoutGroupFromPaymentIntent(
   paymentIntent: Stripe.PaymentIntent
@@ -420,11 +399,89 @@ async function findCheckoutGroupFromPaymentIntent(
   }
 }
 
-/*
- * ============================================================
- * WEBHOOK
- * ============================================================
- */
+/* ============================================================
+   ADRESSE DE LIVRAISON DOMICILE
+   ============================================================ */
+
+async function saveHomeShippingAddress(
+  sessionId: string,
+  checkoutGroupId: string,
+  firstOrder: any
+) {
+  if (firstOrder?.delivery_method !== "home") {
+    return;
+  }
+
+  const checkoutSession =
+    await stripe.checkout.sessions.retrieve(sessionId);
+
+  const shippingDetails =
+    checkoutSession.collected_information
+      ?.shipping_details;
+
+  const address = shippingDetails?.address;
+
+  if (
+    !shippingDetails ||
+    !address?.line1 ||
+    !address?.postal_code ||
+    !address?.city ||
+    !address?.country
+  ) {
+    throw new Error(
+      "Adresse de livraison Stripe absente ou incomplète."
+    );
+  }
+
+  const {
+    error: shippingAddressError,
+  } = await supabaseAdmin
+    .from("preorders")
+    .update({
+      shipping_name:
+        shippingDetails.name ||
+        firstOrder?.name ||
+        null,
+
+      shipping_address_line1:
+        address.line1,
+
+      shipping_address_line2:
+        address.line2 || null,
+
+      shipping_postal_code:
+        address.postal_code,
+
+      shipping_city:
+        address.city,
+
+      shipping_country:
+        address.country,
+    })
+    .eq(
+      "checkout_group_id",
+      checkoutGroupId
+    );
+
+  if (shippingAddressError) {
+    console.error(
+      "[stripe-webhook] Impossible d'enregistrer l'adresse de livraison :",
+      {
+        checkoutGroupId,
+        stripeSessionId: sessionId,
+        error: shippingAddressError,
+      }
+    );
+
+    throw new Error(
+      "Impossible d'enregistrer l'adresse de livraison."
+    );
+  }
+}
+
+/* ============================================================
+   WEBHOOK
+   ============================================================ */
 
 export async function POST(request: Request) {
   const signature =
@@ -464,11 +521,12 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      webhookSecret
-    );
+    event =
+      stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret
+      );
   } catch (error) {
     console.error(
       "[stripe-webhook] Signature invalide :",
@@ -486,11 +544,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    /*
-     * ========================================================
-     * PAIEMENT RÉUSSI
-     * ========================================================
-     */
+    /* ========================================================
+       PAIEMENT RÉUSSI
+       ======================================================== */
 
     if (
       event.type ===
@@ -499,7 +555,9 @@ export async function POST(request: Request) {
       const session =
         event.data.object as Stripe.Checkout.Session;
 
-      if (session.payment_status !== "paid") {
+      if (
+        session.payment_status !== "paid"
+      ) {
         return NextResponse.json({
           received: true,
         });
@@ -518,11 +576,7 @@ export async function POST(request: Request) {
         });
       }
 
-      /*
-       * ======================================================
-       * RÉCUPÉRATION DE LA COMMANDE
-       * ======================================================
-       */
+      /* Récupération commande */
 
       const {
         data: orders,
@@ -547,7 +601,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json(
           {
-            error: "Commande introuvable.",
+            error:
+              "Commande introuvable.",
           },
           {
             status: 500,
@@ -556,22 +611,47 @@ export async function POST(request: Request) {
       }
 
       /*
-       * ======================================================
-       * FINALISATION ATOMIQUE
-       * ======================================================
+       * Pour une livraison à domicile,
+       * l'adresse est collectée directement
+       * par Stripe Checkout.
        *
-       * Le stock a déjà été retiré lors de sa réservation.
+       * On l'enregistre AVANT la finalisation
+       * de la commande.
        *
-       * finalize_paid_order :
-       * - verrouille la commande
-       * - vérifie l'idempotence
-       * - vérifie la réservation active
-       * - confirme la réservation
-       * - marque la commande comme payée
-       *
-       * Aucun second décrément du stock ici.
-       * ======================================================
+       * Ainsi, si l'enregistrement échoue,
+       * Stripe recevra une erreur 500 et pourra
+       * retenter le webhook.
        */
+
+      try {
+        await saveHomeShippingAddress(
+          session.id,
+          checkoutGroupId,
+          orders[0]
+        );
+      } catch (error) {
+        console.error(
+          "[stripe-webhook] Adresse de livraison non enregistrée :",
+          {
+            checkoutGroupId,
+            stripeSessionId:
+              session.id,
+            error,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible d'enregistrer l'adresse de livraison.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      /* Finalisation atomique */
 
       const paidAt =
         new Date().toISOString();
@@ -614,8 +694,8 @@ export async function POST(request: Request) {
       }
 
       if (
-        finalizeResult?.already_processed ===
-        true
+        finalizeResult
+          ?.already_processed === true
       ) {
         console.log(
           "[stripe-webhook] Commande déjà traitée :",
@@ -646,11 +726,7 @@ export async function POST(request: Request) {
         );
       }
 
-      /*
-       * ======================================================
-       * INFORMATIONS COMMANDE
-       * ======================================================
-       */
+      /* Informations commande */
 
       const first = orders[0];
 
@@ -667,7 +743,9 @@ export async function POST(request: Request) {
         orders.length;
 
       const orderNumber =
-        shortOrderId(checkoutGroupId);
+        shortOrderId(
+          checkoutGroupId
+        );
 
       const summary =
         buildTextSummary(orders);
@@ -699,29 +777,23 @@ export async function POST(request: Request) {
       const trackingPageUrl =
         `${SITE_URL}/mes-commandes`;
 
-      /*
-       * ======================================================
-       * INFORMATIONS LIVRAISON
-       * ======================================================
-       */
+      /* ======================================================
+         INFORMATIONS LIVRAISON
+         ====================================================== */
 
       let deliveryHtml = `
         <tr>
-          <td
-            style="
-              padding:12px 0;
-              font-family:Arial,Helvetica,sans-serif;
-              font-size:12px;
-              line-height:20px;
-              color:#aaa69e;
-            "
-          >
+          <td style="
+            padding:12px 0;
+            font-family:Arial,Helvetica,sans-serif;
+            font-size:12px;
+            line-height:20px;
+            color:#aaa69e;
+          ">
             <strong style="color:#f3f0ea;">
               Mode
             </strong>
-
             <br />
-
             ${escapeHtml(deliveryMethod)}
           </td>
         </tr>
@@ -730,19 +802,16 @@ export async function POST(request: Request) {
       if (isRelay) {
         deliveryHtml += `
           <tr>
-            <td
-              style="
-                padding:12px 0;
-                font-family:Arial,Helvetica,sans-serif;
-                font-size:12px;
-                line-height:20px;
-                color:#aaa69e;
-              "
-            >
+            <td style="
+              padding:12px 0;
+              font-family:Arial,Helvetica,sans-serif;
+              font-size:12px;
+              line-height:20px;
+              color:#aaa69e;
+            ">
               <strong style="color:#f3f0ea;">
                 Point Relais
               </strong>
-
               <br />
 
               ${escapeHtml(
@@ -751,9 +820,11 @@ export async function POST(request: Request) {
               )}
 
               ${
-                first?.service_point_address
+                first
+                  ?.service_point_address
                   ? `<br />${escapeHtml(
-                      first.service_point_address
+                      first
+                        .service_point_address
                     )}`
                   : ""
               }
@@ -761,13 +832,44 @@ export async function POST(request: Request) {
               <br />
 
               ${escapeHtml(
-                first?.service_point_postal_code ||
+                first
+                  ?.service_point_postal_code ||
                   ""
               )}
 
               ${escapeHtml(
-                first?.service_point_city || ""
+                first
+                  ?.service_point_city ||
+                  ""
               )}
+            </td>
+          </tr>
+        `;
+      } else {
+        /*
+         * Les données utilisées ici proviennent
+         * de Stripe et viennent d'être sauvegardées.
+         * "first" correspond toutefois à la lecture
+         * effectuée avant cette sauvegarde.
+         *
+         * L'adresse sera donc principalement visible
+         * dans Supabase / l'administration après
+         * l'étape suivante de notre audit.
+         */
+        deliveryHtml += `
+          <tr>
+            <td style="
+              padding:12px 0;
+              font-family:Arial,Helvetica,sans-serif;
+              font-size:12px;
+              line-height:20px;
+              color:#aaa69e;
+            ">
+              <strong style="color:#f3f0ea;">
+                Adresse
+              </strong>
+              <br />
+              Adresse enregistrée avec la commande
             </td>
           </tr>
         `;
@@ -775,31 +877,25 @@ export async function POST(request: Request) {
 
       deliveryHtml += `
         <tr>
-          <td
-            style="
-              padding:12px 0;
-              font-family:Arial,Helvetica,sans-serif;
-              font-size:12px;
-              line-height:20px;
-              color:#aaa69e;
-            "
-          >
+          <td style="
+            padding:12px 0;
+            font-family:Arial,Helvetica,sans-serif;
+            font-size:12px;
+            line-height:20px;
+            color:#aaa69e;
+          ">
             <strong style="color:#f3f0ea;">
               Livraison
             </strong>
-
             <br />
-
             ${escapeHtml(shippingAmount)}
           </td>
         </tr>
       `;
 
-      /*
-       * ======================================================
-       * EMAIL CLIENT
-       * ======================================================
-       */
+      /* ======================================================
+         EMAIL CLIENT
+         ====================================================== */
 
       if (customerEmail) {
         const customerHtml =
@@ -817,22 +913,18 @@ export async function POST(request: Request) {
               `Ta commande AJVEK est maintenant confirmée.`,
 
             content: `
-              <div
-                style="
-                  margin-top:32px;
-                  border-top:1px solid #2a2926;
-                "
-              >
-                <p
-                  style="
-                    margin:24px 0 8px;
-                    font-family:Arial,Helvetica,sans-serif;
-                    font-size:9px;
-                    letter-spacing:3px;
-                    text-transform:uppercase;
-                    color:#8f8b83;
-                  "
-                >
+              <div style="
+                margin-top:32px;
+                border-top:1px solid #2a2926;
+              ">
+                <p style="
+                  margin:24px 0 8px;
+                  font-family:Arial,Helvetica,sans-serif;
+                  font-size:9px;
+                  letter-spacing:3px;
+                  text-transform:uppercase;
+                  color:#8f8b83;
+                ">
                   Ta commande
                 </p>
 
@@ -847,58 +939,48 @@ export async function POST(request: Request) {
                 </table>
               </div>
 
-              <div
-                style="
-                  margin-top:30px;
-                  padding:22px;
-                  border:1px solid #2a2926;
-                  background:#0c0c0b;
-                "
-              >
-                <p
-                  style="
-                    margin:0 0 10px;
-                    font-family:Arial,Helvetica,sans-serif;
-                    font-size:9px;
-                    letter-spacing:3px;
-                    text-transform:uppercase;
-                    color:#8f8b83;
-                  "
-                >
+              <div style="
+                margin-top:30px;
+                padding:22px;
+                border:1px solid #2a2926;
+                background:#0c0c0b;
+              ">
+                <p style="
+                  margin:0 0 10px;
+                  font-family:Arial,Helvetica,sans-serif;
+                  font-size:9px;
+                  letter-spacing:3px;
+                  text-transform:uppercase;
+                  color:#8f8b83;
+                ">
                   Drop 001
                 </p>
 
-                <p
-                  style="
-                    margin:0;
-                    font-family:Georgia,'Times New Roman',serif;
-                    font-size:21px;
-                    line-height:29px;
-                    color:#f3f0ea;
-                  "
-                >
+                <p style="
+                  margin:0;
+                  font-family:Georgia,'Times New Roman',serif;
+                  font-size:21px;
+                  line-height:29px;
+                  color:#f3f0ea;
+                ">
                   Ta pièce est réservée.
                   Nous préparerons ta commande
                   pour son expédition.
                 </p>
               </div>
 
-              <div
-                style="
-                  margin-top:30px;
-                  border-top:1px solid #2a2926;
-                "
-              >
-                <p
-                  style="
-                    margin:24px 0 8px;
-                    font-family:Arial,Helvetica,sans-serif;
-                    font-size:9px;
-                    letter-spacing:3px;
-                    text-transform:uppercase;
-                    color:#8f8b83;
-                  "
-                >
+              <div style="
+                margin-top:30px;
+                border-top:1px solid #2a2926;
+              ">
+                <p style="
+                  margin:24px 0 8px;
+                  font-family:Arial,Helvetica,sans-serif;
+                  font-size:9px;
+                  letter-spacing:3px;
+                  text-transform:uppercase;
+                  color:#8f8b83;
+                ">
                   Livraison
                 </p>
 
@@ -958,11 +1040,9 @@ export async function POST(request: Request) {
         }
       }
 
-      /*
-       * ======================================================
-       * EMAIL ÉQUIPE AJVEK
-       * ======================================================
-       */
+      /* ======================================================
+         EMAIL ÉQUIPE AJVEK
+         ====================================================== */
 
       let ownerDeliveryDetails =
         deliveryMethod;
@@ -970,25 +1050,33 @@ export async function POST(request: Request) {
       if (isRelay) {
         ownerDeliveryDetails +=
           `\nPoint Relais : ${
-            first?.service_point_name ||
+            first
+              ?.service_point_name ||
             "-"
           }\n` +
           `Adresse : ${
-            first?.service_point_address ||
+            first
+              ?.service_point_address ||
             "-"
           }\n` +
           `Code postal : ${
-            first?.service_point_postal_code ||
+            first
+              ?.service_point_postal_code ||
             "-"
           }\n` +
           `Ville : ${
-            first?.service_point_city ||
+            first
+              ?.service_point_city ||
             "-"
           }\n` +
           `ID Point Relais : ${
-            first?.service_point_id ||
+            first
+              ?.service_point_id ||
             "-"
           }`;
+      } else {
+        ownerDeliveryDetails +=
+          "\nAdresse enregistrée dans la commande AJVEK.";
       }
 
       const ownerHtml =
@@ -1006,59 +1094,46 @@ export async function POST(request: Request) {
             )}</strong>.`,
 
           content: `
-            <div
-              style="
-                margin-top:30px;
-                padding:20px;
-                border:1px solid #2a2926;
-                background:#0c0c0b;
-              "
-            >
-              <p
-                style="
-                  margin:0;
-                  font-family:Arial,Helvetica,sans-serif;
-                  font-size:12px;
-                  line-height:22px;
-                  color:#aaa69e;
-                "
-              >
+            <div style="
+              margin-top:30px;
+              padding:20px;
+              border:1px solid #2a2926;
+              background:#0c0c0b;
+            ">
+              <p style="
+                margin:0;
+                font-family:Arial,Helvetica,sans-serif;
+                font-size:12px;
+                line-height:22px;
+                color:#aaa69e;
+              ">
                 <strong style="color:#f3f0ea;">
                   Client
                 </strong>
 
                 <br />
-
                 ${escapeHtml(customerName)}
-
                 <br />
-
                 ${escapeHtml(
                   customerEmail || "-"
                 )}
-
                 <br />
-
                 ${escapeHtml(customerPhone)}
               </p>
             </div>
 
-            <div
-              style="
-                margin-top:28px;
-                border-top:1px solid #2a2926;
-              "
-            >
-              <p
-                style="
-                  margin:24px 0 8px;
-                  font-family:Arial,Helvetica,sans-serif;
-                  font-size:9px;
-                  letter-spacing:3px;
-                  text-transform:uppercase;
-                  color:#8f8b83;
-                "
-              >
+            <div style="
+              margin-top:28px;
+              border-top:1px solid #2a2926;
+            ">
+              <p style="
+                margin:24px 0 8px;
+                font-family:Arial,Helvetica,sans-serif;
+                font-size:9px;
+                letter-spacing:3px;
+                text-transform:uppercase;
+                color:#8f8b83;
+              ">
                 Articles
               </p>
 
@@ -1073,32 +1148,25 @@ export async function POST(request: Request) {
               </table>
             </div>
 
-            <div
-              style="
-                margin-top:28px;
-                padding-top:24px;
-                border-top:1px solid #2a2926;
-              "
-            >
-              <p
-                style="
-                  margin:0;
-                  font-family:Arial,Helvetica,sans-serif;
-                  font-size:12px;
-                  line-height:22px;
-                  color:#aaa69e;
-                "
-              >
+            <div style="
+              margin-top:28px;
+              padding-top:24px;
+              border-top:1px solid #2a2926;
+            ">
+              <p style="
+                margin:0;
+                font-family:Arial,Helvetica,sans-serif;
+                font-size:12px;
+                line-height:22px;
+                color:#aaa69e;
+              ">
                 <strong style="color:#f3f0ea;">
                   Livraison
                 </strong>
 
                 <br />
-
                 ${escapeHtml(deliveryMethod)}
-
                 <br />
-
                 Frais :
                 ${escapeHtml(shippingAmount)}
               </p>
@@ -1152,20 +1220,9 @@ export async function POST(request: Request) {
       });
     }
 
-    /*
-     * ========================================================
-     * SESSION CHECKOUT EXPIRÉE
-     * ========================================================
-     *
-     * La session Stripe n'est plus utilisable.
-     * On remet donc en stock uniquement les réservations
-     * encore actives.
-     *
-     * release_stock_reservation est idempotente :
-     * une réservation déjà confirmée ou déjà libérée
-     * n'est pas ajoutée une deuxième fois au stock.
-     * ========================================================
-     */
+    /* ========================================================
+       SESSION CHECKOUT EXPIRÉE
+       ======================================================== */
 
     if (
       event.type ===
@@ -1246,11 +1303,6 @@ export async function POST(request: Request) {
         );
       }
 
-      /*
-       * On conserve les lignes de commande pour l'historique,
-       * mais on indique qu'elles ont expiré.
-       */
-
       const {
         error: expiredOrderError,
       } = await supabaseAdmin
@@ -1294,8 +1346,8 @@ export async function POST(request: Request) {
           stripeSessionId:
             session.id,
           releasedCount:
-            releaseResult?.released_count ??
-            0,
+            releaseResult
+              ?.released_count ?? 0,
         }
       );
 
@@ -1304,23 +1356,9 @@ export async function POST(request: Request) {
       });
     }
 
-    /*
-     * ========================================================
-     * PAIEMENT ÉCHOUÉ
-     * ========================================================
-     *
-     * IMPORTANT :
-     *
-     * Un échec de PaymentIntent ne libère PAS immédiatement
-     * le stock.
-     *
-     * Le client peut encore avoir une session Checkout active
-     * et retenter son paiement.
-     *
-     * Le stock sera libéré lorsque Stripe enverra
-     * checkout.session.expired.
-     * ========================================================
-     */
+    /* ========================================================
+       PAIEMENT ÉCHOUÉ
+       ======================================================== */
 
     if (
       event.type ===
@@ -1372,8 +1410,8 @@ export async function POST(request: Request) {
       }
 
       /*
-       * Si elle a finalement été payée,
-       * on ignore l'ancien événement d'échec.
+       * Si le paiement a finalement réussi,
+       * on ignore un ancien événement d'échec.
        */
 
       if (
@@ -1388,7 +1426,8 @@ export async function POST(request: Request) {
       }
 
       /*
-       * Anti-spam email paiement échoué.
+       * Anti-spam :
+       * un seul email d'échec par commande.
        */
 
       if (
@@ -1403,7 +1442,8 @@ export async function POST(request: Request) {
         });
       }
 
-      const first = orders[0];
+      const first =
+        orders[0];
 
       const customerName =
         first?.name || "client";
@@ -1412,7 +1452,9 @@ export async function POST(request: Request) {
         first?.email || null;
 
       const orderNumber =
-        shortOrderId(checkoutGroupId);
+        shortOrderId(
+          checkoutGroupId
+        );
 
       const summary =
         buildTextSummary(orders);
@@ -1435,17 +1477,12 @@ export async function POST(request: Request) {
           ?.message ||
         "Le paiement n'a pas pu être validé.";
 
-      /*
-       * ======================================================
-       * ENREGISTREMENT DE L'ÉCHEC
-       * ======================================================
-       */
-
       const notifiedAt =
         new Date().toISOString();
 
       const {
-        error: notificationUpdateError,
+        error:
+          notificationUpdateError,
       } = await supabaseAdmin
         .from("preorders")
         .update({
@@ -1461,7 +1498,9 @@ export async function POST(request: Request) {
         )
         .eq("paid", false);
 
-      if (notificationUpdateError) {
+      if (
+        notificationUpdateError
+      ) {
         console.error(
           "[stripe-webhook] Erreur anti-spam paiement échoué :",
           notificationUpdateError
@@ -1469,7 +1508,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json(
           {
-            error: "Erreur Supabase.",
+            error:
+              "Erreur Supabase.",
           },
           {
             status: 500,
@@ -1477,11 +1517,7 @@ export async function POST(request: Request) {
         );
       }
 
-      /*
-       * ======================================================
-       * EMAIL CLIENT — ÉCHEC
-       * ======================================================
-       */
+      /* Email client */
 
       if (customerEmail) {
         const failureHtml =
@@ -1499,47 +1535,37 @@ export async function POST(request: Request) {
               `mais le paiement n’a pas pu être confirmé.`,
 
             content: `
-              <div
-                style="
-                  margin-top:30px;
-                  padding:22px;
-                  border:1px solid #2a2926;
-                  background:#0c0c0b;
-                "
-              >
-                <p
-                  style="
-                    margin:0;
-                    font-family:Arial,Helvetica,sans-serif;
-                    font-size:12px;
-                    line-height:22px;
-                    color:#aaa69e;
-                  "
-                >
+              <div style="
+                margin-top:30px;
+                padding:22px;
+                border:1px solid #2a2926;
+                background:#0c0c0b;
+              ">
+                <p style="
+                  margin:0;
+                  font-family:Arial,Helvetica,sans-serif;
+                  font-size:12px;
+                  line-height:22px;
+                  color:#aaa69e;
+                ">
                   Ta commande n’est pas confirmée.
-
                   Les articles restent réservés temporairement
-
                   pendant la session de paiement.
                 </p>
               </div>
 
-              <div
-                style="
-                  margin-top:28px;
-                  border-top:1px solid #2a2926;
-                "
-              >
-                <p
-                  style="
-                    margin:24px 0 8px;
-                    font-family:Arial,Helvetica,sans-serif;
-                    font-size:9px;
-                    letter-spacing:3px;
-                    text-transform:uppercase;
-                    color:#8f8b83;
-                  "
-                >
+              <div style="
+                margin-top:28px;
+                border-top:1px solid #2a2926;
+              ">
+                <p style="
+                  margin:24px 0 8px;
+                  font-family:Arial,Helvetica,sans-serif;
+                  font-size:9px;
+                  letter-spacing:3px;
+                  text-transform:uppercase;
+                  color:#8f8b83;
+                ">
                   Articles
                 </p>
 
@@ -1554,19 +1580,15 @@ export async function POST(request: Request) {
                 </table>
               </div>
 
-              <p
-                style="
-                  margin:28px 0 0;
-                  font-family:Arial,Helvetica,sans-serif;
-                  font-size:12px;
-                  line-height:22px;
-                  color:#aaa69e;
-                "
-              >
+              <p style="
+                margin:28px 0 0;
+                font-family:Arial,Helvetica,sans-serif;
+                font-size:12px;
+                line-height:22px;
+                color:#aaa69e;
+              ">
                 Tu peux recommencer ta commande
-
                 depuis notre collection et utiliser
-
                 une autre carte si nécessaire.
               </p>
             `,
@@ -1615,11 +1637,7 @@ export async function POST(request: Request) {
         }
       }
 
-      /*
-       * ======================================================
-       * EMAIL ÉQUIPE — ÉCHEC
-       * ======================================================
-       */
+      /* Email équipe */
 
       const ownerFailureHtml =
         buildEmailLayout({
@@ -1636,30 +1654,28 @@ export async function POST(request: Request) {
             )}</strong> a échoué.`,
 
           content: `
-            <div
-              style="
-                margin-top:30px;
-                padding:22px;
-                border:1px solid #2a2926;
-                background:#0c0c0b;
-              "
-            >
-              <p
-                style="
-                  margin:0;
-                  font-family:Arial,Helvetica,sans-serif;
-                  font-size:12px;
-                  line-height:22px;
-                  color:#aaa69e;
-                "
-              >
+            <div style="
+              margin-top:30px;
+              padding:22px;
+              border:1px solid #2a2926;
+              background:#0c0c0b;
+            ">
+              <p style="
+                margin:0;
+                font-family:Arial,Helvetica,sans-serif;
+                font-size:12px;
+                line-height:22px;
+                color:#aaa69e;
+              ">
                 <strong style="color:#f3f0ea;">
                   Client
                 </strong>
 
                 <br />
 
-                ${escapeHtml(customerName)}
+                ${escapeHtml(
+                  customerName
+                )}
 
                 <br />
 
@@ -1675,7 +1691,9 @@ export async function POST(request: Request) {
 
                 <br />
 
-                ${escapeHtml(declineCode)}
+                ${escapeHtml(
+                  declineCode
+                )}
 
                 <br /><br />
 
@@ -1713,7 +1731,8 @@ export async function POST(request: Request) {
         subject:
           `AJVEK — paiement échoué #${orderNumber}`,
 
-        html: ownerFailureHtml,
+        html:
+          ownerFailureHtml,
 
         text:
           `Un paiement AJVEK a échoué.\n\n` +
@@ -1727,7 +1746,9 @@ export async function POST(request: Request) {
           `Les articles restent réservés temporairement pendant la session de paiement.\n`,
       });
 
-      if (ownerFailureEmailError) {
+      if (
+        ownerFailureEmailError
+      ) {
         console.error(
           "[stripe-webhook] Erreur email équipe paiement échoué :",
           ownerFailureEmailError
@@ -1739,11 +1760,7 @@ export async function POST(request: Request) {
       });
     }
 
-    /*
-     * ========================================================
-     * AUTRES ÉVÉNEMENTS STRIPE
-     * ========================================================
-     */
+    /* Autres événements Stripe */
 
     return NextResponse.json({
       received: true,

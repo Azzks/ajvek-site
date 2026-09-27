@@ -26,25 +26,9 @@ const supabaseAuth = createClient(
   }
 );
 
-/*
- * ============================================================
- * STATUTS DE COMMANDE
- * ============================================================
- *
- * Nouveau fonctionnement AJVEK :
- *
- * paid
- *   ↓
- * preparing
- *   ↓
- * shipped
- *   ↓
- * delivered
- *
- * Le seuil promotionnel des 10 commandes
- * n'a rien à voir avec ces statuts.
- * ============================================================
- */
+/* ============================================================
+   STATUTS
+   ============================================================ */
 
 const ALLOWED_STATUSES = [
   "paid",
@@ -56,11 +40,9 @@ const ALLOWED_STATUSES = [
 type OrderStatus =
   (typeof ALLOWED_STATUSES)[number];
 
-/*
- * ============================================================
- * TYPES
- * ============================================================
- */
+/* ============================================================
+   TYPES
+   ============================================================ */
 
 type AdminOrderItem = {
   product_slug: string;
@@ -68,6 +50,23 @@ type AdminOrderItem = {
   color: string;
   size: string;
   quantity: number;
+};
+
+type ServicePoint = {
+  id: string | null;
+  name: string | null;
+  address: string | null;
+  postal_code: string | null;
+  city: string | null;
+};
+
+type ShippingAddress = {
+  name: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  postal_code: string | null;
+  city: string | null;
+  country: string | null;
 };
 
 type AdminOrder = {
@@ -88,16 +87,11 @@ type AdminOrder = {
   delivery_method: string | null;
   shipping_amount: number;
 
-  service_point: {
-    id: string | null;
-    name: string | null;
-    address: string | null;
-    postal_code: string | null;
-    city: string | null;
-  } | null;
+  service_point: ServicePoint | null;
+
+  shipping_address: ShippingAddress | null;
 
   carrier: string | null;
-
   tracking_number: string | null;
   tracking_url: string | null;
 
@@ -107,21 +101,15 @@ type AdminOrder = {
   items: AdminOrderItem[];
 };
 
-/*
- * ============================================================
- * ADMIN
- * ============================================================
- */
+/* ============================================================
+   ADMIN
+   ============================================================ */
 
 function getAdminEmails() {
-  return (
-    process.env.ADMIN_EMAILS || ""
-  )
+  return (process.env.ADMIN_EMAILS || "")
     .split(",")
     .map((email) =>
-      email
-        .trim()
-        .toLowerCase()
+      email.trim().toLowerCase()
     )
     .filter(Boolean);
 }
@@ -130,9 +118,7 @@ async function getAdminUser(
   request: Request
 ) {
   const authorization =
-    request.headers.get(
-      "authorization"
-    );
+    request.headers.get("authorization");
 
   if (
     !authorization?.startsWith(
@@ -177,15 +163,9 @@ async function getAdminUser(
   return user;
 }
 
-/*
- * ============================================================
- * NORMALISATION DES ANCIENS STATUTS
- * ============================================================
- *
- * Permet de conserver une compatibilité
- * si d'anciennes lignes existent déjà.
- * ============================================================
- */
+/* ============================================================
+   NORMALISATION DES STATUTS
+   ============================================================ */
 
 function normalizeStatus(
   status: string | null
@@ -215,19 +195,9 @@ function normalizeStatus(
   }
 }
 
-/*
- * ============================================================
- * VALIDATION URL DE SUIVI
- * ============================================================
- *
- * Le lien de suivi est affiché ensuite côté client dans un href.
- *
- * On n'accepte donc que :
- * - une valeur vide -> null
- * - une URL HTTPS valide
- *
- * ============================================================
- */
+/* ============================================================
+   VALIDATION URL DE SUIVI
+   ============================================================ */
 
 function normalizeTrackingUrl(
   value: string | null | undefined
@@ -271,20 +241,16 @@ function normalizeTrackingUrl(
   }
 }
 
-/*
- * ============================================================
- * GET — RÉCUPÉRER LES COMMANDES ADMIN
- * ============================================================
- */
+/* ============================================================
+   GET — COMMANDES ADMIN
+   ============================================================ */
 
 export async function GET(
   request: Request
 ) {
   try {
     const admin =
-      await getAdminUser(
-        request
-      );
+      await getAdminUser(request);
 
     if (!admin) {
       return NextResponse.json(
@@ -303,8 +269,7 @@ export async function GET(
       error,
     } = await supabaseAdmin
       .from("preorders")
-      .select(
-        `
+      .select(`
         id,
         created_at,
 
@@ -332,6 +297,13 @@ export async function GET(
         service_point_postal_code,
         service_point_city,
 
+        shipping_name,
+        shipping_address_line1,
+        shipping_address_line2,
+        shipping_postal_code,
+        shipping_city,
+        shipping_country,
+
         order_status,
 
         carrier,
@@ -340,8 +312,7 @@ export async function GET(
 
         shipped_at,
         delivered_at
-        `
-      )
+      `)
       .eq("paid", true)
       .order("created_at", {
         ascending: false,
@@ -364,11 +335,9 @@ export async function GET(
       );
     }
 
-    /*
-     * ========================================================
-     * REGROUPEMENT PAR COMMANDE
-     * ========================================================
-     */
+    /* ========================================================
+       REGROUPEMENT PAR COMMANDE
+       ======================================================== */
 
     const groupedOrders =
       new Map<
@@ -376,9 +345,7 @@ export async function GET(
         AdminOrder
       >();
 
-    for (
-      const row of data ?? []
-    ) {
+    for (const row of data ?? []) {
       const groupId =
         row.checkout_group_id ||
         `legacy-${row.id}`;
@@ -388,6 +355,14 @@ export async function GET(
           groupId
         )
       ) {
+        const isRelay =
+          row.delivery_method ===
+          "relay";
+
+        const isHome =
+          row.delivery_method ===
+          "home";
+
         groupedOrders.set(
           groupId,
           {
@@ -436,8 +411,7 @@ export async function GET(
               ),
 
             service_point:
-              row.delivery_method ===
-              "relay"
+              isRelay
                 ? {
                     id:
                       row.service_point_id ??
@@ -457,6 +431,35 @@ export async function GET(
 
                     city:
                       row.service_point_city ??
+                      null,
+                  }
+                : null,
+
+            shipping_address:
+              isHome
+                ? {
+                    name:
+                      row.shipping_name ??
+                      null,
+
+                    address_line1:
+                      row.shipping_address_line1 ??
+                      null,
+
+                    address_line2:
+                      row.shipping_address_line2 ??
+                      null,
+
+                    postal_code:
+                      row.shipping_postal_code ??
+                      null,
+
+                    city:
+                      row.shipping_city ??
+                      null,
+
+                    country:
+                      row.shipping_country ??
                       null,
                   }
                 : null,
@@ -491,11 +494,9 @@ export async function GET(
           groupId
         )!;
 
-      /*
-       * ======================================================
-       * ARTICLES IDENTIQUES
-       * ======================================================
-       */
+      /* ======================================================
+         ARTICLES IDENTIQUES
+         ====================================================== */
 
       const existingItem =
         order.items.find(
@@ -509,8 +510,7 @@ export async function GET(
         );
 
       if (existingItem) {
-        existingItem.quantity +=
-          1;
+        existingItem.quantity += 1;
       } else {
         order.items.push({
           product_slug:
@@ -532,11 +532,9 @@ export async function GET(
         });
       }
 
-      /*
-       * ======================================================
-       * SYNCHRONISATION DES INFORMATIONS
-       * ======================================================
-       */
+      /* ======================================================
+         SYNCHRONISATION DES INFORMATIONS
+         ====================================================== */
 
       if (row.paid_at) {
         order.paid_at =
@@ -580,13 +578,63 @@ export async function GET(
         order.delivered_at =
           row.delivered_at;
       }
+
+      /*
+       * Synchronisation adresse domicile.
+       *
+       * Toutes les lignes d'un même checkout_group_id
+       * doivent normalement contenir la même adresse.
+       * Cette partie permet néanmoins de récupérer
+       * une adresse présente sur une autre ligne.
+       */
+
+      if (
+        row.delivery_method ===
+        "home"
+      ) {
+        order.shipping_address = {
+          name:
+            row.shipping_name ??
+            order.shipping_address
+              ?.name ??
+            null,
+
+          address_line1:
+            row.shipping_address_line1 ??
+            order.shipping_address
+              ?.address_line1 ??
+            null,
+
+          address_line2:
+            row.shipping_address_line2 ??
+            order.shipping_address
+              ?.address_line2 ??
+            null,
+
+          postal_code:
+            row.shipping_postal_code ??
+            order.shipping_address
+              ?.postal_code ??
+            null,
+
+          city:
+            row.shipping_city ??
+            order.shipping_address
+              ?.city ??
+            null,
+
+          country:
+            row.shipping_country ??
+            order.shipping_address
+              ?.country ??
+            null,
+        };
+      }
     }
 
-    /*
-     * ========================================================
-     * TRI
-     * ========================================================
-     */
+    /* ========================================================
+       TRI
+       ======================================================== */
 
     const orders =
       Array.from(
@@ -609,11 +657,9 @@ export async function GET(
         return bDate - aDate;
       });
 
-    /*
-     * ========================================================
-     * STATISTIQUES
-     * ========================================================
-     */
+    /* ========================================================
+       STATISTIQUES
+       ======================================================== */
 
     const clothingCount =
       orders.reduce(
@@ -652,11 +698,9 @@ export async function GET(
           "delivered"
       ).length;
 
-    /*
-     * ========================================================
-     * RÉPONSE
-     * ========================================================
-     */
+    /* ========================================================
+       RÉPONSE
+       ======================================================== */
 
     return NextResponse.json(
       {
@@ -704,20 +748,16 @@ export async function GET(
   }
 }
 
-/*
- * ============================================================
- * PATCH — MODIFIER UNE COMMANDE
- * ============================================================
- */
+/* ============================================================
+   PATCH — MODIFIER UNE COMMANDE
+   ============================================================ */
 
 export async function PATCH(
   request: Request
 ) {
   try {
     const admin =
-      await getAdminUser(
-        request
-      );
+      await getAdminUser(request);
 
     if (!admin) {
       return NextResponse.json(
@@ -734,12 +774,15 @@ export async function PATCH(
     let body: {
       checkout_group_id?: string;
       status?: OrderStatus;
+
       carrier?:
         | string
         | null;
+
       tracking_number?:
         | string
         | null;
+
       tracking_url?:
         | string
         | null;
@@ -768,9 +811,7 @@ export async function PATCH(
       tracking_url,
     } = body;
 
-    if (
-      !checkout_group_id
-    ) {
+    if (!checkout_group_id) {
       return NextResponse.json(
         {
           error:
@@ -799,11 +840,9 @@ export async function PATCH(
       );
     }
 
-    /*
-     * ========================================================
-     * VALIDATION DU LIEN DE SUIVI
-     * ========================================================
-     */
+    /* ========================================================
+       VALIDATION DU LIEN DE SUIVI
+       ======================================================== */
 
     const normalizedTrackingUrl =
       normalizeTrackingUrl(
@@ -824,11 +863,9 @@ export async function PATCH(
       );
     }
 
-    /*
-     * ========================================================
-     * VÉRIFIER QUE LA COMMANDE EXISTE
-     * ========================================================
-     */
+    /* ========================================================
+       VÉRIFIER QUE LA COMMANDE EXISTE
+       ======================================================== */
 
     const {
       data: existingOrders,
@@ -836,14 +873,12 @@ export async function PATCH(
         existingOrderError,
     } = await supabaseAdmin
       .from("preorders")
-      .select(
-        `
+      .select(`
         id,
         order_status,
         shipped_at,
         delivered_at
-        `
-      )
+      `)
       .eq(
         "checkout_group_id",
         checkout_group_id
@@ -885,26 +920,29 @@ export async function PATCH(
       );
     }
 
-    /*
-     * ========================================================
-     * MISE À JOUR
-     * ========================================================
-     */
+    /* ========================================================
+       MISE À JOUR
+       ======================================================== */
 
     const updates: {
       order_status: OrderStatus;
+
       carrier?:
         | string
         | null;
+
       tracking_number?:
         | string
         | null;
+
       tracking_url?:
         | string
         | null;
+
       shipped_at?:
         | string
         | null;
+
       delivered_at?:
         | string
         | null;
@@ -938,11 +976,9 @@ export async function PATCH(
         normalizedTrackingUrl.value;
     }
 
-    /*
-     * ========================================================
-     * DATES DE SUIVI
-     * ========================================================
-     */
+    /* ========================================================
+       DATES DE SUIVI
+       ======================================================== */
 
     const existing =
       existingOrders[0];
@@ -950,11 +986,6 @@ export async function PATCH(
     if (
       status === "shipped"
     ) {
-      /*
-       * On ne remplace pas la date
-       * d'expédition si elle existe déjà.
-       */
-
       updates.shipped_at =
         existing.shipped_at ||
         new Date().toISOString();
@@ -966,12 +997,6 @@ export async function PATCH(
     if (
       status === "delivered"
     ) {
-      /*
-       * Si on passe directement à livré,
-       * on conserve/crée également une
-       * date d'expédition.
-       */
-
       updates.shipped_at =
         existing.shipped_at ||
         new Date().toISOString();
@@ -985,18 +1010,16 @@ export async function PATCH(
       status === "paid" ||
       status === "preparing"
     ) {
-      /*
-       * Si l'admin revient volontairement
-       * à un statut antérieur, les dates
-       * d'expédition/livraison sont nettoyées.
-       */
-
       updates.shipped_at =
         null;
 
       updates.delivered_at =
         null;
     }
+
+    /* ========================================================
+       ENREGISTREMENT
+       ======================================================== */
 
     const {
       data: updatedRows,
@@ -1046,11 +1069,8 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-
       checkout_group_id,
-
       status,
-
       updated_count:
         updatedRows.length,
     });
