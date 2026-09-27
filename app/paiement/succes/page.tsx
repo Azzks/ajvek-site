@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
 
 import ClearPreorderCart from "@/components/ClearPreorderCart";
@@ -12,7 +18,11 @@ type VerificationStatus =
   | "processing"
   | "paid"
   | "unpaid"
+  | "timeout"
   | "error";
+
+const MAX_PROCESSING_ATTEMPTS = 20;
+const PROCESSING_RETRY_DELAY = 1500;
 
 function PaiementSuccesContent() {
   const searchParams = useSearchParams();
@@ -24,6 +34,8 @@ function PaiementSuccesContent() {
     useState<VerificationStatus>("loading");
 
   const [message, setMessage] = useState("");
+
+  const processingAttempts = useRef(0);
 
   const verifyPayment = useCallback(async () => {
     if (!sessionId) {
@@ -70,18 +82,31 @@ function PaiementSuccesContent() {
       }
 
       if (data.status === "paid") {
+        processingAttempts.current = 0;
         setStatus("paid");
         setMessage("");
         return;
       }
 
       if (data.status === "processing") {
+        processingAttempts.current += 1;
+
+        if (
+          processingAttempts.current >=
+          MAX_PROCESSING_ATTEMPTS
+        ) {
+          setStatus("timeout");
+          setMessage("");
+          return;
+        }
+
         setStatus("processing");
         setMessage("");
         return;
       }
 
       if (data.status === "unpaid") {
+        processingAttempts.current = 0;
         setStatus("unpaid");
         setMessage("");
         return;
@@ -119,7 +144,7 @@ function PaiementSuccesContent() {
 
     const timeout = window.setTimeout(() => {
       void verifyPayment();
-    }, 1500);
+    }, PROCESSING_RETRY_DELAY);
 
     return () => {
       window.clearTimeout(timeout);
@@ -149,6 +174,46 @@ function PaiementSuccesContent() {
           Cette page se met à jour automatiquement dès que ta
           commande est finalisée.
         </p>
+      </main>
+    );
+  }
+
+  if (status === "timeout") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+        <p className="text-xs uppercase tracking-[0.3em] text-stone">
+          Paiement reçu
+        </p>
+
+        <h1 className="mt-4 font-display text-3xl sm:text-5xl">
+          Confirmation plus longue que prévu
+        </h1>
+
+        <p className="mt-6 max-w-md text-stone">
+          Ton paiement a bien été reçu par Stripe, mais la
+          confirmation de ta commande prend plus de temps que prévu.
+        </p>
+
+        <p className="mt-3 max-w-md text-sm text-stone">
+          Ne repasse pas commande immédiatement. Consulte ton espace
+          AJVEK dans quelques instants pour vérifier son statut.
+        </p>
+
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/mes-commandes"
+            className="rounded-full bg-foreground px-6 py-3 text-xs uppercase tracking-widest text-background transition hover:opacity-85"
+          >
+            Mes commandes
+          </Link>
+
+          <Link
+            href="/"
+            className="rounded-full border border-stone/40 px-6 py-3 text-xs uppercase tracking-widest text-stone transition hover:border-foreground hover:text-foreground"
+          >
+            Retour à l&apos;accueil
+          </Link>
+        </div>
       </main>
     );
   }
