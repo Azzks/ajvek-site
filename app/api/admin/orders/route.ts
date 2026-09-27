@@ -217,6 +217,62 @@ function normalizeStatus(
 
 /*
  * ============================================================
+ * VALIDATION URL DE SUIVI
+ * ============================================================
+ *
+ * Le lien de suivi est affiché ensuite côté client dans un href.
+ *
+ * On n'accepte donc que :
+ * - une valeur vide -> null
+ * - une URL HTTPS valide
+ *
+ * ============================================================
+ */
+
+function normalizeTrackingUrl(
+  value: string | null | undefined
+) {
+  if (value === undefined) {
+    return {
+      valid: true as const,
+      value: undefined,
+    };
+  }
+
+  const trimmed =
+    value?.trim() || "";
+
+  if (!trimmed) {
+    return {
+      valid: true as const,
+      value: null,
+    };
+  }
+
+  try {
+    const url = new URL(trimmed);
+
+    if (url.protocol !== "https:") {
+      return {
+        valid: false as const,
+        value: null,
+      };
+    }
+
+    return {
+      valid: true as const,
+      value: url.toString(),
+    };
+  } catch {
+    return {
+      valid: false as const,
+      value: null,
+    };
+  }
+}
+
+/*
+ * ============================================================
  * GET — RÉCUPÉRER LES COMMANDES ADMIN
  * ============================================================
  */
@@ -745,6 +801,31 @@ export async function PATCH(
 
     /*
      * ========================================================
+     * VALIDATION DU LIEN DE SUIVI
+     * ========================================================
+     */
+
+    const normalizedTrackingUrl =
+      normalizeTrackingUrl(
+        tracking_url
+      );
+
+    if (
+      !normalizedTrackingUrl.valid
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Le lien de suivi doit être une URL HTTPS valide.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+     * ========================================================
      * VÉRIFIER QUE LA COMMANDE EXISTE
      * ========================================================
      */
@@ -850,12 +931,11 @@ export async function PATCH(
     }
 
     if (
-      tracking_url !==
+      normalizedTrackingUrl.value !==
       undefined
     ) {
       updates.tracking_url =
-        tracking_url?.trim() ||
-        null;
+        normalizedTrackingUrl.value;
     }
 
     /*
