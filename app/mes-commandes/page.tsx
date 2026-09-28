@@ -180,6 +180,7 @@ export default function MesCommandesPage() {
   const {
     user,
     loading: authLoading,
+    signOut,
   } = useAuth();
 
   const [
@@ -198,6 +199,39 @@ export default function MesCommandesPage() {
   ] = useState<
     string | null
   >(null);
+
+  const [
+    signingOut,
+    setSigningOut,
+  ] = useState(false);
+
+  /*
+   * ==========================================================
+   * DÉCONNEXION
+   * ==========================================================
+   */
+
+  async function handleSignOut() {
+    if (signingOut) {
+      return;
+    }
+
+    setSigningOut(true);
+
+    try {
+      await signOut();
+
+      window.location.href =
+        "/connexion";
+    } catch (error) {
+      console.error(
+        "[mes-commandes] Déconnexion :",
+        error
+      );
+
+      setSigningOut(false);
+    }
+  }
 
   /*
    * ==========================================================
@@ -385,24 +419,28 @@ export default function MesCommandesPage() {
             leur livraison.
           </p>
 
-          {orders.length > 0 && (
-            <div className="mt-10 flex items-center gap-8 border-t border-surface pt-6">
-              <div>
-                <p className="text-[8px] uppercase tracking-[0.35em] text-stone/60">
-                  Commandes
-                </p>
+          <div className="mt-10 flex flex-col gap-6 border-t border-surface pt-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-center gap-8">
+              {orders.length > 0 && (
+                <>
+                  <div>
+                    <p className="text-[8px] uppercase tracking-[0.35em] text-stone/60">
+                      Commandes
+                    </p>
 
-                <p className="mt-2 font-display text-2xl">
-                  {String(
-                    orders.length
-                  ).padStart(
-                    2,
-                    "0"
-                  )}
-                </p>
-              </div>
+                    <p className="mt-2 font-display text-2xl">
+                      {String(
+                        orders.length
+                      ).padStart(
+                        2,
+                        "0"
+                      )}
+                    </p>
+                  </div>
 
-              <div className="h-12 w-px bg-surface" />
+                  <div className="h-12 w-px bg-surface" />
+                </>
+              )}
 
               <div>
                 <p className="text-[8px] uppercase tracking-[0.35em] text-stone/60">
@@ -414,7 +452,18 @@ export default function MesCommandesPage() {
                 </p>
               </div>
             </div>
-          )}
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="w-fit text-[9px] uppercase tracking-[0.3em] text-stone underline underline-offset-4 transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {signingOut
+                ? "Déconnexion..."
+                : "Se déconnecter"}
+            </button>
+          </div>
         </div>
       </section>
 

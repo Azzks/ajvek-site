@@ -10,6 +10,7 @@ export default function ConnexionPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
@@ -141,6 +142,48 @@ export default function ConnexionPage() {
   }
 
   /* =========================================================
+     ICÔNE ŒIL
+  ========================================================= */
+
+  function EyeIcon({ open }: { open: boolean }) {
+    if (open) {
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-[18px] w-[18px]"
+          aria-hidden="true"
+        >
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="2.5" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-[18px] w-[18px]"
+        aria-hidden="true"
+      >
+        <path d="M3 3l18 18" />
+        <path d="M10.6 6.2A10.8 10.8 0 0 1 12 6c6.5 0 10 6 10 6a18 18 0 0 1-2.1 2.8" />
+        <path d="M6.6 6.6C3.6 8.4 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 5.4-1.4" />
+        <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      </svg>
+    );
+  }
+
+  /* =========================================================
      PAGE
   ========================================================= */
 
@@ -233,22 +276,40 @@ export default function ConnexionPage() {
               </button>
             </div>
 
-            <input
-              id="password"
-              required
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
+            <div className="relative">
+              <input
+                id="password"
+                required
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
 
-                if (error) {
-                  setError(null);
+                  if (error) {
+                    setError(null);
+                  }
+                }}
+                placeholder="••••••••"
+                className="w-full rounded-xl border border-surface bg-transparent px-4 py-4 pr-12 text-sm text-foreground outline-none transition placeholder:text-stone/40 focus:border-stone"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowPassword((current) => !current)
                 }
-              }}
-              placeholder="••••••••"
-              className="w-full rounded-xl border border-surface bg-transparent px-4 py-4 text-sm text-foreground outline-none transition placeholder:text-stone/40 focus:border-stone"
-            />
+                aria-label={
+                  showPassword
+                    ? "Masquer le mot de passe"
+                    : "Afficher le mot de passe"
+                }
+                aria-pressed={showPassword}
+                className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center justify-center text-stone transition hover:text-foreground"
+              >
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
           </div>
 
           {/* =================================================

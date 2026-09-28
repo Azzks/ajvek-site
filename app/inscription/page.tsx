@@ -8,6 +8,7 @@ export default function InscriptionPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +43,9 @@ export default function InscriptionPage() {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(
-        "Le mot de passe doit contenir au moins 6 caractères."
+        "Le mot de passe doit contenir au moins 8 caractères."
       );
       setSubmitting(false);
       return;
@@ -130,6 +131,48 @@ export default function InscriptionPage() {
 
       setSubmitting(false);
     }
+  }
+
+  /* =====================================================
+     ICÔNE ŒIL
+  ====================================================== */
+
+  function EyeIcon({ open }: { open: boolean }) {
+    if (open) {
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-[18px] w-[18px]"
+          aria-hidden="true"
+        >
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="2.5" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-[18px] w-[18px]"
+        aria-hidden="true"
+      >
+        <path d="M3 3l18 18" />
+        <path d="M10.6 6.2A10.8 10.8 0 0 1 12 6c6.5 0 10 6 10 6a18 18 0 0 1-2.1 2.8" />
+        <path d="M6.6 6.6C3.6 8.4 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 5.4-1.4" />
+        <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      </svg>
+    );
   }
 
   /* =====================================================
@@ -277,23 +320,48 @@ export default function InscriptionPage() {
                 Mot de passe
               </label>
 
-              <input
-                id="password"
-                required
-                type="password"
-                minLength={6}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                placeholder="6 caractères minimum"
-                disabled={submitting}
-                className="w-full border-b border-surface bg-transparent px-0 py-4 text-sm text-foreground outline-none transition-colors placeholder:text-stone/35 focus:border-foreground disabled:opacity-50"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  required
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
+                  placeholder="8 caractères minimum"
+                  disabled={submitting}
+                  className="w-full border-b border-surface bg-transparent px-0 py-4 pr-11 text-sm text-foreground outline-none transition-colors placeholder:text-stone/35 focus:border-foreground disabled:opacity-50"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword(
+                      (current) => !current
+                    )
+                  }
+                  disabled={submitting}
+                  aria-label={
+                    showPassword
+                      ? "Masquer le mot de passe"
+                      : "Afficher le mot de passe"
+                  }
+                  aria-pressed={showPassword}
+                  className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center justify-center text-stone transition hover:text-foreground disabled:opacity-50"
+                >
+                  <EyeIcon open={showPassword} />
+                </button>
+              </div>
 
               <p className="mt-3 text-[10px] leading-5 text-stone/50">
-                6 caractères minimum.
+                8 caractères minimum.
               </p>
             </div>
 
