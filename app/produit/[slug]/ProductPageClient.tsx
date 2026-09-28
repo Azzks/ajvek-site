@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 
+import { supabase } from "@/lib/supabase";
 import { getProduct } from "@/lib/products";
 import ProductViewer3D from "@/components/ProductViewer3D";
 import PreorderForm from "@/components/PreorderForm";
@@ -34,9 +35,13 @@ export default function ProductPageClient({
 
   const [colorIndex, setColorIndex] = useState(initialColorIndex);
   const [size, setSize] = useState<string | null>(null);
+
   const [stock, setStock] = useState<StockItem[]>([]);
   const [stockLoading, setStockLoading] = useState(true);
   const [stockError, setStockError] = useState(false);
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
 
   /* =========================================================
      CHARGEMENT DU STOCK
@@ -84,6 +89,75 @@ export default function ProductPageClient({
     };
   }, []);
 
+  /* =========================================================
+     VÉRIFICATION ADMIN
+  ========================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAdmin() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          if (!cancelled) {
+            setIsAdmin(false);
+          }
+
+          return;
+        }
+
+        const response = await fetch("/api/admin/me", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setIsAdmin(false);
+          }
+
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setIsAdmin(data.isAdmin === true);
+        }
+      } catch (error) {
+        console.error("[product-admin]", error);
+
+        if (!cancelled) {
+          setIsAdmin(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setAdminLoading(false);
+        }
+      }
+    }
+
+    checkAdmin();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      checkAdmin();
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   if (!product) {
     return notFound();
   }
@@ -104,14 +178,22 @@ export default function ProductPageClient({
     );
   }
 
-  const selectedStock = size ? getStockForSize(size) ?? null : null;
+  const selectedStock = size
+    ? getStockForSize(size) ?? null
+    : null;
 
   /*
-   * Les ventes sont ouvertes pour cette couleur uniquement
-   * si au moins une taille possède sales_enabled = true.
+   * Les ventes sont ouvertes pour cette couleur si :
+   *
+   * - au moins une taille possède sales_enabled = true
+   * OU
+   * - l'utilisateur connecté est administrateur.
+   *
+   * La véritable autorisation admin sera également
+   * vérifiée côté serveur au moment du checkout.
    */
 
-  const salesOpen =
+  const publicSalesOpen =
     !stockLoading &&
     !stockError &&
     product.sizes.some((currentSize) => {
@@ -119,6 +201,11 @@ export default function ProductPageClient({
 
       return item?.sales_enabled === true;
     });
+
+  const salesOpen =
+    !stockLoading &&
+    !stockError &&
+    (publicSalesOpen || isAdmin);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -136,6 +223,7 @@ export default function ProductPageClient({
             <div className="relative overflow-hidden bg-[#111110]">
               <div className="pointer-events-none absolute left-5 top-5 z-10 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
+
                 <span className="text-[8px] uppercase tracking-[0.35em] text-white/60">
                   Drop 001
                 </span>
@@ -254,7 +342,9 @@ export default function ProductPageClient({
                           ? "border-background/30"
                           : "border-stone/30"
                       }`}
-                      style={{ backgroundColor: cw.color }}
+                      style={{
+                        backgroundColor: cw.color,
+                      }}
                     />
                   </button>
                 ))}
@@ -282,14 +372,18 @@ export default function ProductPageClient({
 
                   const soldOut =
                     salesOpen &&
-                    stockItem?.sales_enabled === true &&
-                    Number(stockItem.stock_quantity) <= 0;
+                    Number(stockItem?.stock_quantity ?? 0) <= 0;
 
                   return (
                     <button
                       key={s}
                       type="button"
-                      disabled={stockLoading || stockError || soldOut}
+                      disabled={
+                        stockLoading ||
+                        stockError ||
+                        adminLoading ||
+                        soldOut
+                      }
                       onClick={() => setSize(s)}
                       className={`relative h-14 border text-[10px] uppercase tracking-[0.2em] transition ${
                         soldOut
@@ -298,7 +392,9 @@ export default function ProductPageClient({
                             ? "border-foreground bg-foreground text-background"
                             : "border-surface text-stone hover:border-stone/60 hover:text-foreground"
                       } ${
-                        stockLoading || stockError
+                        stockLoading ||
+                        stockError ||
+                        adminLoading
                           ? "cursor-not-allowed opacity-50"
                           : ""
                       }`}
@@ -310,29 +406,38 @@ export default function ProductPageClient({
               </div>
 
               <div className="min-h-8 pt-3">
-                {stockLoading && (
+                {(stockLoading || adminLoading) && (
                   <p className="text-[10px] leading-5 text-stone">
                     Chargement des disponibilités...
                   </p>
                 )}
 
-                {!stockLoading && stockError && (
-                  <p className="text-[10px] leading-5 text-stone">
-                    Disponibilités momentanément indisponibles.
-                  </p>
-                )}
+                {!stockLoading &&
+                  !adminLoading &&
+                  stockError && (
+                    <p className="text-[10px] leading-5 text-stone">
+                      Disponibilités momentanément indisponibles.
+                    </p>
+                  )}
 
-                {!stockLoading && !stockError && !salesOpen && (
-                  <p className="text-[10px] leading-5 text-stone">
-                    Le premier stock AJVEK arrive bientôt.
-                  </p>
-                )}
+                {!stockLoading &&
+                  !adminLoading &&
+                  !stockError &&
+                  !salesOpen && (
+                    <p className="text-[10px] leading-5 text-stone">
+                      Le premier stock AJVEK arrive bientôt.
+                    </p>
+                  )}
 
-                {!stockLoading && !stockError && salesOpen && !size && (
-                  <p className="text-[10px] leading-5 text-stone">
-                    Sélectionne une taille.
-                  </p>
-                )}
+                {!stockLoading &&
+                  !adminLoading &&
+                  !stockError &&
+                  salesOpen &&
+                  !size && (
+                    <p className="text-[10px] leading-5 text-stone">
+                      Sélectionne une taille.
+                    </p>
+                  )}
               </div>
             </div>
 
@@ -354,6 +459,7 @@ export default function ProductPageClient({
 
                 <p className="text-right text-[8px] uppercase leading-5 tracking-[0.28em] text-stone">
                   {colorway.label}
+
                   {size && (
                     <>
                       <br />
@@ -368,8 +474,9 @@ export default function ProductPageClient({
                 colorway={colorway}
                 size={size}
                 selectedStock={selectedStock}
-                stockLoading={stockLoading}
+                stockLoading={stockLoading || adminLoading}
                 stockError={stockError}
+                isAdmin={isAdmin}
               />
             </div>
 

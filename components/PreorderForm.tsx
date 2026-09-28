@@ -24,6 +24,7 @@ export default function PreorderForm({
   selectedStock,
   stockLoading,
   stockError,
+  isAdmin,
 }: {
   product: Product;
   colorway: Colorway;
@@ -31,6 +32,7 @@ export default function PreorderForm({
   selectedStock: StockItem | null;
   stockLoading: boolean;
   stockError: boolean;
+  isAdmin: boolean;
 }) {
   const { items, addItem } = useCart();
 
@@ -39,12 +41,21 @@ export default function PreorderForm({
    * ÉTAT DE LA VENTE
    * =========================================================
    *
-   * Tant que sales_enabled = false dans Supabase,
-   * aucune pièce ne peut être ajoutée au panier.
+   * Vente publique :
+   * sales_enabled doit être true.
+   *
+   * Mode administrateur :
+   * un administrateur authentifié peut tester l'achat
+   * même lorsque sales_enabled = false.
+   *
+   * Le stock réel reste toujours respecté.
    */
 
-  const salesEnabled =
+  const publicSalesEnabled =
     selectedStock?.sales_enabled === true;
+
+  const salesEnabled =
+    publicSalesEnabled || isAdmin;
 
   const quantity = Math.max(
     Number(selectedStock?.stock_quantity ?? 0),
@@ -63,10 +74,6 @@ export default function PreorderForm({
    * =========================================================
    * ARTICLE DANS LE PANIER
    * =========================================================
-   *
-   * L'identifiant dépend du produit, de la couleur
-   * et de la taille afin que chaque combinaison
-   * corresponde à une ligne distincte du panier.
    */
 
   const cartItemId = size
@@ -119,7 +126,9 @@ export default function PreorderForm({
     size &&
     available
   ) {
-    statusTitle = "Disponible";
+    statusTitle = isAdmin && !publicSalesEnabled
+      ? "Disponible · Mode admin"
+      : "Disponible";
 
     statusDescription =
       `${quantity} pièce${
@@ -222,6 +231,12 @@ export default function PreorderForm({
         <p className="mt-5 max-w-md text-xs leading-6 text-stone">
           {statusDescription}
         </p>
+
+        {isAdmin && !publicSalesEnabled && (
+          <p className="mt-3 text-[9px] uppercase tracking-[0.22em] text-stone">
+            Mode administrateur · vente publique fermée
+          </p>
+        )}
       </div>
 
       {/* =====================================================
@@ -306,7 +321,9 @@ export default function PreorderForm({
                 ? "Sélectionne une taille pour continuer."
                 : stockLimitReached
                   ? "Tout le stock disponible pour cette taille est déjà dans ton panier."
-                  : "Ajoute cette pièce à ton panier pour continuer."}
+                  : isAdmin && !publicSalesEnabled
+                    ? "Mode administrateur : cette pièce peut être ajoutée au panier malgré la fermeture des ventes publiques."
+                    : "Ajoute cette pièce à ton panier pour continuer."}
         </p>
       </div>
 

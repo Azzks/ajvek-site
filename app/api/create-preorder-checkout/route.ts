@@ -401,7 +401,19 @@ export async function POST(
         }
       );
     }
+    const adminEmails = (
+      process.env.ADMIN_EMAILS || ""
+    )
+      .split(",")
+      .map((email) =>
+        email.trim().toLowerCase()
+      )
+      .filter(Boolean);
 
+    const isAdmin =
+      adminEmails.includes(
+        user.email.toLowerCase()
+      );
     // ========================================================
     // 2. DONNÉES
     // ========================================================
@@ -760,19 +772,19 @@ if (delivery_method === "relay") {
       }
 
       if (
-        stockRow.sales_enabled !==
-        true
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              `${item.product_name} — ${item.color} — Taille ${item.size} sera bientôt disponible.`,
-          },
-          {
-            status: 409,
-          }
-        );
-      }
+  stockRow.sales_enabled !== true &&
+  !isAdmin
+) {
+  return NextResponse.json(
+    {
+      error:
+        `${item.product_name} — ${item.color} — Taille ${item.size} sera bientôt disponible.`,
+    },
+    {
+      status: 409,
+    }
+  );
+}
 
       const availableStock =
         Math.max(
