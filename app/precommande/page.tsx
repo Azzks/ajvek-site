@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
@@ -46,6 +47,9 @@ export default function PrecommandePage() {
 
   const [stock, setStock] = useState<StockItem[]>([]);
   const [stockLoading, setStockLoading] = useState(true);
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -98,6 +102,76 @@ export default function PrecommandePage() {
 
     loadStock();
   }, []);
+
+  /*
+   * ============================================================
+   * MODE ADMINISTRATEUR
+   * ============================================================
+   */
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkAdmin() {
+      try {
+        setAdminLoading(true);
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          if (active) {
+            setIsAdmin(false);
+          }
+
+          return;
+        }
+
+        const response = await fetch("/api/admin/me", {
+          headers: {
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (active) {
+          setIsAdmin(
+            response.ok &&
+              data.isAdmin === true
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[Panier] Impossible de vérifier le mode admin :",
+          error
+        );
+
+        if (active) {
+          setIsAdmin(false);
+        }
+      } finally {
+        if (active) {
+          setAdminLoading(false);
+        }
+      }
+    }
+
+    checkAdmin();
+
+    const { data: authListener } =
+      supabase.auth.onAuthStateChange(() => {
+        checkAdmin();
+      });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [user]);
 
   /*
    * ============================================================
@@ -157,13 +231,18 @@ export default function PrecommandePage() {
       setError(
         "Impossible de vérifier le stock de cette pièce."
       );
+
       return;
     }
 
-    if (!stockItem.sales_enabled) {
+    if (
+      !stockItem.sales_enabled &&
+      !isAdmin
+    ) {
       setError(
         "Cette pièce n'est pas encore disponible à la vente."
       );
+
       return;
     }
 
@@ -270,7 +349,7 @@ export default function PrecommandePage() {
   const total = subtotal + shipping;
 
   const cartStockValid = useMemo(() => {
-    if (stockLoading) {
+    if (stockLoading || adminLoading) {
       return false;
     }
 
@@ -295,12 +374,18 @@ export default function PrecommandePage() {
 
       return (
         !!stockItem &&
-        stockItem.sales_enabled &&
+        (stockItem.sales_enabled || isAdmin) &&
         stockItem.stock_quantity >=
           item.quantity
       );
     });
-  }, [items, stock, stockLoading]);
+  }, [
+    items,
+    stock,
+    stockLoading,
+    adminLoading,
+    isAdmin,
+  ]);
 
   /*
    * ============================================================
@@ -317,6 +402,7 @@ export default function PrecommandePage() {
       setError(
         "Connecte-toi pour finaliser ta commande."
       );
+
       return;
     }
 
@@ -330,10 +416,11 @@ export default function PrecommandePage() {
       return;
     }
 
-    if (stockLoading) {
+    if (stockLoading || adminLoading) {
       setError(
         "Vérification du stock en cours."
       );
+
       return;
     }
 
@@ -341,6 +428,7 @@ export default function PrecommandePage() {
       setError(
         "Une ou plusieurs pièces de ton panier ne sont plus disponibles dans la quantité demandée."
       );
+
       return;
     }
 
@@ -351,6 +439,7 @@ export default function PrecommandePage() {
       setError(
         "Choisis ton Point Relais avant de continuer."
       );
+
       return;
     }
 
@@ -613,7 +702,7 @@ export default function PrecommandePage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20">
+                    <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20">
             <div>
               {/* ===============================================
                   01 — PIÈCES
@@ -662,8 +751,10 @@ export default function PrecommandePage() {
 
                       const unavailable =
                         !stockLoading &&
+                        !adminLoading &&
                         (!stockItem ||
-                          !stockItem.sales_enabled ||
+                          (!stockItem.sales_enabled &&
+                            !isAdmin) ||
                           stockItem.stock_quantity <
                             item.quantity);
 
@@ -731,7 +822,10 @@ export default function PrecommandePage() {
                               </div>
 
                               {!stockLoading &&
-                                stockItem?.sales_enabled &&
+                                !adminLoading &&
+                                stockItem &&
+                                (stockItem.sales_enabled ||
+                                  isAdmin) &&
                                 stockItem.stock_quantity >
                                   0 && (
                                   <p className="mt-3 text-[9px] uppercase tracking-[0.2em] text-stone">
@@ -739,6 +833,18 @@ export default function PrecommandePage() {
                                       stockItem.stock_quantity
                                     }{" "}
                                     en stock
+                                  </p>
+                                )}
+
+                              {isAdmin &&
+                                !stockLoading &&
+                                !adminLoading &&
+                                stockItem &&
+                                !stockItem.sales_enabled &&
+                                stockItem.stock_quantity >
+                                  0 && (
+                                  <p className="mt-2 text-[8px] uppercase tracking-[0.2em] text-stone/60">
+                                    Mode administrateur · vente publique fermée
                                   </p>
                                 )}
 
@@ -1232,8 +1338,7 @@ export default function PrecommandePage() {
                     </p>
                   </div>
                 </div>
-
-                <div className="border-b border-surface px-6 py-2 md:px-7">
+                                <div className="border-b border-surface px-6 py-2 md:px-7">
                   {items.map(
                     (item) => (
                       <div
@@ -1367,6 +1472,15 @@ export default function PrecommandePage() {
                     </p>
                   </div>
 
+                  {isAdmin && (
+                    <div className="mt-4 border border-surface px-4 py-3">
+                      <p className="text-[8px] uppercase tracking-[0.25em] text-stone">
+                        Mode administrateur ·
+                        vente publique fermée
+                      </p>
+                    </div>
+                  )}
+
                   {error && (
                     <div className="mt-6 border border-white/15 bg-white/[0.02] px-4 py-4">
                       <p className="text-xs leading-5 text-foreground">
@@ -1384,6 +1498,7 @@ export default function PrecommandePage() {
                       disabled={
                         submitting ||
                         stockLoading ||
+                        adminLoading ||
                         !cartStockValid
                       }
                       className="group mt-7 flex w-full items-center justify-between rounded-full bg-foreground px-6 py-5 text-background transition hover:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
@@ -1391,7 +1506,8 @@ export default function PrecommandePage() {
                       <span className="text-[9px] uppercase tracking-[0.3em]">
                         {submitting
                           ? "Redirection..."
-                          : stockLoading
+                          : stockLoading ||
+                              adminLoading
                             ? "Vérification..."
                             : !cartStockValid
                               ? "Stock indisponible"
