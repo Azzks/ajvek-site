@@ -3579,18 +3579,17 @@ export async function POST(request: Request) {
 
 
               <p style="
-
-                margin:28px 0 0;
-
-                font-family:Arial,Helvetica,sans-serif;
-
-                font-size:12px;
-
-                line-height:22px;
-
-                color:#b3aca4;
-
-              ">
+  margin:28px 0 0;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:12px;
+  line-height:22px;
+  color:#b3aca4;
+">
+  Tes articles restent réservés temporairement.
+  Retourne sur AJVEK pour reprendre ta session
+  de paiement et réessayer avec ta carte ou
+  utiliser une autre carte si nécessaire.
+</p>
 
                 Tu peux recommencer ta commande
 
