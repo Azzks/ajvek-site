@@ -1164,6 +1164,9 @@ service_point_city:
 
         p_expires_at:
           reservationExpiresAt,
+          
+          p_allow_closed_sales:
+  isAdmin,
       }
     );
 
