@@ -51,7 +51,213 @@ type ServicePoint = {
   city?: string;
   carrier?: string;
 };
+type SendcloudServicePoint = {
+  id: number | string;
+  name?: string;
+  street?: string;
+  house_number?: string;
+  postal_code?: string;
+  city?: string;
+  carrier?: string;
+};
 
+type VerifiedServicePoint = {
+  id: string;
+  name: string;
+  street: string;
+  houseNumber: string;
+  postalCode: string;
+  city: string;
+  carrier: string;
+};
+
+async function verifySendcloudServicePoint(
+  servicePoint: ServicePoint
+): Promise<VerifiedServicePoint | null> {
+  const publicKey =
+    process.env.SENDCLOUD_PUBLIC_KEY;
+
+  const secretKey =
+    process.env.SENDCLOUD_SECRET_KEY;
+
+  if (!publicKey || !secretKey) {
+    console.error(
+      "[create-checkout] Configuration Sendcloud serveur manquante."
+    );
+
+    throw new Error(
+      "Configuration Sendcloud indisponible."
+    );
+  }
+
+  const requestedId =
+    String(servicePoint.id ?? "").trim();
+
+  const requestedPostalCode =
+    String(
+      servicePoint.postalCode ?? ""
+    ).trim();
+
+  if (
+    !requestedId ||
+    !/^\d{5}$/.test(requestedPostalCode)
+  ) {
+    return null;
+  }
+
+  const credentials = Buffer.from(
+    `${publicKey}:${secretKey}`
+  ).toString("base64");
+
+  const params = new URLSearchParams({
+    country: "FR",
+    address: requestedPostalCode,
+    radius: "5000",
+  });
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `https://servicepoints.sendcloud.sc/api/v2/service-points?${params.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+  } catch (error) {
+    console.error(
+      "[create-checkout] API Sendcloud inaccessible :",
+      error
+    );
+
+    throw new Error(
+      "Impossible de vérifier le Point Relais."
+    );
+  }
+
+  if (!response.ok) {
+    console.error(
+      "[create-checkout] Erreur API Sendcloud :",
+      {
+        status: response.status,
+        statusText: response.statusText,
+      }
+    );
+
+    throw new Error(
+      "Impossible de vérifier le Point Relais."
+    );
+  }
+
+  let data: unknown;
+
+  try {
+    data = await response.json();
+  } catch (error) {
+    console.error(
+      "[create-checkout] Réponse Sendcloud invalide :",
+      error
+    );
+
+    throw new Error(
+      "Réponse Sendcloud invalide."
+    );
+  }
+
+  if (!Array.isArray(data)) {
+    console.error(
+      "[create-checkout] Format Sendcloud inattendu."
+    );
+
+    throw new Error(
+      "Réponse Sendcloud invalide."
+    );
+  }
+
+  const points =
+    data as SendcloudServicePoint[];
+
+  const matchingPoint = points.find(
+    (point) =>
+      String(point.id) === requestedId
+  );
+
+  if (!matchingPoint) {
+    return null;
+  }
+
+  const carrier = String(
+    matchingPoint.carrier ?? ""
+  )
+    .trim()
+    .toLocaleLowerCase("fr-FR");
+
+  if (
+    carrier !== "mondial_relay" &&
+    carrier !== "mondial relay"
+  ) {
+    console.warn(
+      "[create-checkout] Transporteur Point Relais refusé :",
+      {
+        servicePointId: requestedId,
+        carrier,
+      }
+    );
+
+    return null;
+  }
+
+  const postalCode = String(
+    matchingPoint.postal_code ?? ""
+  ).trim();
+
+  const city = String(
+    matchingPoint.city ?? ""
+  ).trim();
+
+  const street = String(
+    matchingPoint.street ?? ""
+  ).trim();
+
+  const houseNumber = String(
+    matchingPoint.house_number ?? ""
+  ).trim();
+
+  const name = String(
+    matchingPoint.name ??
+      "Point Relais Mondial Relay"
+  ).trim();
+
+  if (
+    !postalCode ||
+    !city ||
+    !street
+  ) {
+    console.error(
+      "[create-checkout] Point Relais Sendcloud incomplet :",
+      {
+        servicePointId: requestedId,
+      }
+    );
+
+    return null;
+  }
+
+  return {
+    id: String(matchingPoint.id),
+    name,
+    street,
+    houseNumber,
+    postalCode,
+    city,
+    carrier: "mondial_relay",
+  };
+}
 type ValidatedItem = {
   product_slug: string;
   product_name: string;
@@ -270,25 +476,58 @@ export async function POST(
       );
     }
 
-    if (
-      delivery_method === "relay" &&
-      (
-        service_point?.id === undefined ||
-        service_point?.id === null ||
-        !service_point?.postalCode ||
-        !service_point?.city
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Choisis un Point Relais valide.",
-        },
-        {
-          status: 400,
-        }
+    let verifiedServicePoint: VerifiedServicePoint | null = null;
+
+if (delivery_method === "relay") {
+  if (
+    service_point?.id === undefined ||
+    service_point?.id === null ||
+    !service_point?.postalCode
+  ) {
+    return NextResponse.json(
+      {
+        error: "Choisis un Point Relais valide.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  try {
+    verifiedServicePoint =
+      await verifySendcloudServicePoint(
+        service_point
       );
-    }
+  } catch (error) {
+    console.error(
+      "[create-checkout] Vérification du Point Relais impossible :",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Impossible de vérifier le Point Relais actuellement. Réessaie dans quelques instants.",
+      },
+      {
+        status: 503,
+      }
+    );
+  }
+
+  if (!verifiedServicePoint) {
+    return NextResponse.json(
+      {
+        error:
+          "Ce Point Relais n'est pas valide. Choisis à nouveau ton Point Relais.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+}
 
     // ========================================================
     // 3. VALIDATION DES ARTICLES
@@ -597,15 +836,15 @@ export async function POST(
       randomUUID();
 
     const servicePointAddress =
-      delivery_method === "relay" &&
-      service_point
-        ? [
-            service_point.houseNumber,
-            service_point.street,
-          ]
-            .filter(Boolean)
-            .join(" ")
-        : null;
+  delivery_method === "relay" &&
+  verifiedServicePoint
+    ? [
+        verifiedServicePoint.houseNumber,
+        verifiedServicePoint.street,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : null;
 
     // ========================================================
     // 8. CRÉATION DES LIGNES DE COMMANDE
@@ -659,40 +898,29 @@ export async function POST(
                 "awaiting_payment",
 
               service_point_id:
-                delivery_method ===
-                "relay"
-                  ? String(
-                      service_point?.id ??
-                        ""
-                    )
-                  : null,
+  delivery_method === "relay"
+    ? verifiedServicePoint?.id ?? null
+    : null,
 
-              service_point_name:
-                delivery_method ===
-                "relay"
-                  ? service_point?.name ||
-                    null
-                  : null,
+service_point_name:
+  delivery_method === "relay"
+    ? verifiedServicePoint?.name ?? null
+    : null,
 
-              service_point_address:
-                delivery_method ===
-                "relay"
-                  ? servicePointAddress
-                  : null,
+service_point_address:
+  delivery_method === "relay"
+    ? servicePointAddress
+    : null,
 
-              service_point_postal_code:
-                delivery_method ===
-                "relay"
-                  ? service_point?.postalCode ||
-                    null
-                  : null,
+service_point_postal_code:
+  delivery_method === "relay"
+    ? verifiedServicePoint?.postalCode ?? null
+    : null,
 
-              service_point_city:
-                delivery_method ===
-                "relay"
-                  ? service_point?.city ||
-                    null
-                  : null,
+service_point_city:
+  delivery_method === "relay"
+    ? verifiedServicePoint?.city ?? null
+    : null,
             })
           )
       );
@@ -837,13 +1065,9 @@ export async function POST(
             "stock",
 
           service_point_id:
-            delivery_method ===
-            "relay"
-              ? String(
-                  service_point?.id ??
-                    ""
-                )
-              : "",
+  delivery_method === "relay"
+    ? verifiedServicePoint?.id ?? ""
+    : "",
         },
 
         success_url:
