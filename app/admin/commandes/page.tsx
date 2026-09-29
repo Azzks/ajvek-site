@@ -74,7 +74,13 @@ type OrderDraft = {
   tracking_number: string;
   tracking_url: string;
 };
-
+type StockRow = {
+  product_slug: string;
+  color: string;
+  size: string;
+  stock_quantity: number;
+  sales_enabled: boolean;
+};
 /* ============================================================
    STATUTS
    ============================================================ */
@@ -218,7 +224,17 @@ export default function AdminCommandesPage() {
     useState<
       Record<string, OrderDraft>
     >({});
+const [stock, setStock] =
+  useState<StockRow[]>([]);
 
+const [stockLoading, setStockLoading] =
+  useState(true);
+
+const [stockError, setStockError] =
+  useState<string | null>(null);
+
+const [stockSavingKey, setStockSavingKey] =
+  useState<string | null>(null);
   /* ==========================================================
      TOKEN ADMIN
      ========================================================== */
@@ -234,7 +250,184 @@ export default function AdminCommandesPage() {
       null
     );
   }
+/* ==========================================================
+   STOCK
+   ========================================================== */
 
+async function loadStock() {
+  setStockLoading(true);
+  setStockError(null);
+
+  try {
+    const token =
+      await getAccessToken();
+
+    if (!token) {
+      setStockError(
+        "Tu dois être connecté avec ton compte admin."
+      );
+
+      return;
+    }
+
+    const response =
+      await fetch(
+        "/api/admin/stock",
+        {
+          cache: "no-store",
+
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      setStockError(
+        data.error ||
+          "Impossible de charger le stock."
+      );
+
+      return;
+    }
+
+    setStock(
+      Array.isArray(data.stock)
+        ? data.stock
+        : []
+    );
+  } catch (error) {
+    console.error(
+      "[admin-stock]",
+      error
+    );
+
+    setStockError(
+      "Impossible de charger le stock."
+    );
+  } finally {
+    setStockLoading(false);
+  }
+}
+
+async function adjustStock(
+  row: StockRow,
+  adjustment: 1 | -1
+) {
+  const productName =
+    row.product_slug === "sakura"
+      ? "Cerisier"
+      : "Roses";
+
+  const action =
+    adjustment === -1
+      ? "retirer 1"
+      : "ajouter 1";
+
+  const confirmed =
+    window.confirm(
+      `Confirmer : ${action} au stock de ${productName} · ${row.color} · ${row.size} ?`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const key =
+    `${row.product_slug}-${row.color}-${row.size}`;
+
+  setStockSavingKey(key);
+  setStockError(null);
+
+  try {
+    const token =
+      await getAccessToken();
+
+    if (!token) {
+      setStockError(
+        "Ta session a expiré."
+      );
+
+      return;
+    }
+
+    const response =
+      await fetch(
+        "/api/admin/stock",
+        {
+          method: "PATCH",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${token}`,
+          },
+
+          body: JSON.stringify({
+            product_slug:
+              row.product_slug,
+
+            color:
+              row.color,
+
+            size:
+              row.size,
+
+            adjustment,
+          }),
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      setStockError(
+        data.error ||
+          "Impossible de modifier le stock."
+      );
+
+      await loadStock();
+
+      return;
+    }
+
+    const updated =
+      data.stock as StockRow;
+
+    setStock((current) =>
+      current.map((item) =>
+        item.product_slug ===
+          updated.product_slug &&
+        item.color ===
+          updated.color &&
+        item.size ===
+          updated.size
+          ? updated
+          : item
+      )
+    );
+  } catch (error) {
+    console.error(
+      "[admin-stock/adjust]",
+      error
+    );
+
+    setStockError(
+      "Impossible de modifier le stock."
+    );
+
+    await loadStock();
+  } finally {
+    setStockSavingKey(null);
+  }
+}
   /* ==========================================================
      CHARGER LES COMMANDES
      ========================================================== */
@@ -339,9 +532,9 @@ export default function AdminCommandesPage() {
   }
 
   useEffect(() => {
-    loadOrders();
-  }, []);
-
+  loadOrders();
+  loadStock();
+}, []);
   /* ==========================================================
      MODIFIER UN BROUILLON
      ========================================================== */
@@ -613,9 +806,10 @@ export default function AdminCommandesPage() {
 
             <button
               type="button"
-              onClick={
-                loadOrders
-              }
+              onClick={() => {
+  loadOrders();
+  loadStock();
+}}
               disabled={
                 loading
               }
@@ -635,6 +829,195 @@ export default function AdminCommandesPage() {
 
       <section className="px-6 py-10 md:px-8 md:py-14">
         <div className="mx-auto max-w-7xl">
+          {/* =================================================
+    STOCK
+================================================= */}
+
+<div className="mb-12 border border-surface">
+  <div className="border-b border-surface px-5 py-6 md:px-7">
+    <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+          Stock réel
+        </p>
+
+        <h2 className="mt-2 font-display text-2xl md:text-3xl">
+          Drop 001
+        </h2>
+
+        <p className="mt-3 max-w-xl text-xs leading-5 text-stone">
+          Ajustement manuel du stock pour les ventes réalisées en dehors du site.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={loadStock}
+        disabled={stockLoading}
+        className="w-fit rounded-full border border-surface px-5 py-3 text-[9px] uppercase tracking-[0.25em] transition hover:border-foreground disabled:opacity-50"
+      >
+        {stockLoading
+          ? "Actualisation..."
+          : "Actualiser le stock"}
+      </button>
+    </div>
+  </div>
+
+  {stockError && (
+    <div className="border-b border-surface px-5 py-5 md:px-7">
+      <p className="text-[9px] uppercase tracking-[0.3em] text-stone">
+        Erreur stock
+      </p>
+
+      <p className="mt-2 text-sm">
+        {stockError}
+      </p>
+    </div>
+  )}
+
+  {stockLoading && stock.length === 0 && (
+    <div className="px-5 py-8 md:px-7">
+      <p className="text-sm text-stone">
+        Chargement du stock...
+      </p>
+    </div>
+  )}
+
+  {!stockLoading && stock.length === 0 && !stockError && (
+    <div className="px-5 py-8 md:px-7">
+      <p className="text-sm text-stone">
+        Aucun stock trouvé.
+      </p>
+    </div>
+  )}
+
+  {stock.length > 0 && (
+    <div className="grid lg:grid-cols-2">
+      {["roses", "sakura"].map(
+        (productSlug, productIndex) => {
+          const productRows =
+            stock.filter(
+              (row) =>
+                row.product_slug ===
+                productSlug
+            );
+
+          const productName =
+            productSlug === "sakura"
+              ? "Cerisier"
+              : "Roses";
+
+          return (
+            <div
+              key={productSlug}
+              className={
+                productIndex === 0
+                  ? "border-b border-surface lg:border-b-0 lg:border-r"
+                  : ""
+              }
+            >
+              <div className="border-b border-surface px-5 py-5 md:px-7">
+                <p className="font-display text-xl">
+                  {productName}
+                </p>
+
+                <p className="mt-1 text-[9px] uppercase tracking-[0.25em] text-stone">
+                  {productRows.reduce(
+                    (total, row) =>
+                      total +
+                      row.stock_quantity,
+                    0
+                  )}{" "}
+                  pièces disponibles
+                </p>
+              </div>
+
+              <div>
+                {productRows.map(
+                  (row) => {
+                    const key =
+                      `${row.product_slug}-${row.color}-${row.size}`;
+
+                    const saving =
+                      stockSavingKey ===
+                      key;
+
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between gap-4 border-b border-surface px-5 py-4 last:border-b-0 md:px-7"
+                      >
+                        <div>
+                          <p className="text-sm">
+                            {row.color}
+                            {" · "}
+                            Taille {row.size}
+                          </p>
+
+                          <p className="mt-1 text-[9px] uppercase tracking-[0.2em] text-stone">
+                            {row.sales_enabled
+                              ? "Vente activée"
+                              : "Vente fermée"}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              adjustStock(
+                                row,
+                                -1
+                              )
+                            }
+                            disabled={
+                              saving ||
+                              row.stock_quantity <=
+                                0
+                            }
+                            className="flex h-10 w-10 items-center justify-center border border-surface text-lg transition hover:border-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                            aria-label={`Retirer une unité de ${productName} ${row.color} ${row.size}`}
+                          >
+                            −
+                          </button>
+
+                          <div className="min-w-12 text-center">
+                            <p className="font-display text-2xl">
+                              {row.stock_quantity}
+                            </p>
+
+                            <p className="text-[7px] uppercase tracking-[0.2em] text-stone">
+                              stock
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              adjustStock(
+                                row,
+                                1
+                              )
+                            }
+                            disabled={saving}
+                            className="flex h-10 w-10 items-center justify-center border border-surface text-lg transition hover:border-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                            aria-label={`Ajouter une unité de ${productName} ${row.color} ${row.size}`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          );
+        }
+      )}
+    </div>
+  )}
+</div>
           {/* =================================================
               RÉSUMÉ
           ================================================= */}
