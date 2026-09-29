@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-
 import { useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
@@ -64,6 +63,14 @@ export default function PrecommandePage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [checkoutAttemptId, setCheckoutAttemptId] =
+    useState<string | null>(null);
+
+  const [
+    checkoutAttemptFingerprint,
+    setCheckoutAttemptFingerprint,
+  ] = useState<string | null>(null);
 
   /*
    * ============================================================
@@ -231,7 +238,6 @@ export default function PrecommandePage() {
       setError(
         "Impossible de vérifier le stock de cette pièce."
       );
-
       return;
     }
 
@@ -242,7 +248,6 @@ export default function PrecommandePage() {
       setError(
         "Cette pièce n'est pas encore disponible à la vente."
       );
-
       return;
     }
 
@@ -402,7 +407,6 @@ export default function PrecommandePage() {
       setError(
         "Connecte-toi pour finaliser ta commande."
       );
-
       return;
     }
 
@@ -420,7 +424,6 @@ export default function PrecommandePage() {
       setError(
         "Vérification du stock en cours."
       );
-
       return;
     }
 
@@ -428,7 +431,6 @@ export default function PrecommandePage() {
       setError(
         "Une ou plusieurs pièces de ton panier ne sont plus disponibles dans la quantité demandée."
       );
-
       return;
     }
 
@@ -439,22 +441,72 @@ export default function PrecommandePage() {
       setError(
         "Choisis ton Point Relais avant de continuer."
       );
-
       return;
     }
 
     setSubmitting(true);
     setError(null);
 
+    /*
+     * L'identifiant de tentative doit être réutilisé uniquement
+     * lorsque le contenu de la commande est strictement identique.
+     *
+     * Si le client modifie son panier, sa livraison ou ses
+     * coordonnées après une tentative, un nouvel identifiant est
+     * généré.
+     */
+
+    const attemptFingerprint = JSON.stringify({
+      name: name.trim(),
+      phone: phone.trim(),
+      delivery_method: deliveryMethod,
+      service_point:
+        deliveryMethod === "relay"
+          ? selectedPoint
+          : null,
+      items: items.map((item) => ({
+        product_slug: item.slug,
+        color: item.colorLabel,
+        size: item.size,
+        quantity: item.quantity,
+      })),
+    });
+
+    const canReuseAttempt =
+      checkoutAttemptId !== null &&
+      checkoutAttemptFingerprint ===
+        attemptFingerprint;
+
+    const attemptId = canReuseAttempt
+      ? checkoutAttemptId
+      : crypto.randomUUID();
+
+    if (!canReuseAttempt) {
+      setCheckoutAttemptId(attemptId);
+      setCheckoutAttemptFingerprint(
+        attemptFingerprint
+      );
+    }
+
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
+      /*
+       * Aucun appel au serveur de checkout n'a encore été effectué
+       * si la session utilisateur est absente.
+       *
+       * L'identifiant peut donc être abandonné sans ambiguïté.
+       */
+
       if (!session?.access_token) {
         setError(
           "Ta session a expiré. Reconnecte-toi puis réessaie."
         );
+
+        setCheckoutAttemptId(null);
+        setCheckoutAttemptFingerprint(null);
 
         setSubmitting(false);
         return;
@@ -474,6 +526,8 @@ export default function PrecommandePage() {
           },
 
           body: JSON.stringify({
+            checkout_attempt_id: attemptId,
+
             name: name.trim(),
 
             phone: phone.trim(),
@@ -508,7 +562,24 @@ export default function PrecommandePage() {
       const data =
         await response.json();
 
+      /*
+       * Une erreur explicitement marquée retryable par le serveur
+       * représente un résultat potentiellement ambigu.
+       *
+       * On conserve alors le même checkout_attempt_id afin que le
+       * serveur puisse reprendre la même tentative.
+       *
+       * Pour une erreur définitive connue du serveur, on abandonne
+       * l'identifiant. Le prochain clic créera une nouvelle
+       * tentative et donc une nouvelle clé d'idempotence Stripe.
+       */
+
       if (!response.ok || !data.url) {
+        if (data.retryable !== true) {
+          setCheckoutAttemptId(null);
+          setCheckoutAttemptFingerprint(null);
+        }
+
         setError(
           data.error ||
             "Impossible de lancer le paiement. Réessaie dans un instant."
@@ -521,6 +592,13 @@ export default function PrecommandePage() {
       window.location.href =
         data.url;
     } catch (error) {
+      /*
+       * Une erreur réseau ne permet pas de savoir avec certitude
+       * jusqu'où le serveur est allé.
+       *
+       * On conserve donc volontairement checkoutAttemptId.
+       */
+
       console.error(
         "[Panier] Erreur checkout :",
         error
@@ -702,7 +780,7 @@ export default function PrecommandePage() {
             </Link>
           </div>
         ) : (
-                    <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20">
+          <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20">
             <div>
               {/* ===============================================
                   01 — PIÈCES
@@ -923,7 +1001,6 @@ export default function PrecommandePage() {
                   <span>
                     + Ajouter une pièce
                   </span>
-
                   <span>→</span>
                 </Link>
               </section>
@@ -1338,7 +1415,8 @@ export default function PrecommandePage() {
                     </p>
                   </div>
                 </div>
-                                <div className="border-b border-surface px-6 py-2 md:px-7">
+
+                <div className="border-b border-surface px-6 py-2 md:px-7">
                   {items.map(
                     (item) => (
                       <div
