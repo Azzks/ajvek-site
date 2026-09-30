@@ -24,6 +24,10 @@ const PRIMARY_LINKS = [
     label: "Lookbook",
   },
   {
+    href: "/tirage",
+    label: "Le Tirage",
+  },
+  {
     href: "/a-propos",
     label: "Notre histoire",
   },
@@ -37,6 +41,10 @@ const MENU_LINKS = [
   {
     href: "/lookbook",
     label: "Lookbook",
+  },
+  {
+    href: "/tirage",
+    label: "Le Tirage",
   },
   {
     href: "/a-propos",
