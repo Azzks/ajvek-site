@@ -8,6 +8,16 @@ import { getProduct } from "@/lib/products";
 import ProductViewer3D from "@/components/ProductViewer3D";
 import PreorderForm from "@/components/PreorderForm";
 
+const SIZE_GUIDE: Record<
+  string,
+  { chest: number; length: number; sleeve: number }
+> = {
+  XS: { chest: 52, length: 68, sleeve: 22 },
+  S: { chest: 54, length: 70, sleeve: 23 },
+  M: { chest: 56, length: 72, sleeve: 24 },
+  L: { chest: 58, length: 74, sleeve: 25 },
+};
+
 type StockItem = {
   product_slug: string;
   color: string;
@@ -35,6 +45,7 @@ export default function ProductPageClient({
 
   const [colorIndex, setColorIndex] = useState(initialColorIndex);
   const [size, setSize] = useState<string | null>(null);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   const [stock, setStock] = useState<StockItem[]>([]);
   const [stockLoading, setStockLoading] = useState(true);
@@ -164,6 +175,19 @@ export default function ProductPageClient({
 
   const productSlug = product.slug;
   const colorway = product.colorways[colorIndex];
+
+  const selectedSizeGuide = size
+    ? SIZE_GUIDE[size.toUpperCase()]
+    : null;
+
+  const sizeGuideProductName =
+    productSlug === "sakura" ? "cerisier" : "roses";
+
+  const sizeGuideColorName =
+    colorway.label.toLowerCase() === "noir" ? "noir" : "blanc";
+
+  const sizeGuideImage =
+    `/images/size-guides/${sizeGuideProductName}-${sizeGuideColorName}.png`;
 
   /* =========================================================
      STOCK DE LA TAILLE
@@ -326,6 +350,7 @@ export default function ProductPageClient({
                     onClick={() => {
                       setColorIndex(index);
                       setSize(null);
+                      setSizeGuideOpen(false);
                     }}
                     className={`group flex h-14 items-center justify-between border px-4 text-[9px] uppercase tracking-[0.25em] transition ${
                       index === colorIndex
@@ -404,6 +429,83 @@ export default function ProductPageClient({
                   );
                 })}
               </div>
+
+              {/* DIMENSIONS DE LA TAILLE SÉLECTIONNÉE */}
+
+              {selectedSizeGuide && (
+                <div className="mt-4 border border-surface">
+                  <div className="grid grid-cols-3 divide-x divide-surface">
+                    <div className="px-3 py-4 text-center">
+                      <p className="text-[8px] uppercase tracking-[0.25em] text-stone">
+                        A — Poitrine
+                      </p>
+
+                      <p className="mt-2 text-sm">
+                        {selectedSizeGuide.chest} cm
+                      </p>
+                    </div>
+
+                    <div className="px-3 py-4 text-center">
+                      <p className="text-[8px] uppercase tracking-[0.25em] text-stone">
+                        B — Longueur
+                      </p>
+
+                      <p className="mt-2 text-sm">
+                        {selectedSizeGuide.length} cm
+                      </p>
+                    </div>
+
+                    <div className="px-3 py-4 text-center">
+                      <p className="text-[8px] uppercase tracking-[0.25em] text-stone">
+                        C — Manche
+                      </p>
+
+                      <p className="mt-2 text-sm">
+                        {selectedSizeGuide.sleeve} cm
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* GUIDE DES TAILLES COMPLET */}
+
+              <button
+  type="button"
+  onClick={() =>
+    setSizeGuideOpen((open) => !open)
+  }
+  aria-expanded={sizeGuideOpen}
+  className="group mt-4 flex w-full items-center justify-between border border-surface px-5 py-4 text-left transition hover:border-stone/60"
+>
+  <div>
+    <p className="text-[10px] uppercase tracking-[0.28em] text-foreground">
+      Voir le guide des tailles
+    </p>
+
+    <p className="mt-1 text-[9px] tracking-[0.08em] text-stone">
+      Mesures & conseils de taille
+    </p>
+  </div>
+
+  <span
+    aria-hidden
+    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone/60 text-xl leading-none text-foreground transition group-hover:border-foreground"
+  >
+    {sizeGuideOpen ? "−" : "+"}
+  </span>
+</button>
+
+              {sizeGuideOpen && (
+                <div className="mt-4 overflow-hidden border border-surface bg-[#d6d2cb]">
+                  <img
+                    src={sizeGuideImage}
+                    alt={`Guide des tailles ${product.name} ${colorway.label}`}
+                    className="h-auto w-full"
+                    loading="lazy"
+                  />
+                </div>
+              )}
 
               <div className="min-h-8 pt-3">
                 {(stockLoading || adminLoading) && (
