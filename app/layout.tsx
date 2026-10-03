@@ -11,6 +11,7 @@ import { CartProvider } from "@/components/CartContext";
 import SiteHeader from "@/components/SiteHeader";
 import PromoDrawBanner from "@/components/PromoDrawBanner";
 import SiteFooter from "@/components/SiteFooter";
+import LiveVisitorCounter from "@/components/LiveVisitorCounter";
 import { Analytics } from "@vercel/analytics/next";
 
 /* =========================================================
@@ -140,6 +141,13 @@ export default function RootLayout({
             </main>
 
             <SiteFooter />
+
+            {/* =================================================
+                VISITEURS EN DIRECT
+                Visible uniquement par les administrateurs
+            ================================================== */}
+
+            <LiveVisitorCounter />
           </CartProvider>
         </AuthProvider>
 
