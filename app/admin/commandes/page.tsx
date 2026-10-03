@@ -82,6 +82,44 @@ type StockRow = {
   sales_enabled: boolean;
 };
 /* ============================================================
+   STOCK INITIAL — DROP 001
+   ============================================================ */
+
+const INITIAL_STOCK: Record<string, number> = {
+  "roses-Blanc-XS": 2,
+  "roses-Blanc-S": 3,
+  "roses-Blanc-M": 4,
+  "roses-Blanc-L": 3,
+
+  "roses-Noir-XS": 2,
+  "roses-Noir-S": 3,
+  "roses-Noir-M": 4,
+  "roses-Noir-L": 3,
+
+  "sakura-Blanc-XS": 2,
+  "sakura-Blanc-S": 5,
+  "sakura-Blanc-M": 5,
+  "sakura-Blanc-L": 3,
+
+  "sakura-Noir-XS": 2,
+  "sakura-Noir-S": 4,
+  "sakura-Noir-M": 5,
+  "sakura-Noir-L": 4,
+};
+
+const INITIAL_TOTAL_STOCK = 54;
+
+const INITIAL_PRODUCT_STOCK: Record<string, number> = {
+  roses: 24,
+  sakura: 30,
+};
+
+function getInitialStock(row: StockRow) {
+  const key = `${row.product_slug}-${row.color}-${row.size}`;
+
+  return INITIAL_STOCK[key] ?? 0;
+}
+/* ============================================================
    STATUTS
    ============================================================ */
 
@@ -727,7 +765,64 @@ async function adjustStock(
   /* ==========================================================
      COMPTEURS
      ========================================================== */
+const currentStockTotal = stock.reduce(
+  (total, row) =>
+    total + Math.max(Number(row.stock_quantity ?? 0), 0),
+  0
+);
 
+const soldPieces = orders.reduce(
+  (total, order) =>
+    total +
+    order.items.reduce(
+      (orderTotal, item) =>
+        orderTotal + item.quantity,
+      0
+    ),
+  0
+);
+
+const rosesCurrentStock = stock
+  .filter((row) => row.product_slug === "roses")
+  .reduce(
+    (total, row) =>
+      total + Math.max(Number(row.stock_quantity ?? 0), 0),
+    0
+  );
+
+const sakuraCurrentStock = stock
+  .filter((row) => row.product_slug === "sakura")
+  .reduce(
+    (total, row) =>
+      total + Math.max(Number(row.stock_quantity ?? 0), 0),
+    0
+  );
+
+const rosesSold = orders.reduce(
+  (total, order) =>
+    total +
+    order.items
+      .filter((item) => item.product_slug === "roses")
+      .reduce(
+        (itemTotal, item) =>
+          itemTotal + item.quantity,
+        0
+      ),
+  0
+);
+
+const sakuraSold = orders.reduce(
+  (total, order) =>
+    total +
+    order.items
+      .filter((item) => item.product_slug === "sakura")
+      .reduce(
+        (itemTotal, item) =>
+          itemTotal + item.quantity,
+        0
+      ),
+  0
+);
   const totalPieces =
     orders.reduce(
       (
@@ -892,7 +987,58 @@ async function adjustStock(
   )}
 
   {stock.length > 0 && (
-    <div className="grid lg:grid-cols-2">
+   <>
+  <div className="grid grid-cols-2 gap-px border-b border-surface bg-surface md:grid-cols-4">
+    <div className="bg-background p-5 md:p-7">
+      <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+        Stock disponible
+      </p>
+
+      <p className="mt-3 font-display text-3xl">
+        {currentStockTotal} / {INITIAL_TOTAL_STOCK}
+      </p>
+    </div>
+
+    <div className="bg-background p-5 md:p-7">
+      <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+        Vendus
+      </p>
+
+      <p className="mt-3 font-display text-3xl">
+        {soldPieces}
+      </p>
+    </div>
+
+    <div className="bg-background p-5 md:p-7">
+      <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+        Roses
+      </p>
+
+      <p className="mt-3 font-display text-3xl">
+        {rosesCurrentStock} / {INITIAL_PRODUCT_STOCK.roses}
+      </p>
+
+      <p className="mt-2 text-[8px] uppercase tracking-[0.2em] text-stone">
+        {rosesSold} vendu{rosesSold > 1 ? "s" : ""}
+      </p>
+    </div>
+
+    <div className="bg-background p-5 md:p-7">
+      <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+        Cerisier
+      </p>
+
+      <p className="mt-3 font-display text-3xl">
+        {sakuraCurrentStock} / {INITIAL_PRODUCT_STOCK.sakura}
+      </p>
+
+      <p className="mt-2 text-[8px] uppercase tracking-[0.2em] text-stone">
+        {sakuraSold} vendu{sakuraSold > 1 ? "s" : ""}
+      </p>
+    </div>
+  </div>
+
+  <div className="grid lg:grid-cols-2">
       {["roses", "sakura"].map(
         (productSlug, productIndex) => {
           const productRows =
@@ -981,15 +1127,15 @@ async function adjustStock(
                             −
                           </button>
 
-                          <div className="min-w-12 text-center">
-                            <p className="font-display text-2xl">
-                              {row.stock_quantity}
-                            </p>
+                          <div className="min-w-16 text-center">
+  <p className="font-display text-2xl">
+    {row.stock_quantity} / {getInitialStock(row)}
+  </p>
 
-                            <p className="text-[7px] uppercase tracking-[0.2em] text-stone">
-                              stock
-                            </p>
-                          </div>
+  <p className="text-[7px] uppercase tracking-[0.2em] text-stone">
+    disponible
+  </p>
+</div>
 
                           <button
                             type="button"
@@ -1015,8 +1161,9 @@ async function adjustStock(
           );
         }
       )}
-    </div>
-  )}
+        </div>
+  </>
+)}
 </div>
           {/* =================================================
               RÉSUMÉ
