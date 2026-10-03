@@ -624,7 +624,7 @@ export default function ProductPageClient({
                   </p>
 
                   <p className="mt-3 text-xs leading-5">
-                    Première série de 32 pièces
+                    Première série de 54 pièces
                   </p>
                 </div>
               </div>
