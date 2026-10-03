@@ -40,18 +40,20 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="my-20 max-w-xl lg:my-12">
+            <div className="my-20 lg:my-12">
               <p className="mb-5 text-[10px] uppercase tracking-[0.36em] text-[#b3a48c]">
                 Roses / Cerisier
               </p>
 
-              <h1 className="font-display text-[clamp(4rem,9vw,9rem)] font-normal leading-[0.72] tracking-[-0.06em]">
-                Le dessin
-                <br />
-                <span className="italic">prend corps.</span>
+              <h1 className="font-display text-[clamp(5.5rem,11vw,11rem)] font-normal leading-[0.72] tracking-[-0.07em]">
+                AJVEK
               </h1>
 
-              <p className="mt-10 max-w-md text-sm leading-7 text-[#aaa29a] sm:text-[15px]">
+              <p className="mt-8 font-display text-2xl italic tracking-[-0.02em] text-[#d5cec4] sm:text-3xl">
+                Le dessin prend corps.
+              </p>
+
+              <p className="mt-8 max-w-md text-sm leading-7 text-[#aaa29a] sm:text-[15px]">
                 Deux dessins. Deux interprétations.
                 <br />
                 Le premier chapitre AJVEK.
