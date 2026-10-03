@@ -22,104 +22,60 @@ export default function HomePage() {
   return (
     <main className="overflow-hidden bg-[#0d0d0c] text-[#f3f0ea]">
       {/* =====================================================
-          HERO
+          HERO — AJVEK
       ====================================================== */}
 
-      <section className="relative border-b border-white/[0.08]">
-        <div className="mx-auto grid min-h-[calc(100svh-180px)] max-w-[1600px] lg:grid-cols-[0.82fr_1.18fr]">
-          {/* TEXTE */}
+      <section className="relative flex min-h-[calc(100svh-68px)] items-center justify-center overflow-hidden border-b border-white/[0.08] px-5 md:min-h-[calc(100svh-76px)] md:px-10">
+        {/* Informations hautes */}
 
-          <div className="relative flex flex-col justify-between border-white/[0.08] px-6 py-10 sm:px-10 lg:border-r lg:px-14 lg:py-14 xl:px-20">
-            <div className="flex items-center justify-between gap-6">
-              <p className="text-[9px] uppercase tracking-[0.34em] text-[#8a8178]">
-                Drop 001 · 2026
-              </p>
+        <div className="absolute left-5 right-5 top-7 flex items-center justify-between sm:left-10 sm:right-10 lg:left-14 lg:right-14 xl:left-20 xl:right-20">
+          <p className="text-[8px] uppercase tracking-[0.34em] text-[#716a63] sm:text-[9px]">
+            Drop 001 · 2026
+          </p>
 
-              <p className="text-[9px] uppercase tracking-[0.34em] text-[#8a8178]">
-                Créé en France
-              </p>
-            </div>
+          <p className="text-[8px] uppercase tracking-[0.34em] text-[#716a63] sm:text-[9px]">
+            Créé en France
+          </p>
+        </div>
 
-            <div className="my-20 lg:my-12">
-              <p className="mb-5 text-[10px] uppercase tracking-[0.36em] text-[#b3a48c]">
-                Roses / Cerisier
-              </p>
+        {/* Nom de marque */}
 
-              <h1 className="font-display text-[clamp(5.5rem,11vw,11rem)] font-normal leading-[0.72] tracking-[-0.07em]">
-                AJVEK
-              </h1>
+        <div className="relative flex w-full flex-col items-center justify-center text-center">
+          <p className="mb-5 text-[8px] uppercase tracking-[0.5em] text-[#8a8178] sm:mb-7 sm:text-[9px]">
+            Streetwear français
+          </p>
 
-              <p className="mt-8 font-display text-2xl italic tracking-[-0.02em] text-[#d5cec4] sm:text-3xl">
-                Le dessin prend corps.
-              </p>
-
-              <p className="mt-8 max-w-md text-sm leading-7 text-[#aaa29a] sm:text-[15px]">
-                Deux dessins. Deux interprétations.
-                <br />
-                Le premier chapitre AJVEK.
-              </p>
-
-              <div className="mt-10 flex flex-wrap items-center gap-6">
-                <Link
-                  href="/catalogue"
-                  className="group inline-flex min-h-14 items-center gap-12 rounded-full bg-[#f3f0ea] px-7 text-[9px] font-semibold uppercase tracking-[0.28em] text-[#0d0d0c] transition hover:bg-white"
-                >
-                  Découvrir le Drop 001
-
-                  <span
-                    aria-hidden
-                    className="text-base transition-transform duration-300 group-hover:translate-x-1"
-                  >
-                    →
-                  </span>
-                </Link>
-
-                <p className="font-display text-2xl">39,90 €</p>
-              </div>
-            </div>
-
-            <div className="flex items-end justify-between gap-8 border-t border-white/[0.08] pt-6">
-              <p className="max-w-[260px] text-[9px] uppercase leading-5 tracking-[0.25em] text-[#716a63]">
-                Deux créations disponibles en noir et blanc.
-              </p>
-
-              <span className="hidden text-[9px] uppercase tracking-[0.3em] text-[#716a63] sm:block">
-                AJVEK / 001
-              </span>
-            </div>
-          </div>
-
-          {/* IMAGE PRINCIPALE */}
-
-          <Link
-            href="/produit/roses"
-            className="group relative block min-h-[560px] overflow-hidden bg-[#d5d1ca] lg:min-h-0"
+          <h1
+            className="
+              font-display
+              text-[clamp(5rem,22vw,20rem)]
+              font-normal
+              leading-[0.7]
+              tracking-[-0.065em]
+              text-[#f3f0ea]
+            "
           >
-            <Image
-              src="/images/drop-001/roses-white.jpg"
-              alt="Tee-shirt AJVEK Roses blanc, vue avant et arrière"
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 60vw"
-              className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.015]"
-            />
+            AJVEK
+          </h1>
 
-            <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/70 via-black/15 to-transparent px-6 pb-7 pt-28 sm:px-10">
-              <div>
-                <p className="text-[9px] uppercase tracking-[0.32em] text-white/60">
-                  Drop 001
-                </p>
+          <p className="mt-8 font-display text-xl italic tracking-[-0.02em] text-[#9c948b] sm:mt-10 sm:text-2xl lg:text-3xl">
+            Le dessin prend corps.
+          </p>
+        </div>
 
-                <p className="mt-2 font-display text-3xl text-white sm:text-4xl">
-                  Roses
-                </p>
-              </div>
+        {/* Invitation scroll */}
 
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/30 text-lg text-white backdrop-blur-sm transition group-hover:bg-white group-hover:text-black">
-                →
-              </div>
-            </div>
-          </Link>
+        <div className="absolute bottom-7 left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 sm:bottom-9">
+          <span className="text-[7px] uppercase tracking-[0.38em] text-[#625c56] sm:text-[8px]">
+            Découvrir
+          </span>
+
+          <span
+            aria-hidden
+            className="text-sm text-[#716a63]"
+          >
+            ↓
+          </span>
         </div>
       </section>
 
@@ -144,6 +100,26 @@ export default function HomePage() {
                 Roses et Cerisier explorent deux expressions différentes
                 d&apos;AJVEK, réunies dans un même Drop 001.
               </p>
+
+              <div className="mt-10 flex flex-wrap items-center gap-6">
+                <Link
+                  href="/catalogue"
+                  className="group inline-flex min-h-14 items-center gap-12 rounded-full bg-[#f3f0ea] px-7 text-[9px] font-semibold uppercase tracking-[0.28em] text-[#0d0d0c] transition hover:bg-white"
+                >
+                  Découvrir le Drop 001
+
+                  <span
+                    aria-hidden
+                    className="text-base transition-transform duration-300 group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
+                </Link>
+
+                <p className="font-display text-2xl">
+                  39,90 €
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -191,7 +167,9 @@ export default function HomePage() {
                   </div>
 
                   <div className="text-right">
-                    <p className="font-display text-2xl">39,90 €</p>
+                    <p className="font-display text-2xl">
+                      39,90 €
+                    </p>
 
                     <p className="mt-3 text-[8px] uppercase tracking-[0.25em] text-[#8a8178]">
                       Voir la pièce →
@@ -269,6 +247,7 @@ export default function HomePage() {
           </div>
 
           {/* Indication mobile */}
+
           <div className="mb-5 flex items-center justify-between px-6 sm:hidden">
             <p className="text-[8px] uppercase tracking-[0.28em] text-[#6f6962]">
               5 étapes
@@ -283,7 +262,8 @@ export default function HomePage() {
           </div>
 
           {/* MOBILE : swipe horizontal
-              DESKTOP : grille actuelle */}
+              DESKTOP : grille */}
+
           <div className="flex snap-x snap-mandatory gap-px overflow-x-auto bg-white/[0.08] pl-6 pr-[12vw] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-5">
             <ProcessImage
               src="/process/01-roses.jpg"
@@ -331,7 +311,9 @@ export default function HomePage() {
           <h2 className="mx-auto mt-7 max-w-5xl font-display text-6xl leading-[0.86] tracking-[-0.055em] sm:text-7xl lg:text-9xl">
             Roses.
             <br />
-            <span className="italic">Cerisier.</span>
+            <span className="italic">
+              Cerisier.
+            </span>
           </h2>
 
           <Link
