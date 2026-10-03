@@ -271,8 +271,15 @@ const [stockLoading, setStockLoading] =
 const [stockError, setStockError] =
   useState<string | null>(null);
 
-const [stockSavingKey, setStockSavingKey] =
+  const [stockSavingKey, setStockSavingKey] =
   useState<string | null>(null);
+
+const [salesToggleLoading, setSalesToggleLoading] =
+  useState(false);
+
+/* ==========================================================
+   TOKEN ADMIN
+   ========================================================== */
   /* ==========================================================
      TOKEN ADMIN
      ========================================================== */
@@ -351,7 +358,103 @@ async function loadStock() {
     setStockLoading(false);
   }
 }
+async function togglePublicSales(
+  enable: boolean
+) {
+  const firstConfirmation =
+    window.confirm(
+      enable
+        ? "ATTENTION : tu es sur le point d'OUVRIR les ventes publiques du Drop 001. Les clients pourront immédiatement acheter les produits. Continuer ?"
+        : "Tu es sur le point de FERMER les ventes publiques du Drop 001. Continuer ?"
+    );
 
+  if (!firstConfirmation) {
+    return;
+  }
+
+  // Double confirmation obligatoire pour l'ouverture.
+  if (enable) {
+    const secondConfirmation =
+      window.confirm(
+        "DERNIÈRE CONFIRMATION : ouvrir réellement les ventes maintenant ?"
+      );
+
+    if (!secondConfirmation) {
+      return;
+    }
+  }
+
+  setSalesToggleLoading(true);
+  setStockError(null);
+
+  try {
+    const token =
+      await getAccessToken();
+
+    if (!token) {
+      setStockError(
+        "Ta session a expiré."
+      );
+
+      return;
+    }
+
+    const response =
+      await fetch(
+        "/api/admin/stock",
+        {
+          method: "PATCH",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Authorization:
+              `Bearer ${token}`,
+          },
+
+          body: JSON.stringify({
+            action:
+              "set_sales_enabled",
+
+            sales_enabled:
+              enable,
+          }),
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      setStockError(
+        data.error ||
+          "Impossible de modifier l'état des ventes."
+      );
+
+      return;
+    }
+
+    await loadStock();
+
+    window.alert(
+      enable
+        ? "Les ventes du Drop 001 sont maintenant OUVERTES."
+        : "Les ventes du Drop 001 sont maintenant FERMÉES."
+    );
+  } catch (error) {
+    console.error(
+      "[admin-stock/sales]",
+      error
+    );
+
+    setStockError(
+      "Impossible de modifier l'état des ventes."
+    );
+  } finally {
+    setSalesToggleLoading(false);
+  }
+}
 async function adjustStock(
   row: StockRow,
   adjustment: 1 | -1
@@ -957,7 +1060,90 @@ const sakuraSold = orders.reduce(
       </button>
     </div>
   </div>
+{stock.length > 0 && (() => {
+  const publicSalesOpen =
+    stock.some(
+      (row) => row.sales_enabled
+    );
 
+  const allSalesOpen =
+    stock.every(
+      (row) => row.sales_enabled
+    );
+
+  const mixedSalesState =
+    publicSalesOpen &&
+    !allSalesOpen;
+
+  return (
+    <div className="border-b border-surface p-5 md:p-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-[8px] uppercase tracking-[0.3em] text-stone">
+            Ventes publiques
+          </p>
+
+          <p
+            className={`mt-2 font-display text-2xl ${
+              allSalesOpen
+                ? "text-green-500"
+                : mixedSalesState
+                  ? "text-orange-500"
+                  : "text-red-500"
+            }`}
+          >
+            {allSalesOpen
+              ? "OUVERTES"
+              : mixedSalesState
+                ? "ÉTAT INCOHÉRENT"
+                : "FERMÉES"}
+          </p>
+
+          <p className="mt-2 max-w-xl text-xs leading-5 text-stone">
+            {allSalesOpen
+              ? "Les clients peuvent actuellement acheter les produits du Drop 001."
+              : mixedSalesState
+                ? "Certaines variantes sont ouvertes et d'autres fermées."
+                : "Les produits sont visibles mais les clients ne peuvent pas les acheter."}
+          </p>
+        </div>
+
+        {allSalesOpen ? (
+          <button
+            type="button"
+            onClick={() =>
+              togglePublicSales(false)
+            }
+            disabled={salesToggleLoading}
+            className="w-full border border-red-500 bg-red-500 px-7 py-4 text-[10px] font-medium uppercase tracking-[0.25em] text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
+          >
+            {salesToggleLoading
+              ? "Fermeture..."
+              : "Fermer les ventes"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              togglePublicSales(true)
+            }
+            disabled={
+              salesToggleLoading ||
+              mixedSalesState
+            }
+            className="w-full border border-red-500 bg-red-500 px-7 py-4 text-[10px] font-medium uppercase tracking-[0.25em] text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
+          >
+            {salesToggleLoading
+              ? "Ouverture..."
+              : mixedSalesState
+                ? "État à corriger"
+                : "Ouvrir les ventes"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+})()}
   {stockError && (
     <div className="border-b border-surface px-5 py-5 md:px-7">
       <p className="text-[9px] uppercase tracking-[0.3em] text-stone">

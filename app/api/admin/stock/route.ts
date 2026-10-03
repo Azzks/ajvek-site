@@ -158,7 +158,7 @@ export async function GET(request: Request) {
 }
 
 /* ============================================================
-   PATCH — AJUSTEMENT MANUEL DU STOCK
+   PATCH — STOCK + OUVERTURE / FERMETURE DES VENTES
    ============================================================ */
 
 export async function PATCH(request: Request) {
@@ -182,6 +182,9 @@ export async function PATCH(request: Request) {
       color?: string;
       size?: string;
       adjustment?: number;
+
+      action?: string;
+      sales_enabled?: boolean;
     };
 
     try {
@@ -196,6 +199,109 @@ export async function PATCH(request: Request) {
         }
       );
     }
+
+    /* ==========================================================
+       OUVERTURE / FERMETURE GLOBALE DES VENTES
+       ========================================================== */
+
+    if (body.action === "set_sales_enabled") {
+      if (
+        typeof body.sales_enabled !== "boolean"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "État des ventes invalide.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      const nextSalesEnabled =
+        body.sales_enabled;
+
+      /*
+       * On limite volontairement l'action
+       * aux produits du Drop 001.
+       *
+       * Aucun stock_quantity n'est modifié.
+       */
+      const {
+        data: updatedRows,
+        error: updateSalesError,
+      } = await supabaseAdmin
+        .from("product_stock")
+        .update({
+          sales_enabled:
+            nextSalesEnabled,
+        })
+        .in("product_slug", [
+          "roses",
+          "sakura",
+        ])
+        .select(`
+          product_slug,
+          color,
+          size,
+          stock_quantity,
+          sales_enabled
+        `);
+
+      if (updateSalesError) {
+        console.error(
+          "[admin/stock] SALES :",
+          updateSalesError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de modifier l'état des ventes.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      if (
+        !updatedRows ||
+        updatedRows.length === 0
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Aucune variante du Drop 001 n'a été trouvée.",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          sales_enabled:
+            nextSalesEnabled,
+          updated_count:
+            updatedRows.length,
+          stock: updatedRows,
+        },
+        {
+          headers: {
+            "Cache-Control":
+              "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
+    /* ==========================================================
+       AJUSTEMENT MANUEL DU STOCK
+       ========================================================== */
 
     const productSlug =
       body.product_slug?.trim();
@@ -273,7 +379,9 @@ export async function PATCH(request: Request) {
     }
 
     const currentStock = Math.max(
-      Number(stockRow.stock_quantity ?? 0),
+      Number(
+        stockRow.stock_quantity ?? 0
+      ),
       0
     );
 
@@ -298,8 +406,7 @@ export async function PATCH(request: Request) {
      * à celui qu'on vient de lire.
      *
      * Cela évite d'écraser une modification
-     * intervenue entre-temps (commande,
-     * réservation, autre action admin, etc.).
+     * intervenue entre-temps.
      */
     const {
       data: updatedRow,
@@ -309,10 +416,16 @@ export async function PATCH(request: Request) {
       .update({
         stock_quantity: nextStock,
       })
-      .eq("product_slug", productSlug)
+      .eq(
+        "product_slug",
+        productSlug
+      )
       .eq("color", color)
       .eq("size", size)
-      .eq("stock_quantity", currentStock)
+      .eq(
+        "stock_quantity",
+        currentStock
+      )
       .select(`
         product_slug,
         color,
@@ -339,11 +452,6 @@ export async function PATCH(request: Request) {
       );
     }
 
-    /*
-     * Si aucune ligne n'a été modifiée,
-     * le stock a probablement changé entre
-     * la lecture et la mise à jour.
-     */
     if (!updatedRow) {
       return NextResponse.json(
         {
