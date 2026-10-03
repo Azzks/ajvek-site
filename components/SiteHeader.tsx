@@ -377,7 +377,7 @@ export default function SiteHeader() {
         <div className="mx-auto flex h-[100svh] max-w-[1440px] flex-col px-5 sm:px-8">
           {/* TOP */}
 
-          <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-white/10">
+          <div className="flex h-[64px] shrink-0 items-center justify-between border-b border-white/10 sm:h-[72px]">
             <Link
               href="/"
               onClick={() =>
@@ -402,10 +402,15 @@ export default function SiteHeader() {
             </button>
           </div>
 
-          {/* LIENS */}
+          {/* =================================================
+              LIENS
 
-          <div className="flex min-h-0 flex-1 flex-col justify-center py-8">
-            <p className="mb-6 text-[9px] uppercase tracking-[0.35em] text-[#8a8178]">
+              Le conteneur peut défiler verticalement si la
+              hauteur disponible est insuffisante.
+          ================================================== */}
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:py-6">
+            <p className="mb-3 text-[8px] uppercase tracking-[0.35em] text-[#8a8178] sm:mb-5 sm:text-[9px]">
               Navigation
             </p>
 
@@ -424,11 +429,11 @@ export default function SiteHeader() {
                       onClick={() =>
                         setOpen(false)
                       }
-                      className="group flex items-center justify-between border-t border-white/10 py-4"
+                      className="group flex min-h-[58px] items-center justify-between border-t border-white/10 py-3 sm:min-h-[66px] sm:py-4"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex min-w-0 items-center gap-4">
                         <span
-                          className={`font-display text-[2rem] leading-none ${
+                          className={`min-w-0 font-display text-[clamp(1.7rem,7.2vw,2rem)] leading-[0.95] ${
                             active
                               ? "text-white"
                               : "text-white/75"
@@ -438,11 +443,11 @@ export default function SiteHeader() {
                         </span>
 
                         {active && (
-                          <span className="h-1 w-1 rounded-full bg-white" />
+                          <span className="h-1 w-1 shrink-0 rounded-full bg-white" />
                         )}
                       </div>
 
-                      <span className="text-[9px] tracking-[0.22em] text-[#6f6861]">
+                      <span className="ml-4 shrink-0 text-[9px] tracking-[0.22em] text-[#6f6861]">
                         {String(
                           index + 1
                         ).padStart(
@@ -459,16 +464,19 @@ export default function SiteHeader() {
             </nav>
           </div>
 
-          {/* BOTTOM */}
+          {/* =================================================
+              BOTTOM
+              Toujours séparé des liens.
+          ================================================== */}
 
-          <div className="shrink-0 border-t border-white/10 pb-[max(24px,env(safe-area-inset-bottom))] pt-5">
+          <div className="relative z-10 shrink-0 border-t border-white/10 bg-[#0d0d0c] pb-[max(16px,env(safe-area-inset-bottom))] pt-4 sm:pb-[max(24px,env(safe-area-inset-bottom))] sm:pt-5">
             <div className="flex items-end justify-between gap-6">
               <div>
                 <p className="text-[8px] uppercase tracking-[0.32em] text-[#8a8178]">
                   AJVEK · France
                 </p>
 
-                <p className="mt-3 text-[11px] leading-5 text-white/55">
+                <p className="mt-2 text-[10px] leading-4 text-white/55 sm:mt-3 sm:text-[11px] sm:leading-5">
                   Drop 001
                   <br />
                   Roses / Cerisier
