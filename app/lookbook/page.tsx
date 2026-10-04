@@ -1,127 +1,36 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 
-type LookbookImage = {
-  src: string;
-  label: string;
-  shortLabel: string;
+const photos = {
+  duo: "/images/shooting/cerisier et rose blanc de dos.jpg",
+
+  roseWide: "/images/shooting/rose noir dos de biais.jpg",
+  roseDetail: "/images/shooting/rose noir dos proche.jpg",
+
+  cerisierWhiteWide:
+    "/images/shooting/cerisier blanc dos de biais.jpg",
+  cerisierWhiteDetail:
+    "/images/shooting/cerisier blanc dos proche.jpg",
+
+  cerisierBlackWide:
+    "/images/shooting/cerisier noir dos de biais.jpg",
+  cerisierBlackDetail:
+    "/images/shooting/cerisier noir dos proche.jpg",
+
+  embroideryBlack:
+    "/images/shooting/AJK blanc sur noir proche.jpg",
+  embroideryWhite:
+    "/images/shooting/AJK en noir sur blanc proche.jpg",
 };
-
-type LookbookCollection = {
-  id: "roses" | "cerisier";
-  name: string;
-  motif: string;
-  productHref: string;
-  cover: string;
-  images: LookbookImage[];
-};
-
-const COLLECTIONS: LookbookCollection[] = [
-  {
-    id: "roses",
-    name: "ROSES",
-    motif: "Motif Rose",
-    productHref: "/produit/roses",
-    cover: "/images/lookbook/rose-blanc-dos.jpg",
-    images: [
-      {
-        src: "/images/lookbook/cerisier-noir-face.jpg",
-        label: "Roses — Noir · Face",
-        shortLabel: "Noir · Face",
-      },
-      {
-        src: "/images/lookbook/rose-noir-dos.jpg",
-        label: "Roses — Noir · Dos",
-        shortLabel: "Noir · Dos",
-      },
-      {
-        src: "/images/lookbook/cerisier-blanc-face.jpg",
-        label: "Roses — Blanc · Face",
-        shortLabel: "Blanc · Face",
-      },
-      {
-        src: "/images/lookbook/rose-blanc-dos.jpg",
-        label: "Roses — Blanc · Dos",
-        shortLabel: "Blanc · Dos",
-      },
-    ],
-  },
-  {
-    id: "cerisier",
-    name: "CERISIER",
-    motif: "Motif Cerisier",
-    productHref: "/produit/sakura",
-    cover: "/images/lookbook/cerisier-noir-dos.jpg",
-    images: [
-      {
-        src: "/images/lookbook/cerisier-noir-face.jpg",
-        label: "Cerisier — Noir · Face",
-        shortLabel: "Noir · Face",
-      },
-      {
-        src: "/images/lookbook/cerisier-noir-dos.jpg",
-        label: "Cerisier — Noir · Dos",
-        shortLabel: "Noir · Dos",
-      },
-      {
-        src: "/images/lookbook/cerisier-blanc-face.jpg",
-        label: "Cerisier — Blanc · Face",
-        shortLabel: "Blanc · Face",
-      },
-      {
-        src: "/images/lookbook/cerisier-blanc-dos.jpg",
-        label: "Cerisier — Blanc · Dos",
-        shortLabel: "Blanc · Dos",
-      },
-    ],
-  },
-];
 
 export default function LookbookPage() {
-  const [collectionIndex, setCollectionIndex] =
-    useState(0);
-
-  const [imageIndex, setImageIndex] =
-    useState(0);
-
-  const collection =
-    COLLECTIONS[collectionIndex];
-
-  const selectedImage =
-    collection.images[imageIndex];
-
-  function selectCollection(index: number) {
-    setCollectionIndex(index);
-    setImageIndex(0);
-  }
-
-  function previousImage() {
-    setImageIndex((current) =>
-      current === 0
-        ? collection.images.length - 1
-        : current - 1
-    );
-  }
-
-  function nextImage() {
-    setImageIndex((current) =>
-      current ===
-      collection.images.length - 1
-        ? 0
-        : current + 1
-    );
-  }
-
   return (
     <main className="overflow-hidden bg-[#0d0d0c] text-[#f3f0ea]">
       {/* =====================================================
-          HEADER LOOKBOOK
+          INTRO
       ====================================================== */}
 
-      <section className="px-5 pb-10 pt-10 md:px-8 md:pb-14 md:pt-14">
+      <section className="px-5 pb-16 pt-12 md:px-8 md:pb-24 md:pt-20">
         <div className="mx-auto max-w-7xl">
           <div className="flex items-center justify-between">
             <p className="text-[7px] uppercase tracking-[0.5em] text-[#8a8178] md:text-[8px]">
@@ -133,244 +42,144 @@ export default function LookbookPage() {
             </p>
           </div>
 
-          <div className="mt-10 text-center md:mt-12">
-            <h1 className="font-display text-[clamp(3.6rem,9vw,7.5rem)] leading-none tracking-[0.04em]">
-              LOOKBOOK
-            </h1>
+          <div className="mt-20 md:mt-28">
+            <p className="text-[8px] uppercase tracking-[0.5em] text-[#8a8178]">
+              Roses / Cerisier
+            </p>
 
-            <p className="mt-5 text-[8px] uppercase tracking-[0.55em] text-[#8a8178] md:text-[9px]">
-              Roses / Cerisier — Drop 001
+            <h1 className="mt-6 font-display text-[17vw] leading-[0.72] tracking-[-0.055em] sm:text-[8rem] md:text-[10rem] lg:text-[12rem]">
+              LOOK
+              <br />
+              BOOK.
+            </h1>
+          </div>
+
+          <div className="mt-16 grid gap-8 border-t border-white/[0.08] pt-7 md:grid-cols-2 md:items-end">
+            <p className="max-w-lg text-sm leading-7 text-[#8a8178] md:text-base">
+              Le premier chapitre AJVEK porté.
+              <br />
+              Deux dessins. Deux coloris.
+              <br />
+              Une même identité.
+            </p>
+
+            <p className="text-[8px] uppercase leading-6 tracking-[0.4em] text-[#6f6861] md:text-right">
+              Drop 001
+              <br />
+              France · 2026
             </p>
           </div>
         </div>
       </section>
 
       {/* =====================================================
-          GALERIE
+          HERO SHOOTING
       ====================================================== */}
 
-      <section className="px-5 md:px-8">
-        <div className="mx-auto max-w-7xl">
-          {/* GRANDE PHOTO */}
+      <section>
+        <div className="relative h-[72svh] min-h-[540px] overflow-hidden md:h-[88svh] md:min-h-[760px]">
+          <Image
+            src={photos.duo}
+            alt="AJVEK Roses et Cerisier blancs portés de dos"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+          />
 
-          <div className="relative overflow-hidden border border-white/[0.08] bg-[#080808]">
-            <div className="relative h-[68svh] min-h-[520px] max-h-[850px] w-full md:h-[75vh]">
-              {/*
-                IMPORTANT :
-                object-contain permet de conserver toute la
-                photo verticale sans couper Julien.
-              */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-black/10" />
 
-              <Image
-                key={selectedImage.src}
-                src={selectedImage.src}
-                alt={selectedImage.label}
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 1280px"
-                className="object-contain object-center"
-              />
+          <div className="absolute bottom-0 left-0 right-0">
+            <div className="mx-auto flex max-w-7xl items-end justify-between gap-8 px-5 pb-7 md:px-8 md:pb-12">
+              <div>
+                <p className="text-[7px] uppercase tracking-[0.45em] text-white/55 md:text-[8px]">
+                  01 — Drop 001
+                </p>
 
-              {/* Fond derrière la photo si l'écran est large */}
+                <h2 className="mt-4 font-display text-5xl tracking-[-0.04em] text-white md:text-7xl">
+                  Ensemble.
+                </h2>
+              </div>
 
-              <div className="-z-10 absolute inset-0 bg-[#080808]" />
+              <p className="hidden text-right text-[8px] uppercase leading-6 tracking-[0.38em] text-white/55 sm:block">
+                Roses
+                <br />
+                Cerisier
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              {/* Dégradé uniquement pour la lisibilité */}
+      {/* =====================================================
+          ROSES
+      ====================================================== */}
 
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/75 to-transparent" />
+      <section className="border-b border-white/[0.08]">
+        <div className="mx-auto max-w-7xl px-5 py-24 md:px-8 md:py-36">
+          <div className="mb-12 grid gap-8 md:mb-16 md:grid-cols-2 md:items-end">
+            <div>
+              <p className="text-[8px] uppercase tracking-[0.45em] text-[#8a8178]">
+                02 — Roses
+              </p>
 
-              {/* GAUCHE */}
+              <h2 className="mt-6 font-display text-6xl leading-[0.85] tracking-[-0.045em] md:text-8xl">
+                ROSES.
+              </h2>
+            </div>
 
-              <button
-                type="button"
-                onClick={previousImage}
-                aria-label="Photo précédente"
-                className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/45 text-lg text-white backdrop-blur-sm transition hover:bg-white hover:text-black md:left-6 md:h-12 md:w-12"
-              >
-                ←
-              </button>
+            <p className="max-w-sm text-sm leading-7 text-[#8a8178] md:justify-self-end">
+              Une composition verticale qui accompagne le dos et transforme la
+              silhouette.
+            </p>
+          </div>
 
-              {/* DROITE */}
+          <div className="grid gap-3 md:grid-cols-[1.35fr_0.65fr]">
+            <div>
+              <div className="relative min-h-[620px] overflow-hidden bg-[#151413] md:min-h-[850px]">
+                <Image
+                  src={photos.roseWide}
+                  alt="AJVEK Roses noir porté"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 67vw"
+                  className="object-cover object-center"
+                />
 
-              <button
-                type="button"
-                onClick={nextImage}
-                aria-label="Photo suivante"
-                className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/45 text-lg text-white backdrop-blur-sm transition hover:bg-white hover:text-black md:right-6 md:h-12 md:w-12"
-              >
-                →
-              </button>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-              {/* INFOS */}
+                <p className="absolute bottom-6 left-6 text-[8px] uppercase tracking-[0.4em] text-white/65 md:bottom-8 md:left-8">
+                  Roses · Noir
+                </p>
+              </div>
+            </div>
 
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-5 p-5 md:p-8">
-                <div>
-                  <p className="text-[7px] uppercase tracking-[0.45em] text-white/55 md:text-[8px]">
-                    AJVEK · Drop 001
-                  </p>
+            <div>
+              <div className="relative min-h-[480px] overflow-hidden bg-[#151413] md:min-h-[850px]">
+                <Image
+                  src={photos.roseDetail}
+                  alt="Détail du motif Roses AJVEK"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover object-center"
+                />
 
-                  <h2 className="mt-3 font-display text-2xl tracking-[-0.02em] md:text-4xl">
-                    {selectedImage.label}
-                  </h2>
-                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
-                <p className="shrink-0 text-[7px] uppercase tracking-[0.35em] text-white/55 md:text-[8px]">
-                  {String(
-                    imageIndex + 1
-                  ).padStart(2, "0")}
-                  {" / "}
-                  {String(
-                    collection.images.length
-                  ).padStart(2, "0")}
+                <p className="absolute bottom-6 left-6 text-[8px] uppercase tracking-[0.4em] text-white/65 md:bottom-8 md:left-8">
+                  Le dessin · Détail
                 </p>
               </div>
             </div>
           </div>
 
-          {/* =================================================
-              4 MINIATURES
-          ================================================== */}
-
-          <div className="mt-4 grid grid-cols-4 gap-2 md:mt-5 md:gap-4">
-            {collection.images.map(
-              (image, index) => {
-                const active =
-                  imageIndex === index;
-
-                return (
-                  <button
-                    key={`${collection.id}-${image.shortLabel}`}
-                    type="button"
-                    onClick={() =>
-                      setImageIndex(index)
-                    }
-                    className="group text-left"
-                  >
-                    <div
-                      className={`relative aspect-[4/5] overflow-hidden border transition ${
-                        active
-                          ? "border-[#f3f0ea]"
-                          : "border-white/[0.08] opacity-55 hover:opacity-100"
-                      }`}
-                    >
-                      <Image
-                        src={image.src}
-                        alt={image.label}
-                        fill
-                        sizes="(max-width: 768px) 25vw, 300px"
-                        className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
-                      />
-                    </div>
-
-                    <div className="mt-3 hidden items-center justify-center gap-2 sm:flex">
-                      {active && (
-                        <span className="h-1 w-1 rounded-full bg-[#f3f0ea]" />
-                      )}
-
-                      <p
-                        className={`text-center text-[7px] uppercase tracking-[0.35em] ${
-                          active
-                            ? "text-[#f3f0ea]"
-                            : "text-[#6f6861]"
-                        }`}
-                      >
-                        {image.shortLabel}
-                      </p>
-                    </div>
-                  </button>
-                );
-              }
-            )}
-          </div>
-
-          {/* =================================================
-              ROSES / CERISIER
-          ================================================== */}
-
-          <div className="mt-16 grid gap-4 md:mt-24 md:grid-cols-2 md:gap-5">
-            {COLLECTIONS.map(
-              (item, index) => {
-                const active =
-                  collectionIndex === index;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() =>
-                      selectCollection(index)
-                    }
-                    className={`group relative overflow-hidden border text-left transition ${
-                      active
-                        ? "border-[#f3f0ea]/70"
-                        : "border-white/[0.08]"
-                    }`}
-                  >
-                    <div className="relative aspect-[4/3] md:aspect-[5/4]">
-                      <Image
-                        src={item.cover}
-                        alt={item.name}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.025]"
-                      />
-
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 to-black/5" />
-
-                      <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 lg:p-10">
-                        <p className="text-[7px] uppercase tracking-[0.5em] text-white/55">
-                          Drop 001
-                        </p>
-
-                        <h3 className="mt-4 font-display text-4xl tracking-[-0.03em] md:text-5xl lg:text-6xl">
-                          {item.name}
-                        </h3>
-
-                        <p className="mt-4 text-[8px] uppercase tracking-[0.4em] text-white/60">
-                          {item.motif}
-                        </p>
-
-                        <div className="mt-7 flex items-center gap-4">
-                          <span className="border border-white/40 px-5 py-3 text-[7px] uppercase tracking-[0.35em] text-white transition group-hover:bg-white group-hover:text-black">
-                            Voir le look
-                          </span>
-
-                          {active && (
-                            <span className="text-[7px] uppercase tracking-[0.3em] text-white/60">
-                              Sélectionné
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              }
-            )}
-          </div>
-
-          {/* =================================================
-              PRODUIT SÉLECTIONNÉ
-          ================================================== */}
-
-          <div className="mt-5 flex flex-col gap-6 border-b border-t border-white/[0.08] py-7 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[7px] uppercase tracking-[0.4em] text-[#6f6861]">
-                Collection sélectionnée
-              </p>
-
-              <p className="mt-2 font-display text-3xl">
-                {collection.name}
-              </p>
-            </div>
-
+          <div className="mt-8 flex justify-end">
             <Link
-              href={collection.productHref}
-              className="group flex w-full items-center justify-between border border-white/20 px-6 py-4 text-[8px] uppercase tracking-[0.35em] transition hover:bg-[#f3f0ea] hover:text-[#0d0d0c] sm:w-auto sm:min-w-[260px]"
+              href="/produit/roses"
+              className="group inline-flex items-center gap-8 border-b border-[#8a8178] pb-2 text-[8px] uppercase tracking-[0.35em]"
             >
-              <span>Découvrir la pièce</span>
+              Découvrir Roses
 
-              <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
+              <span className="transition-transform duration-300 group-hover:translate-x-1">
                 →
               </span>
             </Link>
@@ -379,49 +188,241 @@ export default function LookbookPage() {
       </section>
 
       {/* =====================================================
-          FOOT LOOKBOOK
+          BRODERIE
       ====================================================== */}
 
-      <section className="px-5 py-20 md:px-8 md:py-28">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 border-b border-white/[0.08] pb-16 md:grid-cols-[1fr_auto_1fr] md:items-end">
-            <div>
-              <p className="text-[7px] uppercase tracking-[0.45em] text-[#6f6861]">
-                L&apos;univers AJVEK
-              </p>
+      <section className="border-b border-white/[0.08]">
+        <div className="grid md:grid-cols-2">
+          <div className="relative aspect-[4/5] overflow-hidden bg-[#151413] md:aspect-auto md:min-h-[800px]">
+            <Image
+              src={photos.embroideryBlack}
+              alt="Broderie AJVEK blanche sur tee-shirt noir"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover object-center"
+            />
 
-              <p className="mt-4 max-w-sm text-sm leading-7 text-[#8a8178]">
-                Le vêtement porté.
-                <br />
-                Le dessin en mouvement.
-              </p>
-            </div>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
 
-            <p className="font-display text-center text-4xl tracking-[0.2em] md:text-5xl">
-              AJVEK
-            </p>
-
-            <p className="text-left text-[7px] uppercase leading-6 tracking-[0.4em] text-[#6f6861] md:text-right">
-              Silhouette
-              <br />
-              Matière
-              <br />
-              Mouvement
+            <p className="absolute bottom-6 left-6 text-[8px] uppercase tracking-[0.4em] text-white/65 md:bottom-8 md:left-8">
+              Noir · Broderie
             </p>
           </div>
 
-          <div className="pt-10 text-center">
-            <Link
-              href="/catalogue"
-              className="group inline-flex items-center gap-8 text-[8px] uppercase tracking-[0.4em] text-[#8a8178] transition hover:text-[#f3f0ea]"
-            >
-              <span>Voir le Drop 001</span>
+          <div className="relative aspect-[4/5] overflow-hidden bg-[#d6d2cb] md:aspect-auto md:min-h-[800px]">
+            <Image
+              src={photos.embroideryWhite}
+              alt="Broderie AJVEK noire sur tee-shirt blanc"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover object-center"
+            />
 
-              <span className="text-base transition-transform duration-300 group-hover:translate-x-2">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+
+            <p className="absolute bottom-6 left-6 text-[8px] uppercase tracking-[0.4em] text-white/75 md:bottom-8 md:left-8">
+              Blanc · Broderie
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-7xl px-5 py-16 md:px-8 md:py-24">
+          <div className="grid gap-8 md:grid-cols-2 md:items-end">
+            <div>
+              <p className="text-[8px] uppercase tracking-[0.45em] text-[#8a8178]">
+                03 — Signature
+              </p>
+
+              <h2 className="mt-6 font-display text-5xl leading-[0.9] tracking-[-0.04em] md:text-7xl">
+                Devant,
+                <br />
+                l&apos;essentiel.
+              </h2>
+            </div>
+
+            <p className="max-w-md text-sm leading-7 text-[#8a8178] md:justify-self-end">
+              Une broderie discrète sur la poitrine. Le dessin principal prend
+              place dans le dos.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          CERISIER BLANC
+      ====================================================== */}
+
+      <section className="border-b border-white/[0.08]">
+        <div className="mx-auto max-w-7xl px-5 py-24 md:px-8 md:py-36">
+          <div className="mb-12 md:mb-16">
+            <p className="text-[8px] uppercase tracking-[0.45em] text-[#8a8178]">
+              04 — Cerisier
+            </p>
+
+            <h2 className="mt-6 max-w-5xl font-display text-6xl leading-[0.85] tracking-[-0.045em] md:text-8xl">
+              CERISIER.
+              <br />
+              <span className="italic text-[#8a8178]">Blanc.</span>
+            </h2>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-[0.7fr_1.3fr]">
+            <div className="relative min-h-[500px] overflow-hidden bg-[#151413] md:min-h-[820px]">
+              <Image
+                src={photos.cerisierWhiteDetail}
+                alt="Détail du Cerisier blanc AJVEK"
+                fill
+                sizes="(max-width: 768px) 100vw, 35vw"
+                className="object-cover object-center"
+              />
+
+              <p className="absolute bottom-6 left-6 text-[8px] uppercase tracking-[0.4em] text-white/70 md:bottom-8 md:left-8">
+                Détail
+              </p>
+            </div>
+
+            <div className="relative min-h-[620px] overflow-hidden bg-[#151413] md:min-h-[820px]">
+              <Image
+                src={photos.cerisierWhiteWide}
+                alt="AJVEK Cerisier blanc porté"
+                fill
+                sizes="(max-width: 768px) 100vw, 65vw"
+                className="object-cover object-center"
+              />
+
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+
+              <p className="absolute bottom-6 left-6 text-[8px] uppercase tracking-[0.4em] text-white/70 md:bottom-8 md:left-8">
+                Cerisier · Blanc
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          CERISIER NOIR — FULL BLEED
+      ====================================================== */}
+
+      <section className="border-b border-white/[0.08]">
+        <div className="relative h-[80svh] min-h-[620px] overflow-hidden md:h-[95svh] md:min-h-[800px]">
+          <Image
+            src={photos.cerisierBlackWide}
+            alt="AJVEK Cerisier noir porté"
+            fill
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/60 via-black/5 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/10" />
+
+          <div className="absolute inset-0 flex items-end">
+            <div className="mx-auto w-full max-w-7xl px-5 pb-8 md:px-8 md:pb-14">
+              <p className="text-[8px] uppercase tracking-[0.45em] text-white/55">
+                05 — Cerisier / Noir
+              </p>
+
+              <h2 className="mt-5 max-w-4xl font-display text-6xl leading-[0.85] tracking-[-0.045em] text-white md:text-9xl">
+                La nuit
+                <br />
+                révèle le dessin.
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-7xl px-5 py-5 md:px-8 md:py-8">
+          <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
+            <p className="max-w-lg text-sm leading-7 text-[#8a8178]">
+              Noir profond, motif floral et contraste graphique.
+            </p>
+
+            <Link
+              href="/produit/sakura"
+              className="group inline-flex w-fit items-center gap-8 border-b border-[#8a8178] pb-2 text-[8px] uppercase tracking-[0.35em]"
+            >
+              Découvrir Cerisier
+
+              <span className="transition-transform duration-300 group-hover:translate-x-1">
                 →
               </span>
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          CERISIER NOIR DETAIL
+      ====================================================== */}
+
+      <section className="border-b border-white/[0.08]">
+        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-24 md:grid-cols-2 md:items-center md:px-8 md:py-36">
+          <div className="relative aspect-[4/5] overflow-hidden bg-[#151413]">
+            <Image
+              src={photos.cerisierBlackDetail}
+              alt="Détail du motif Cerisier noir AJVEK"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover object-center"
+            />
+          </div>
+
+          <div className="md:px-10 lg:px-16">
+            <p className="text-[8px] uppercase tracking-[0.45em] text-[#8a8178]">
+              06 — Détail
+            </p>
+
+            <h2 className="mt-7 font-display text-5xl leading-[0.9] tracking-[-0.04em] md:text-7xl">
+              Le dessin
+              <br />
+              prend corps.
+            </h2>
+
+            <p className="mt-8 max-w-md text-sm leading-7 text-[#8a8178]">
+              Les lignes, les fleurs et la typographie construisent une
+              composition pensée pour le dos du vêtement.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          FINAL
+      ====================================================== */}
+
+      <section className="px-5 py-24 text-center md:px-8 md:py-36">
+        <div className="mx-auto max-w-5xl">
+          <p className="text-[8px] uppercase tracking-[0.5em] text-[#8a8178]">
+            Lookbook 001
+          </p>
+
+          <h2 className="mt-8 font-display text-6xl leading-[0.85] tracking-[-0.05em] sm:text-7xl md:text-9xl">
+            ROSES.
+            <br />
+            <span className="italic text-[#8a8178]">
+              CERISIER.
+            </span>
+          </h2>
+
+          <p className="mx-auto mt-9 max-w-md text-sm leading-7 text-[#8a8178]">
+            Le premier chapitre AJVEK.
+          </p>
+
+          <Link
+            href="/catalogue"
+            className="group mx-auto mt-12 inline-flex min-h-14 items-center gap-12 rounded-full bg-[#f3f0ea] px-8 text-[8px] font-semibold uppercase tracking-[0.3em] text-[#0d0d0c]"
+          >
+            Voir le Drop 001
+
+            <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
+              →
+            </span>
+          </Link>
+
+          <p className="mt-20 text-[7px] uppercase tracking-[0.5em] text-[#57514c]">
+            AJVEK · France · 2026
+          </p>
         </div>
       </section>
     </main>
