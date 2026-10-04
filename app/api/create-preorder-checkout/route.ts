@@ -51,6 +51,7 @@ type ServicePoint = {
   city?: string;
   carrier?: string;
 };
+
 type SendcloudServicePoint = {
   id: number | string;
   name?: string;
@@ -74,29 +75,22 @@ type VerifiedServicePoint = {
 async function verifySendcloudServicePoint(
   servicePoint: ServicePoint
 ): Promise<VerifiedServicePoint | null> {
-  const publicKey =
-    process.env.SENDCLOUD_PUBLIC_KEY;
-
-  const secretKey =
-    process.env.SENDCLOUD_SECRET_KEY;
+  const publicKey = process.env.SENDCLOUD_PUBLIC_KEY;
+  const secretKey = process.env.SENDCLOUD_SECRET_KEY;
 
   if (!publicKey || !secretKey) {
     console.error(
       "[create-checkout] Configuration Sendcloud serveur manquante."
     );
 
-    throw new Error(
-      "Configuration Sendcloud indisponible."
-    );
+    throw new Error("Configuration Sendcloud indisponible.");
   }
 
-  const requestedId =
-    String(servicePoint.id ?? "").trim();
+  const requestedId = String(servicePoint.id ?? "").trim();
 
-  const requestedPostalCode =
-    String(
-      servicePoint.postalCode ?? ""
-    ).trim();
+  const requestedPostalCode = String(
+    servicePoint.postalCode ?? ""
+  ).trim();
 
   if (
     !requestedId ||
@@ -164,9 +158,7 @@ async function verifySendcloudServicePoint(
       error
     );
 
-    throw new Error(
-      "Réponse Sendcloud invalide."
-    );
+    throw new Error("Réponse Sendcloud invalide.");
   }
 
   if (!Array.isArray(data)) {
@@ -174,17 +166,13 @@ async function verifySendcloudServicePoint(
       "[create-checkout] Format Sendcloud inattendu."
     );
 
-    throw new Error(
-      "Réponse Sendcloud invalide."
-    );
+    throw new Error("Réponse Sendcloud invalide.");
   }
 
-  const points =
-    data as SendcloudServicePoint[];
+  const points = data as SendcloudServicePoint[];
 
   const matchingPoint = points.find(
-    (point) =>
-      String(point.id) === requestedId
+    (point) => String(point.id) === requestedId
   );
 
   if (!matchingPoint) {
@@ -233,11 +221,7 @@ async function verifySendcloudServicePoint(
       "Point Relais Mondial Relay"
   ).trim();
 
-  if (
-    !postalCode ||
-    !city ||
-    !street
-  ) {
+  if (!postalCode || !city || !street) {
     console.error(
       "[create-checkout] Point Relais Sendcloud incomplet :",
       {
@@ -258,6 +242,7 @@ async function verifySendcloudServicePoint(
     carrier: "mondial_relay",
   };
 }
+
 type ValidatedItem = {
   product_slug: string;
   product_name: string;
@@ -276,7 +261,9 @@ type StockRow = {
 };
 
 function normalize(value: string) {
-  return value.trim().toLocaleLowerCase("fr-FR");
+  return value
+    .trim()
+    .toLocaleLowerCase("fr-FR");
 }
 
 async function deleteTemporaryOrder(
@@ -295,6 +282,7 @@ async function deleteTemporaryOrder(
     );
   }
 }
+
 async function deleteCheckoutAttempt(
   checkoutAttemptId: string
 ) {
@@ -320,15 +308,18 @@ async function deleteCheckoutAttempt(
 
   return true;
 }
+
 async function releaseReservation(
   checkoutGroupId: string
 ) {
-  const { data, error } = await supabaseAdmin.rpc(
-    "release_stock_reservation",
-    {
-      p_checkout_group_id: checkoutGroupId,
-    }
-  );
+  const { data, error } =
+    await supabaseAdmin.rpc(
+      "release_stock_reservation",
+      {
+        p_checkout_group_id:
+          checkoutGroupId,
+      }
+    );
 
   if (error) {
     console.error(
@@ -425,6 +416,7 @@ export async function POST(
         }
       );
     }
+
     const adminEmails = (
       process.env.ADMIN_EMAILS || ""
     )
@@ -438,6 +430,7 @@ export async function POST(
       adminEmails.includes(
         user.email.toLowerCase()
       );
+
     // ========================================================
     // 2. DONNÉES
     // ========================================================
@@ -473,26 +466,47 @@ export async function POST(
       delivery_method,
       service_point,
     } = body;
+
     if (
-  !checkout_attempt_id ||
-  !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    checkout_attempt_id
-  )
-) {
-  return NextResponse.json(
-    {
-      error: "Tentative de paiement invalide.",
-    },
-    {
-      status: 400,
+      !checkout_attempt_id ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        checkout_attempt_id
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Tentative de paiement invalide.",
+        },
+        {
+          status: 400,
+        }
+      );
     }
-  );
-}
 
     if (!name?.trim()) {
       return NextResponse.json(
         {
           error: "Ton nom est requis.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+     * Sendcloud / Mondial Relay nécessite un numéro
+     * de téléphone pour créer l'expédition.
+     *
+     * On bloque donc la commande avant Stripe si le
+     * téléphone n'a pas été renseigné.
+     */
+    if (!phone?.trim()) {
+      return NextResponse.json(
+        {
+          error:
+            "Ton numéro de téléphone est requis pour la livraison.",
         },
         {
           status: 400,
@@ -529,58 +543,61 @@ export async function POST(
       );
     }
 
-    let verifiedServicePoint: VerifiedServicePoint | null = null;
+    let verifiedServicePoint:
+      | VerifiedServicePoint
+      | null = null;
 
-if (delivery_method === "relay") {
-  if (
-    service_point?.id === undefined ||
-    service_point?.id === null ||
-    !service_point?.postalCode
-  ) {
-    return NextResponse.json(
-      {
-        error: "Choisis un Point Relais valide.",
-      },
-      {
-        status: 400,
+    if (delivery_method === "relay") {
+      if (
+        service_point?.id === undefined ||
+        service_point?.id === null ||
+        !service_point?.postalCode
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Choisis un Point Relais valide.",
+          },
+          {
+            status: 400,
+          }
+        );
       }
-    );
-  }
 
-  try {
-    verifiedServicePoint =
-      await verifySendcloudServicePoint(
-        service_point
-      );
-  } catch (error) {
-    console.error(
-      "[create-checkout] Vérification du Point Relais impossible :",
-      error
-    );
+      try {
+        verifiedServicePoint =
+          await verifySendcloudServicePoint(
+            service_point
+          );
+      } catch (error) {
+        console.error(
+          "[create-checkout] Vérification du Point Relais impossible :",
+          error
+        );
 
-    return NextResponse.json(
-      {
-        error:
-          "Impossible de vérifier le Point Relais actuellement. Réessaie dans quelques instants.",
-      },
-      {
-        status: 503,
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de vérifier le Point Relais actuellement. Réessaie dans quelques instants.",
+          },
+          {
+            status: 503,
+          }
+        );
       }
-    );
-  }
 
-  if (!verifiedServicePoint) {
-    return NextResponse.json(
-      {
-        error:
-          "Ce Point Relais n'est pas valide. Choisis à nouveau ton Point Relais.",
-      },
-      {
-        status: 400,
+      if (!verifiedServicePoint) {
+        return NextResponse.json(
+          {
+            error:
+              "Ce Point Relais n'est pas valide. Choisis à nouveau ton Point Relais.",
+          },
+          {
+            status: 400,
+          }
+        );
       }
-    );
-  }
-}
+    }
 
     // ========================================================
     // 3. VALIDATION DES ARTICLES
@@ -620,8 +637,7 @@ if (delivery_method === "relay") {
       if (!product) {
         return NextResponse.json(
           {
-            error:
-              `Produit introuvable : ${item.product_slug}`,
+            error: `Produit introuvable : ${item.product_slug}`,
           },
           {
             status: 404,
@@ -639,8 +655,7 @@ if (delivery_method === "relay") {
       if (!colorway) {
         return NextResponse.json(
           {
-            error:
-              `Couleur invalide pour ${product.name}.`,
+            error: `Couleur invalide pour ${product.name}.`,
           },
           {
             status: 400,
@@ -658,8 +673,7 @@ if (delivery_method === "relay") {
       if (!validSize) {
         return NextResponse.json(
           {
-            error:
-              `Taille invalide pour ${product.name}.`,
+            error: `Taille invalide pour ${product.name}.`,
           },
           {
             status: 400,
@@ -670,8 +684,7 @@ if (delivery_method === "relay") {
       const cleanColor =
         colorway.label;
 
-      const cleanSize =
-        validSize;
+      const cleanSize = validSize;
 
       const itemKey = [
         product.slug,
@@ -803,8 +816,7 @@ if (delivery_method === "relay") {
       if (!stockRow) {
         return NextResponse.json(
           {
-            error:
-              `${item.product_name} — ${item.color} — Taille ${item.size} n'est pas disponible.`,
+            error: `${item.product_name} — ${item.color} — Taille ${item.size} n'est pas disponible.`,
           },
           {
             status: 409,
@@ -813,19 +825,18 @@ if (delivery_method === "relay") {
       }
 
       if (
-  stockRow.sales_enabled !== true &&
-  !isAdmin
-) {
-  return NextResponse.json(
-    {
-      error:
-        `${item.product_name} — ${item.color} — Taille ${item.size} sera bientôt disponible.`,
-    },
-    {
-      status: 409,
-    }
-  );
-}
+        stockRow.sales_enabled !== true &&
+        !isAdmin
+      ) {
+        return NextResponse.json(
+          {
+            error: `${item.product_name} — ${item.color} — Taille ${item.size} sera bientôt disponible.`,
+          },
+          {
+            status: 409,
+          }
+        );
+      }
 
       const availableStock =
         Math.max(
@@ -839,8 +850,7 @@ if (delivery_method === "relay") {
       if (availableStock <= 0) {
         return NextResponse.json(
           {
-            error:
-              `${item.product_name} — ${item.color} — Taille ${item.size} est épuisé.`,
+            error: `${item.product_name} — ${item.color} — Taille ${item.size} est épuisé.`,
           },
           {
             status: 409,
@@ -854,12 +864,11 @@ if (delivery_method === "relay") {
       ) {
         return NextResponse.json(
           {
-            error:
-              `Il ne reste que ${availableStock} exemplaire${
-                availableStock > 1
-                  ? "s"
-                  : ""
-              } de ${item.product_name} — ${item.color} — Taille ${item.size}.`,
+            error: `Il ne reste que ${availableStock} exemplaire${
+              availableStock > 1
+                ? "s"
+                : ""
+            } de ${item.product_name} — ${item.color} — Taille ${item.size}.`,
           },
           {
             status: 409,
@@ -884,327 +893,370 @@ if (delivery_method === "relay") {
     // ========================================================
     // 7. IDENTIFIANT UNIQUE DE COMMANDE
     // ========================================================
-let isRetryExistingAttempt = false;
 
-let checkoutGroupId = randomUUID();
+    let isRetryExistingAttempt = false;
 
-const { error: checkoutAttemptError } = await supabaseAdmin
-  .from("checkout_attempts")
-  .insert({
-    checkout_attempt_id,
-    user_id: user.id,
-    checkout_group_id: checkoutGroupId,
-    status: "processing",
-    updated_at: new Date().toISOString(),
-  });
+    let checkoutGroupId = randomUUID();
 
-if (checkoutAttemptError) {
-  if (checkoutAttemptError.code !== "23505") {
-    console.error(
-      "[create-checkout] Impossible de verrouiller la tentative :",
-      checkoutAttemptError
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Impossible de préparer le paiement. Réessaie dans quelques instants.",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
-
-  const {
-    data: existingAttempt,
-    error: existingAttemptError,
-  } = await supabaseAdmin
-    .from("checkout_attempts")
-    .select(`
-      checkout_attempt_id,
-      user_id,
-      checkout_group_id,
-      status,
-      updated_at,
-      stripe_session_id,
-      checkout_url
-    `)
-    .eq("checkout_attempt_id", checkout_attempt_id)
-    .maybeSingle();
-
-  if (existingAttemptError || !existingAttempt) {
-    console.error(
-      "[create-checkout] Impossible de récupérer la tentative existante :",
-      existingAttemptError
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Impossible de vérifier la tentative de paiement.",
-        retryable: true,
-      },
-      {
-        status: 503,
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      }
-    );
-  }
-
-  if (existingAttempt.user_id !== user.id) {
-    return NextResponse.json(
-      {
-        error: "Tentative de paiement invalide.",
-      },
-      {
-        status: 403,
-      }
-    );
-  }
-
-  checkoutGroupId =
-    existingAttempt.checkout_group_id;
-
-  isRetryExistingAttempt = true;
-
-  const {
-    data: existingOrders,
-    error: existingOrdersError,
-  } = await supabaseAdmin
-    .from("preorders")
-    .select(`
-      stripe_session_id,
-      checkout_url
-    `)
-    .eq(
-      "checkout_group_id",
-      checkoutGroupId
-    )
-    .eq("user_id", user.id)
-    .limit(1);
-
-  if (existingOrdersError) {
-    console.error(
-      "[create-checkout] Impossible de récupérer la commande existante :",
-      existingOrdersError
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Impossible de vérifier la commande existante.",
-        retryable: true,
-      },
-      {
-        status: 503,
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      }
-    );
-  }
-
-  const existingOrder =
-    existingOrders?.[0];
-
-  const existingStripeSessionId =
-    existingAttempt.stripe_session_id ??
-    existingOrder?.stripe_session_id ??
-    null;
-
-  if (existingStripeSessionId) {
-    let existingSession:
-      Stripe.Checkout.Session;
-
-    try {
-      existingSession =
-        await stripe.checkout.sessions.retrieve(
-          existingStripeSessionId
-        );
-    } catch (error) {
-      console.error(
-        "[create-checkout] Impossible de récupérer la session Stripe existante :",
-        error
-      );
-
-      return NextResponse.json(
-        {
-          error:
-            "Impossible de reprendre la session de paiement.",
-          retryable: true,
-        },
-        {
-          status: 503,
-          headers: {
-            "Cache-Control":
-              "no-store, max-age=0",
-          },
-        }
-      );
-    }
-
-    if (
-      existingSession.metadata
-        ?.checkout_attempt_id !==
-        checkout_attempt_id ||
-      existingSession.metadata?.user_id !==
-        user.id
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Session de paiement invalide.",
-        },
-        {
-          status: 403,
-        }
-      );
-    }
-
-    if (
-      existingSession.status === "open" &&
-      existingSession.payment_status !==
-        "paid" &&
-      existingSession.url
-    ) {
-      return NextResponse.json(
-        {
-          url: existingSession.url,
+    const {
+      error: checkoutAttemptError,
+    } = await supabaseAdmin
+      .from("checkout_attempts")
+      .insert({
+        checkout_attempt_id,
+        user_id: user.id,
+        checkout_group_id:
           checkoutGroupId,
-          resumed: true,
-        },
-        {
-          headers: {
-            "Cache-Control":
-              "no-store, max-age=0",
+        status: "processing",
+        updated_at:
+          new Date().toISOString(),
+      });
+
+    if (checkoutAttemptError) {
+      if (
+        checkoutAttemptError.code !==
+        "23505"
+      ) {
+        console.error(
+          "[create-checkout] Impossible de verrouiller la tentative :",
+          checkoutAttemptError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de préparer le paiement. Réessaie dans quelques instants.",
           },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      const {
+        data: existingAttempt,
+        error: existingAttemptError,
+      } = await supabaseAdmin
+        .from("checkout_attempts")
+        .select(`
+          checkout_attempt_id,
+          user_id,
+          checkout_group_id,
+          status,
+          updated_at,
+          stripe_session_id,
+          checkout_url
+        `)
+        .eq(
+          "checkout_attempt_id",
+          checkout_attempt_id
+        )
+        .maybeSingle();
+
+      if (
+        existingAttemptError ||
+        !existingAttempt
+      ) {
+        console.error(
+          "[create-checkout] Impossible de récupérer la tentative existante :",
+          existingAttemptError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de vérifier la tentative de paiement.",
+            retryable: true,
+          },
+          {
+            status: 503,
+            headers: {
+              "Cache-Control":
+                "no-store, max-age=0",
+            },
+          }
+        );
+      }
+
+      if (
+        existingAttempt.user_id !==
+        user.id
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Tentative de paiement invalide.",
+          },
+          {
+            status: 403,
+          }
+        );
+      }
+
+      checkoutGroupId =
+        existingAttempt.checkout_group_id;
+
+      isRetryExistingAttempt = true;
+
+      const {
+        data: existingOrders,
+        error: existingOrdersError,
+      } = await supabaseAdmin
+        .from("preorders")
+        .select(`
+          stripe_session_id,
+          checkout_url
+        `)
+        .eq(
+          "checkout_group_id",
+          checkoutGroupId
+        )
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (existingOrdersError) {
+        console.error(
+          "[create-checkout] Impossible de récupérer la commande existante :",
+          existingOrdersError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de vérifier la commande existante.",
+            retryable: true,
+          },
+          {
+            status: 503,
+            headers: {
+              "Cache-Control":
+                "no-store, max-age=0",
+            },
+          }
+        );
+      }
+
+      const existingOrder =
+        existingOrders?.[0];
+
+      const existingStripeSessionId =
+        existingAttempt.stripe_session_id ??
+        existingOrder?.stripe_session_id ??
+        null;
+
+      if (existingStripeSessionId) {
+        let existingSession:
+          Stripe.Checkout.Session;
+
+        try {
+          existingSession =
+            await stripe.checkout.sessions.retrieve(
+              existingStripeSessionId
+            );
+        } catch (error) {
+          console.error(
+            "[create-checkout] Impossible de récupérer la session Stripe existante :",
+            error
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Impossible de reprendre la session de paiement.",
+              retryable: true,
+            },
+            {
+              status: 503,
+              headers: {
+                "Cache-Control":
+                  "no-store, max-age=0",
+              },
+            }
+          );
         }
-      );
+
+        if (
+          existingSession.metadata
+            ?.checkout_attempt_id !==
+            checkout_attempt_id ||
+          existingSession.metadata
+            ?.user_id !== user.id
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Session de paiement invalide.",
+            },
+            {
+              status: 403,
+            }
+          );
+        }
+
+        if (
+          existingSession.status ===
+            "open" &&
+          existingSession.payment_status !==
+            "paid" &&
+          existingSession.url
+        ) {
+          return NextResponse.json(
+            {
+              url:
+                existingSession.url,
+              checkoutGroupId,
+              resumed: true,
+            },
+            {
+              headers: {
+                "Cache-Control":
+                  "no-store, max-age=0",
+              },
+            }
+          );
+        }
+
+        return NextResponse.json(
+          {
+            error:
+              "Cette session de paiement n'est plus disponible.",
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      const staleBefore =
+        new Date(
+          Date.now() -
+            2 * 60 * 1000
+        ).toISOString();
+
+      const canClaimRetry =
+        existingAttempt.status ===
+          "retryable" ||
+        (
+          existingAttempt.status ===
+            "processing" &&
+          typeof existingAttempt.updated_at ===
+            "string" &&
+          existingAttempt.updated_at <
+            staleBefore
+        );
+
+      if (!canClaimRetry) {
+        return NextResponse.json(
+          {
+            error:
+              "Une tentative de paiement est déjà en cours. Réessaie dans quelques instants.",
+            retryable: true,
+          },
+          {
+            status: 409,
+            headers: {
+              "Cache-Control":
+                "no-store, max-age=0",
+            },
+          }
+        );
+      }
+
+      let claimQuery =
+        supabaseAdmin
+          .from("checkout_attempts")
+          .update({
+            status: "processing",
+            updated_at:
+              new Date().toISOString(),
+          })
+          .eq(
+            "checkout_attempt_id",
+            checkout_attempt_id
+          )
+          .eq("user_id", user.id);
+
+      if (
+        existingAttempt.status ===
+        "retryable"
+      ) {
+        claimQuery =
+          claimQuery.eq(
+            "status",
+            "retryable"
+          );
+      } else {
+        claimQuery =
+          claimQuery
+            .eq(
+              "status",
+              "processing"
+            )
+            .lt(
+              "updated_at",
+              staleBefore
+            );
+      }
+
+      const {
+        data: claimedAttempt,
+        error: claimError,
+      } = await claimQuery
+        .select(
+          "checkout_attempt_id"
+        )
+        .maybeSingle();
+
+      if (claimError) {
+        console.error(
+          "[create-checkout] Impossible de reprendre la tentative :",
+          claimError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de reprendre la tentative de paiement.",
+            retryable: true,
+          },
+          {
+            status: 503,
+            headers: {
+              "Cache-Control":
+                "no-store, max-age=0",
+            },
+          }
+        );
+      }
+
+      if (!claimedAttempt) {
+        return NextResponse.json(
+          {
+            error:
+              "Une tentative de paiement est déjà en cours. Réessaie dans quelques instants.",
+            retryable: true,
+          },
+          {
+            status: 409,
+            headers: {
+              "Cache-Control":
+                "no-store, max-age=0",
+            },
+          }
+        );
+      }
     }
 
-    return NextResponse.json(
-      {
-        error:
-          "Cette session de paiement n'est plus disponible.",
-      },
-      {
-        status: 409,
-      }
-    );
-  }
-
-  const staleBefore = new Date(
-    Date.now() - 2 * 60 * 1000
-  ).toISOString();
-
-  const canClaimRetry =
-    existingAttempt.status === "retryable" ||
-    (
-      existingAttempt.status === "processing" &&
-      typeof existingAttempt.updated_at === "string" &&
-      existingAttempt.updated_at < staleBefore
-    );
-
-  if (!canClaimRetry) {
-    return NextResponse.json(
-      {
-        error:
-          "Une tentative de paiement est déjà en cours. Réessaie dans quelques instants.",
-        retryable: true,
-      },
-      {
-        status: 409,
-        headers: {
-          "Cache-Control":
-            "no-store, max-age=0",
-        },
-      }
-    );
-  }
-
-  let claimQuery = supabaseAdmin
-    .from("checkout_attempts")
-    .update({
-      status: "processing",
-      updated_at:
-        new Date().toISOString(),
-    })
-    .eq(
-      "checkout_attempt_id",
-      checkout_attempt_id
-    )
-    .eq("user_id", user.id);
-
-  if (existingAttempt.status === "retryable") {
-    claimQuery = claimQuery.eq(
-      "status",
-      "retryable"
-    );
-  } else {
-    claimQuery = claimQuery
-      .eq("status", "processing")
-      .lt("updated_at", staleBefore);
-  }
-
-  const {
-    data: claimedAttempt,
-    error: claimError,
-  } = await claimQuery
-    .select("checkout_attempt_id")
-    .maybeSingle();
-
-  if (claimError) {
-    console.error(
-      "[create-checkout] Impossible de reprendre la tentative :",
-      claimError
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Impossible de reprendre la tentative de paiement.",
-        retryable: true,
-      },
-      {
-        status: 503,
-        headers: {
-          "Cache-Control":
-            "no-store, max-age=0",
-        },
-      }
-    );
-  }
-
-  if (!claimedAttempt) {
-    return NextResponse.json(
-      {
-        error:
-          "Une tentative de paiement est déjà en cours. Réessaie dans quelques instants.",
-        retryable: true,
-      },
-      {
-        status: 409,
-        headers: {
-          "Cache-Control":
-            "no-store, max-age=0",
-        },
-      }
-    );
-  }
-}
     const servicePointAddress =
-  delivery_method === "relay" &&
-  verifiedServicePoint
-    ? [
-        verifiedServicePoint.houseNumber,
-        verifiedServicePoint.street,
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : null;
+      delivery_method === "relay" &&
+      verifiedServicePoint
+        ? [
+            verifiedServicePoint.houseNumber,
+            verifiedServicePoint.street,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        : null;
 
     // ========================================================
     // 8. CRÉATION DES LIGNES DE COMMANDE
@@ -1215,22 +1267,17 @@ if (checkoutAttemptError) {
         (item) =>
           Array.from(
             {
-              length:
-                item.quantity,
+              length: item.quantity,
             },
             () => ({
-              user_id:
-                user.id,
+              user_id: user.id,
 
-              name:
-                name.trim(),
+              name: name.trim(),
 
-              email:
-                user.email!,
+              email: user.email!,
 
               phone:
-                phone?.trim() ||
-                null,
+                phone.trim(),
 
               product_slug:
                 item.product_slug,
@@ -1248,8 +1295,9 @@ if (checkoutAttemptError) {
 
               checkout_group_id:
                 checkoutGroupId,
-checkout_attempt_id:
-  checkout_attempt_id,
+
+              checkout_attempt_id,
+
               delivery_method,
 
               shipping_amount:
@@ -1259,67 +1307,77 @@ checkout_attempt_id:
                 "awaiting_payment",
 
               service_point_id:
-  delivery_method === "relay"
-    ? verifiedServicePoint?.id ?? null
-    : null,
+                delivery_method ===
+                "relay"
+                  ? verifiedServicePoint
+                      ?.id ?? null
+                  : null,
 
-service_point_name:
-  delivery_method === "relay"
-    ? verifiedServicePoint?.name ?? null
-    : null,
+              service_point_name:
+                delivery_method ===
+                "relay"
+                  ? verifiedServicePoint
+                      ?.name ?? null
+                  : null,
 
-service_point_address:
-  delivery_method === "relay"
-    ? servicePointAddress
-    : null,
+              service_point_address:
+                delivery_method ===
+                "relay"
+                  ? servicePointAddress
+                  : null,
 
-service_point_postal_code:
-  delivery_method === "relay"
-    ? verifiedServicePoint?.postalCode ?? null
-    : null,
+              service_point_postal_code:
+                delivery_method ===
+                "relay"
+                  ? verifiedServicePoint
+                      ?.postalCode ??
+                    null
+                  : null,
 
-service_point_city:
-  delivery_method === "relay"
-    ? verifiedServicePoint?.city ?? null
-    : null,
+              service_point_city:
+                delivery_method ===
+                "relay"
+                  ? verifiedServicePoint
+                      ?.city ?? null
+                  : null,
             })
           )
       );
 
     if (!isRetryExistingAttempt) {
-  const {
-    data: createdOrders,
-    error: orderError,
-  } = await supabaseAdmin
-    .from("preorders")
-    .insert(orderRows)
-    .select();
+      const {
+        data: createdOrders,
+        error: orderError,
+      } = await supabaseAdmin
+        .from("preorders")
+        .insert(orderRows)
+        .select();
 
-  if (
-    orderError ||
-    !createdOrders ||
-    createdOrders.length === 0
-  ) {
-    console.error(
-      "[create-checkout] Erreur création commande :",
-      orderError
-    );
+      if (
+        orderError ||
+        !createdOrders ||
+        createdOrders.length === 0
+      ) {
+        console.error(
+          "[create-checkout] Erreur création commande :",
+          orderError
+        );
 
-    await deleteCheckoutAttempt(
-      checkout_attempt_id
-    );
+        await deleteCheckoutAttempt(
+          checkout_attempt_id
+        );
 
-    return NextResponse.json(
-      {
-        error:
-          "Impossible de créer la commande.",
-      },
-      {
-        status: 500,
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de créer la commande.",
+          },
+          {
+            status: 500,
+          }
+        );
       }
-    );
-  }
-}
+    }
 
     // ========================================================
     // 9. ARTICLES STRIPE
@@ -1333,8 +1391,7 @@ service_point_city:
             currency: "eur",
 
             product_data: {
-              name:
-                `${item.product_name} — ${item.color} — Taille ${item.size}`,
+              name: `${item.product_name} — ${item.color} — Taille ${item.size}`,
 
               description:
                 "AJVEK · Drop 001",
@@ -1381,8 +1438,7 @@ service_point_city:
             checkout_group_id:
               checkoutGroupId,
 
-checkout_attempt_id:
-  checkout_attempt_id,
+            checkout_attempt_id,
 
             user_id:
               user.id,
@@ -1420,9 +1476,8 @@ checkout_attempt_id:
         metadata: {
           checkout_group_id:
             checkoutGroupId,
-           
-            checkout_attempt_id:
-  checkout_attempt_id,
+
+          checkout_attempt_id,
 
           user_id:
             user.id,
@@ -1438,9 +1493,11 @@ checkout_attempt_id:
             "stock",
 
           service_point_id:
-  delivery_method === "relay"
-    ? verifiedServicePoint?.id ?? ""
-    : "",
+            delivery_method ===
+            "relay"
+              ? verifiedServicePoint
+                  ?.id ?? ""
+              : "",
         },
 
         success_url:
@@ -1470,76 +1527,69 @@ checkout_attempt_id:
 
     try {
       session =
-  await stripe.checkout.sessions.create(
-    sessionParams,
-    {
-      idempotencyKey:
-        `checkout_${checkout_attempt_id}`,
-    }
-  );
+        await stripe.checkout.sessions.create(
+          sessionParams,
+          {
+            idempotencyKey:
+              `checkout_${checkout_attempt_id}`,
+          }
+        );
     } catch (error) {
-  console.error(
-    "[create-checkout] Création/récupération de la session Stripe impossible :",
-    {
-      checkoutAttemptId:
-        checkout_attempt_id,
-      checkoutGroupId,
-      error,
+      console.error(
+        "[create-checkout] Création/récupération de la session Stripe impossible :",
+        {
+          checkoutAttemptId:
+            checkout_attempt_id,
+          checkoutGroupId,
+          error,
+        }
+      );
+
+      const {
+        error: retryStateError,
+      } = await supabaseAdmin
+        .from("checkout_attempts")
+        .update({
+          status: "retryable",
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "checkout_attempt_id",
+          checkout_attempt_id
+        )
+        .eq("user_id", user.id)
+        .eq(
+          "checkout_group_id",
+          checkoutGroupId
+        )
+        .eq("status", "processing");
+
+      if (retryStateError) {
+        console.error(
+          "[create-checkout] Impossible de marquer la tentative comme réessayable :",
+          retryStateError
+        );
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de préparer le paiement actuellement. Réessaie dans quelques instants.",
+          retryable: true,
+        },
+        {
+          status: 503,
+          headers: {
+            "Cache-Control":
+              "no-store, max-age=0",
+          },
+        }
+      );
     }
-  );
-
-  const {
-    error: retryStateError,
-  } = await supabaseAdmin
-    .from("checkout_attempts")
-    .update({
-      status: "retryable",
-      updated_at:
-        new Date().toISOString(),
-    })
-    .eq(
-      "checkout_attempt_id",
-      checkout_attempt_id
-    )
-    .eq("user_id", user.id)
-    .eq(
-      "checkout_group_id",
-      checkoutGroupId
-    )
-    .eq("status", "processing");
-
-  if (retryStateError) {
-    console.error(
-      "[create-checkout] Impossible de marquer la tentative comme réessayable :",
-      retryStateError
-    );
-  }
-
-  return NextResponse.json(
-    {
-      error:
-        "Impossible de préparer le paiement actuellement. Réessaie dans quelques instants.",
-      retryable: true,
-    },
-    {
-      status: 503,
-      headers: {
-        "Cache-Control":
-          "no-store, max-age=0",
-      },
-    }
-  );
-}
 
     // ========================================================
     // 12. RÉSERVATION ATOMIQUE DU STOCK
-    // ========================================================
-    //
-    // La session Stripe existe mais son URL n'a encore jamais
-    // été transmise au navigateur.
-    //
-    // On utilise la date d'expiration de Stripe pour la
-    // réservation Supabase.
     // ========================================================
 
     const reservationExpiresAt =
@@ -1575,9 +1625,9 @@ checkout_attempt_id:
 
         p_expires_at:
           reservationExpiresAt,
-          
-          p_allow_closed_sales:
-  isAdmin,
+
+        p_allow_closed_sales:
+          isAdmin,
       }
     );
 
@@ -1604,9 +1654,11 @@ checkout_attempt_id:
       await deleteTemporaryOrder(
         checkoutGroupId
       );
-await deleteCheckoutAttempt(
-  checkout_attempt_id
-);
+
+      await deleteCheckoutAttempt(
+        checkout_attempt_id
+      );
+
       return NextResponse.json(
         {
           error:
@@ -1647,9 +1699,11 @@ await deleteCheckoutAttempt(
       await deleteTemporaryOrder(
         checkoutGroupId
       );
-await deleteCheckoutAttempt(
-  checkout_attempt_id
-);
+
+      await deleteCheckoutAttempt(
+        checkout_attempt_id
+      );
+
       return NextResponse.json(
         {
           error:
@@ -1711,9 +1765,11 @@ await deleteCheckoutAttempt(
       await deleteTemporaryOrder(
         checkoutGroupId
       );
-await deleteCheckoutAttempt(
-  checkout_attempt_id
-);
+
+      await deleteCheckoutAttempt(
+        checkout_attempt_id
+      );
+
       return NextResponse.json(
         {
           error:
@@ -1724,84 +1780,86 @@ await deleteCheckoutAttempt(
         }
       );
     }
-const {
-  error: attemptReadyError,
-} = await supabaseAdmin
-  .from("checkout_attempts")
-  .update({
-    status: "ready",
-    stripe_session_id:
-      session.id,
-    checkout_url:
-      session.url,
-    updated_at:
-      new Date().toISOString(),
-  })
-  .eq(
-    "checkout_attempt_id",
-    checkout_attempt_id
-  )
-  .eq("user_id", user.id)
-  .eq(
-    "checkout_group_id",
-    checkoutGroupId
-  )
-  .eq("status", "processing");
 
-if (attemptReadyError) {
-  console.error(
-    "[create-checkout] Impossible d'enregistrer l'état final de la tentative :",
-    attemptReadyError
-  );
+    const {
+      error: attemptReadyError,
+    } = await supabaseAdmin
+      .from("checkout_attempts")
+      .update({
+        status: "ready",
+        stripe_session_id:
+          session.id,
+        checkout_url:
+          session.url,
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq(
+        "checkout_attempt_id",
+        checkout_attempt_id
+      )
+      .eq("user_id", user.id)
+      .eq(
+        "checkout_group_id",
+        checkoutGroupId
+      )
+      .eq("status", "processing");
 
-  await expireStripeSession(
-    session.id
-  );
+    if (attemptReadyError) {
+      console.error(
+        "[create-checkout] Impossible d'enregistrer l'état final de la tentative :",
+        attemptReadyError
+      );
 
-  const released =
-    await releaseReservation(
-      checkoutGroupId
-    );
+      await expireStripeSession(
+        session.id
+      );
 
-  if (!released) {
-    return NextResponse.json(
-      {
-        error:
-          "La tentative de paiement nécessite une vérification. Réessaie dans quelques instants.",
-        retryable: true,
-      },
-      {
-        status: 500,
-        headers: {
-          "Cache-Control":
-            "no-store, max-age=0",
-        },
+      const released =
+        await releaseReservation(
+          checkoutGroupId
+        );
+
+      if (!released) {
+        return NextResponse.json(
+          {
+            error:
+              "La tentative de paiement nécessite une vérification. Réessaie dans quelques instants.",
+            retryable: true,
+          },
+          {
+            status: 500,
+            headers: {
+              "Cache-Control":
+                "no-store, max-age=0",
+            },
+          }
+        );
       }
-    );
-  }
 
-  await deleteTemporaryOrder(
-    checkoutGroupId
-  );
+      await deleteTemporaryOrder(
+        checkoutGroupId
+      );
 
-  await deleteCheckoutAttempt(
-    checkout_attempt_id
-  );
+      await deleteCheckoutAttempt(
+        checkout_attempt_id
+      );
 
-  return NextResponse.json(
-    {
-      error:
-        "Impossible de finaliser la session de paiement. Réessaie dans quelques instants.",
-    },
-    {
-      status: 500,
-      headers: {
-        "Cache-Control":
-          "no-store, max-age=0",
-      },
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de finaliser la session de paiement. Réessaie dans quelques instants.",
+        },
+        {
+          status: 500,
+          headers: {
+            "Cache-Control":
+              "no-store, max-age=0",
+          },
+        }
+      );
     }
-  );
-}
+
     // ========================================================
     // 15. RÉPONSE
     // ========================================================

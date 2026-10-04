@@ -48,7 +48,601 @@ const OWNER_EMAIL = "ajvek.contact@gmail.com";
 
 const FROM_EMAIL = "AJVEK <commandes@ajvek.fr>";
 
+const SENDCLOUD_API = "https://panel.sendcloud.sc/api/v3";
+const SENDCLOUD_INTEGRATION_ID = 624594;
 
+const MONDIAL_RELAY_HOME =
+  "mondial_relay:home_domestic,dualapi/c2c";
+
+const MONDIAL_RELAY_POINT_RELAIS =
+  "mondial_relay:service_point,dualapi/size=l,c2c";
+
+const ESTIMATED_PACKED_TSHIRT_WEIGHT_KG = 0.25;
+
+function getSendcloudAuthorization() {
+  const publicKey = process.env.SENDCLOUD_PUBLIC_KEY;
+  const secretKey = process.env.SENDCLOUD_SECRET_KEY;
+
+  if (!publicKey || !secretKey) {
+    throw new Error(
+      "SENDCLOUD_PUBLIC_KEY ou SENDCLOUD_SECRET_KEY manquant."
+    );
+  }
+
+  return `Basic ${Buffer.from(
+    `${publicKey}:${secretKey}`
+  ).toString("base64")}`;
+}
+
+async function sendcloudRequest(
+  path: string,
+  init: RequestInit = {}
+) {
+  const response = await fetch(`${SENDCLOUD_API}${path}`, {
+    ...init,
+    cache: "no-store",
+    headers: {
+      Authorization: getSendcloudAuthorization(),
+      "Content-Type": "application/json",
+      ...(init.headers || {}),
+    },
+  });
+
+  const raw = await response.text();
+
+  let data: any = null;
+
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = raw;
+    }
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      `Sendcloud ${response.status} ${response.statusText}`
+    ) as Error & {
+      status?: number;
+      data?: any;
+    };
+
+    error.status = response.status;
+    error.data = data;
+
+    throw error;
+  }
+
+  return data;
+}
+
+function splitStreetAndHouseNumber(value: string) {
+  const normalized = String(value || "").trim();
+
+  const leadingNumber = normalized.match(
+    /^(\d+[A-Za-z]?(?:\s*(?:bis|ter))?)\s+(.+)$/i
+  );
+
+  if (leadingNumber) {
+    return {
+      addressLine1: leadingNumber[2].trim(),
+      houseNumber: leadingNumber[1].trim(),
+    };
+  }
+
+  const trailingNumber = normalized.match(
+    /^(.+?)\s+(\d+[A-Za-z]?(?:\s*(?:bis|ter))?)$/i
+  );
+
+  if (trailingNumber) {
+    return {
+      addressLine1: trailingNumber[1].trim(),
+      houseNumber: trailingNumber[2].trim(),
+    };
+  }
+
+  return {
+    addressLine1: normalized,
+    houseNumber: "",
+  };
+}
+
+async function releaseSendcloudClaim(
+  checkoutGroupId: string
+) {
+  const { error } = await supabaseAdmin
+    .from("preorders")
+    .update({
+      sendcloud_processing_at: null,
+    })
+    .eq("checkout_group_id", checkoutGroupId)
+    .is("sendcloud_parcel_id", null);
+
+  if (error) {
+    console.error(
+      "[stripe-webhook] Impossible de libérer le verrou Sendcloud :",
+      {
+        checkoutGroupId,
+        error,
+      }
+    );
+  }
+}
+
+async function createSendcloudShipmentForPaidOrder({
+  checkoutGroupId,
+  orders,
+  session,
+}: {
+  checkoutGroupId: string;
+  orders: any[];
+  session: Stripe.Checkout.Session;
+}) {
+  const first = orders[0];
+
+  if (!first || orders.length === 0) {
+    throw new Error("Commande vide pour Sendcloud.");
+  }
+
+  const { data: claimResult, error: claimError } =
+    await supabaseAdmin.rpc("claim_sendcloud_shipment", {
+      p_checkout_group_id: checkoutGroupId,
+    });
+
+  if (claimError) {
+    throw new Error(
+      `Impossible de prendre le verrou Sendcloud : ${claimError.message}`
+    );
+  }
+
+  if (claimResult?.success !== true) {
+    throw new Error(
+      `Verrou Sendcloud refusé : ${
+        claimResult?.reason || "raison inconnue"
+      }`
+    );
+  }
+
+  if (claimResult?.claimed !== true) {
+    console.log(
+      "[stripe-webhook] Sendcloud déjà traité ou déjà en cours :",
+      {
+        checkoutGroupId,
+        reason: claimResult?.reason || "unknown",
+        parcelId: claimResult?.parcel_id || null,
+      }
+    );
+
+    return;
+  }
+
+  let labelRequestStarted = false;
+
+  try {
+    const isRelay = first?.delivery_method === "relay";
+
+    if (isRelay && !first?.service_point_id) {
+      throw new Error(
+        "service_point_id absent pour une livraison Point Relais."
+      );
+    }
+
+    if (
+      !isRelay &&
+      (
+        !first?.shipping_address_line1 ||
+        !first?.shipping_postal_code ||
+        !first?.shipping_city ||
+        !first?.shipping_country
+      )
+    ) {
+      throw new Error(
+        "Adresse domicile incomplète pour Sendcloud."
+      );
+    }
+
+    if (!first?.email || !first?.phone) {
+      throw new Error(
+        "Email ou téléphone client absent pour Sendcloud."
+      );
+    }
+
+    const orderNumber =
+      `AJVEK-${shortOrderId(checkoutGroupId)}`;
+
+    const groupedItems = groupItems(orders);
+    const itemCount = orders.length;
+
+    const subtotalCents = Number(
+      session.amount_subtotal ?? 0
+    );
+
+    const fallbackUnitPriceCents = 3990;
+
+    const unitPriceCents =
+      itemCount > 0 && subtotalCents > 0
+        ? Math.round(subtotalCents / itemCount)
+        : fallbackUnitPriceCents;
+
+    const orderItems = groupedItems.map((item) => ({
+      name:
+        `${item.name} — ${item.color} — Taille ${item.size}`,
+
+      quantity: item.quantity,
+
+      total_price: {
+        value: Number(
+          (
+            (unitPriceCents * item.quantity) /
+            100
+          ).toFixed(2)
+        ),
+        currency: "EUR",
+      },
+    }));
+
+    const totalPaidCents = Number(
+      session.amount_total ?? subtotalCents
+    );
+
+    const weightKg = Number(
+      Math.max(
+        ESTIMATED_PACKED_TSHIRT_WEIGHT_KG,
+        itemCount *
+          ESTIMATED_PACKED_TSHIRT_WEIGHT_KG
+      ).toFixed(2)
+    );
+
+    const sendcloudOrder: any = {
+      order_id: checkoutGroupId,
+
+      order_number: orderNumber,
+
+      order_details: {
+        integration: {
+          id: SENDCLOUD_INTEGRATION_ID,
+        },
+
+        status: {
+          code: "fulfilled",
+          message: "Fulfilled",
+        },
+
+        order_created_at:
+          new Date().toISOString(),
+
+        order_items: orderItems,
+      },
+
+      payment_details: {
+        total_price: {
+          value: Number(
+            (totalPaidCents / 100).toFixed(2)
+          ),
+          currency: "EUR",
+        },
+
+        status: {
+          code: "paid",
+          message: "Paid",
+        },
+      },
+
+      shipping_details: {
+        is_local_pickup: false,
+
+        delivery_indicator: isRelay
+          ? "Mondial Relay Point Relais"
+          : "Mondial Relay Home Domestic",
+
+        measurement: {
+          weight: {
+            value: weightKg,
+            unit: "kg",
+          },
+        },
+      },
+    };
+
+    if (isRelay) {
+      sendcloudOrder.service_point_details = {
+        id: String(first.service_point_id),
+      };
+
+      const relayStreet =
+        splitStreetAndHouseNumber(
+          first?.service_point_address || ""
+        );
+
+      sendcloudOrder.shipping_address = {
+        name: first?.name || "Client AJVEK",
+        email: first.email,
+        phone_number: first.phone,
+
+        address_line_1:
+          relayStreet.addressLine1 ||
+          first?.service_point_name ||
+          "Point Relais Mondial Relay",
+
+        postal_code: String(
+          first?.service_point_postal_code || ""
+        ),
+
+        city: String(
+          first?.service_point_city || ""
+        ),
+
+        country_code: "FR",
+      };
+
+      if (relayStreet.houseNumber) {
+        sendcloudOrder.shipping_address.house_number =
+          relayStreet.houseNumber;
+      }
+    } else {
+      const homeStreet =
+        splitStreetAndHouseNumber(
+          first.shipping_address_line1
+        );
+
+      sendcloudOrder.shipping_address = {
+        name:
+          first?.shipping_name ||
+          first?.name ||
+          "Client AJVEK",
+
+        email: first.email,
+        phone_number: first.phone,
+
+        address_line_1:
+          homeStreet.addressLine1,
+
+        postal_code: String(
+          first.shipping_postal_code
+        ),
+
+        city: String(first.shipping_city),
+
+        country_code: String(
+          first.shipping_country
+        ).toUpperCase(),
+      };
+
+      if (homeStreet.houseNumber) {
+        sendcloudOrder.shipping_address.house_number =
+          homeStreet.houseNumber;
+      }
+
+      if (first?.shipping_address_line2) {
+        sendcloudOrder.shipping_address.address_line_2 =
+          String(first.shipping_address_line2);
+      }
+    }
+
+    const createOrderData =
+      await sendcloudRequest("/orders", {
+        method: "POST",
+        body: JSON.stringify([sendcloudOrder]),
+      });
+
+    const sendcloudOrderId =
+      createOrderData?.data?.[0]?.id;
+
+    if (!sendcloudOrderId) {
+      throw new Error(
+        "Sendcloud n'a pas retourné d'identifiant de commande."
+      );
+    }
+
+    const { error: saveOrderIdError } =
+      await supabaseAdmin
+        .from("preorders")
+        .update({
+          sendcloud_order_id:
+            String(sendcloudOrderId),
+        })
+        .eq(
+          "checkout_group_id",
+          checkoutGroupId
+        );
+
+    if (saveOrderIdError) {
+      throw new Error(
+        `Impossible d'enregistrer sendcloud_order_id : ${saveOrderIdError.message}`
+      );
+    }
+
+    let orderAvailable = false;
+
+    for (
+      let attempt = 0;
+      attempt < 10;
+      attempt += 1
+    ) {
+      try {
+        await sendcloudRequest(
+          `/orders/${sendcloudOrderId}`,
+          {
+            method: "GET",
+          }
+        );
+
+        orderAvailable = true;
+        break;
+      } catch (error) {
+        if (attempt === 9) {
+          throw error;
+        }
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000)
+        );
+      }
+    }
+
+    if (!orderAvailable) {
+      throw new Error(
+        "Commande Sendcloud non disponible après création."
+      );
+    }
+
+    const shippingOptionCode = isRelay
+      ? MONDIAL_RELAY_POINT_RELAIS
+      : MONDIAL_RELAY_HOME;
+
+    labelRequestStarted = true;
+
+    const labelData =
+      await sendcloudRequest(
+        "/orders/create-label-sync",
+        {
+          method: "POST",
+
+          body: JSON.stringify({
+            integration_id:
+              SENDCLOUD_INTEGRATION_ID,
+
+            label_details: {
+              mime_type: "application/pdf",
+              dpi: 72,
+            },
+
+            ship_with: {
+              type: "shipping_option_code",
+
+              properties: {
+                shipping_option_code:
+                  shippingOptionCode,
+              },
+            },
+
+            order: {
+              order_id: checkoutGroupId,
+              order_number: orderNumber,
+              apply_shipping_rules: false,
+            },
+          }),
+        }
+      );
+
+    const parcelId = labelData?.parcel_id;
+
+    const shipmentId =
+      labelData?.shipment_id;
+
+    const trackingNumber =
+      labelData?.tracking_number || null;
+
+    const trackingUrl =
+      labelData?.tracking_url || null;
+
+    const labelDocument =
+      Array.isArray(labelData?.documents)
+        ? labelData.documents.find(
+            (document: any) =>
+              document?.type === "label"
+          )
+        : null;
+
+    const labelUrl =
+      labelDocument?.link || null;
+
+    if (!parcelId) {
+      throw new Error(
+        "Étiquette créée sans parcel_id Sendcloud exploitable."
+      );
+    }
+
+    const sendcloudCreatedAt =
+      new Date().toISOString();
+
+    const { error: saveShipmentError } =
+      await supabaseAdmin
+        .from("preorders")
+        .update({
+          sendcloud_order_id:
+            String(sendcloudOrderId),
+
+          sendcloud_parcel_id:
+            Number(parcelId),
+
+          sendcloud_label_url:
+            labelUrl,
+
+          sendcloud_created_at:
+            sendcloudCreatedAt,
+
+          sendcloud_processing_at: null,
+
+          carrier: "mondial_relay",
+
+          tracking_number:
+            trackingNumber,
+
+          tracking_url:
+            trackingUrl,
+        })
+        .eq(
+          "checkout_group_id",
+          checkoutGroupId
+        );
+
+    if (saveShipmentError) {
+      const { error: restoreLockError } =
+        await supabaseAdmin
+          .from("preorders")
+          .update({
+            sendcloud_processing_at:
+              sendcloudCreatedAt,
+          })
+          .eq(
+            "checkout_group_id",
+            checkoutGroupId
+          )
+          .is(
+            "sendcloud_parcel_id",
+            null
+          );
+
+      if (restoreLockError) {
+        console.error(
+          "[stripe-webhook] Étiquette créée mais verrou Sendcloud impossible à restaurer :",
+          {
+            checkoutGroupId,
+            parcelId,
+            error: restoreLockError,
+          }
+        );
+      }
+
+      throw new Error(
+        `Étiquette Sendcloud créée mais sauvegarde Supabase impossible. Parcel ${parcelId}, shipment ${shipmentId || "-"} : ${saveShipmentError.message}`
+      );
+    }
+
+    console.log(
+      "[stripe-webhook] Expédition Sendcloud créée :",
+      {
+        checkoutGroupId,
+        sendcloudOrderId,
+        parcelId,
+        shipmentId: shipmentId || null,
+        trackingNumber,
+        shippingOptionCode,
+        weightKg,
+      }
+    );
+  } catch (error) {
+    if (!labelRequestStarted) {
+      await releaseSendcloudClaim(
+        checkoutGroupId
+      );
+    }
+
+    throw error;
+  }
+}
 
 /* ============================================================
 
@@ -1600,7 +2194,28 @@ export async function POST(request: Request) {
 
       }
 
-
+/*
+ * SENDCLOUD
+ *
+ * Le paiement et le stock sont déjà finalisés.
+ * Une erreur Sendcloud ne doit donc pas annuler
+ * la commande AJVEK.
+ */
+try {
+  await createSendcloudShipmentForPaidOrder({
+    checkoutGroupId,
+    orders,
+    session,
+  });
+} catch (error) {
+  console.error(
+    "[stripe-webhook] Automatisation Sendcloud non terminée. Commande payée conservée, intervention manuelle possible :",
+    {
+      checkoutGroupId,
+      error,
+    }
+  );
+}
 
       const customerName =
 
