@@ -1798,24 +1798,9 @@ const currentStockTotal = stock.reduce(
 
 
 
-const soldPieces = orders.reduce(
-
-  (total, order) =>
-
-    total +
-
-    order.items.reduce(
-
-      (orderTotal, item) =>
-
-        orderTotal + item.quantity,
-
-      0
-
-    ),
-
+const soldPieces = Math.max(
+  INITIAL_TOTAL_STOCK - currentStockTotal,
   0
-
 );
 
 
@@ -1852,54 +1837,16 @@ const sakuraCurrentStock = stock
 
 
 
-const rosesSold = orders.reduce(
-
-  (total, order) =>
-
-    total +
-
-    order.items
-
-      .filter((item) => item.product_slug === "roses")
-
-      .reduce(
-
-        (itemTotal, item) =>
-
-          itemTotal + item.quantity,
-
-        0
-
-      ),
-
+const rosesSold = Math.max(
+  INITIAL_PRODUCT_STOCK.roses - rosesCurrentStock,
   0
-
 );
 
 
 
-const sakuraSold = orders.reduce(
-
-  (total, order) =>
-
-    total +
-
-    order.items
-
-      .filter((item) => item.product_slug === "sakura")
-
-      .reduce(
-
-        (itemTotal, item) =>
-
-          itemTotal + item.quantity,
-
-        0
-
-      ),
-
+const sakuraSold = Math.max(
+  INITIAL_PRODUCT_STOCK.sakura - sakuraCurrentStock,
   0
-
 );
 
   const totalPieces =
