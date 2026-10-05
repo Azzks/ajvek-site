@@ -36,16 +36,31 @@ export async function GET() {
       }
     );
 
-    const { data, error } = await supabase
+    /*
+     * ============================================================
+     * 1. COMMANDES RÉELLES PAYÉES
+     * ============================================================
+     *
+     * Une commande peut contenir plusieurs vêtements.
+     * Toutes les lignes d'une même commande partagent
+     * le même checkout_group_id.
+     *
+     * On compte donc uniquement les commandes uniques.
+     */
+
+    const {
+      data: paidOrders,
+      error: paidOrdersError,
+    } = await supabase
       .from("preorders")
       .select("checkout_group_id")
       .eq("paid", true)
       .not("checkout_group_id", "is", null);
 
-    if (error) {
+    if (paidOrdersError) {
       console.error(
-        "[promo-order-count]",
-        error
+        "[promo-order-count/orders]",
+        paidOrdersError
       );
 
       return NextResponse.json(
@@ -59,15 +74,8 @@ export async function GET() {
       );
     }
 
-    /*
-     * Une commande peut contenir plusieurs vêtements.
-     * Toutes les lignes d'une même commande partagent
-     * le même checkout_group_id.
-     *
-     * On compte donc uniquement les groupes uniques.
-     */
     const uniqueOrders = new Set(
-      (data ?? [])
+      (paidOrders ?? [])
         .map(
           (row) =>
             row.checkout_group_id
@@ -75,7 +83,66 @@ export async function GET() {
         .filter(Boolean)
     );
 
-    const count = uniqueOrders.size;
+    const realOrderCount =
+      uniqueOrders.size;
+
+    /*
+     * ============================================================
+     * 2. AJUSTEMENT MANUEL ADMIN
+     * ============================================================
+     *
+     * Même valeur que celle utilisée dans l'admin.
+     *
+     * Exemple :
+     * 0 commandes Stripe + manual_orders 1
+     * = 1 commande affichée
+     * = Private Draw 1 / 10.
+     */
+
+    const {
+      data: manualCounters,
+      error: manualCountersError,
+    } = await supabase
+      .from("admin_manual_counters")
+      .select("manual_orders")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (manualCountersError) {
+      console.error(
+        "[promo-order-count/manual]",
+        manualCountersError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de récupérer les ajustements manuels.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const manualOrderCount =
+      Math.max(
+        Number(
+          manualCounters?.manual_orders ??
+            0
+        ),
+        0
+      );
+
+    /*
+     * ============================================================
+     * 3. TOTAL PRIVATE DRAW
+     * ============================================================
+     */
+
+    const count =
+      realOrderCount +
+      manualOrderCount;
 
     return NextResponse.json(
       {
